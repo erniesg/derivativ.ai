@@ -1,0 +1,10 @@
+# This file is used internally by FFMPEG.
+file 'file:/Users/erniesg/code/erniesg/derivativ/manim_examples/media/videos/scatter_plot/480p15/partial_movie_files/ScatterPlotScene/931832650_1326670073_223132457.mp4'
+file 'file:/Users/erniesg/code/erniesg/derivativ/manim_examples/media/videos/scatter_plot/480p15/partial_movie_files/ScatterPlotScene/1905288516_4142765363_1265579694.mp4'
+file 'file:/Users/erniesg/code/erniesg/derivativ/manim_examples/media/videos/scatter_plot/480p15/partial_movie_files/ScatterPlotScene/1905288516_2292570925_3404439341.mp4'
+file 'file:/Users/erniesg/code/erniesg/derivativ/manim_examples/media/videos/scatter_plot/480p15/partial_movie_files/ScatterPlotScene/1905288516_1208419163_2797496941.mp4'
+file 'file:/Users/erniesg/code/erniesg/derivativ/manim_examples/media/videos/scatter_plot/480p15/partial_movie_files/ScatterPlotScene/1905288516_2582390034_479923887.mp4'
+file 'file:/Users/erniesg/code/erniesg/derivativ/manim_examples/media/videos/scatter_plot/480p15/partial_movie_files/ScatterPlotScene/1905288516_1504160926_2099683849.mp4'
+file 'file:/Users/erniesg/code/erniesg/derivativ/manim_examples/media/videos/scatter_plot/480p15/partial_movie_files/ScatterPlotScene/1905288516_1143145186_3889547319.mp4'
+file 'file:/Users/erniesg/code/erniesg/derivativ/manim_examples/media/videos/scatter_plot/480p15/partial_movie_files/ScatterPlotScene/1905288516_4069718207_2336732443.mp4'
+file 'file:/Users/erniesg/code/erniesg/derivativ/manim_examples/media/videos/scatter_plot/480p15/partial_movie_files/ScatterPlotScene/1905288516_2631580503_312515489.mp4'
