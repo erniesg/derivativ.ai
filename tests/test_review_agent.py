@@ -91,7 +91,7 @@ def create_test_question() -> CandidateQuestion:
     taxonomy = QuestionTaxonomy(
         topic_path=["Geometry", "Mensuration", "Rectangles"],
         subject_content_references=["G1.1", "G1.2"],
-        skill_tags=["area_calculation", "perimeter_calculation", "rectangle_properties"],
+        skill_tags=["AREA_CALCULATION", "PERIMETER_CALCULATION", "RECTANGLE_PROPERTIES"],
         cognitive_level="ProceduralFluency",
         difficulty_estimate_0_to_1=0.4
     )

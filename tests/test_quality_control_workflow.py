@@ -57,7 +57,7 @@ class TestQualityControlWorkflow:
             taxonomy=QuestionTaxonomy(
                 topic_path=["Geometry", "Circles"],
                 subject_content_references=["C1.1"],
-                skill_tags=["area_calculation"],
+                skill_tags=["AREA_CALCULATION"],
                 cognitive_level="ProceduralFluency",
                 difficulty_estimate_0_to_1=0.6
             ),
@@ -82,13 +82,13 @@ class TestQualityControlWorkflow:
                         step_number=1,
                         description_text="Apply area formula",
                         mathematical_expression_latex="A = \\pi r^2",
-                        skill_applied_tag="area_formula"
+                        skill_applied_tag="FORMULA_APPLICATION"
                     ),
                     SolverStep(
                         step_number=2,
                         description_text="Substitute values",
                         mathematical_expression_latex="A = \\pi \\times 5^2 = 25\\pi",
-                        skill_applied_tag="substitution"
+                        skill_applied_tag="SUBSTITUTION"
                     )
                 ]
             ),
@@ -437,7 +437,7 @@ class TestRefinementAgent:
             taxonomy=QuestionTaxonomy(
                 topic_path=["Geometry"],
                 subject_content_references=["C1.1"],
-                skill_tags=["area_calculation"]
+                skill_tags=["AREA_CALCULATION"]
             ),
             solution_and_marking_scheme=SolutionAndMarkingScheme(
                 final_answers_summary=[
@@ -477,7 +477,7 @@ class TestRefinementAgent:
             "taxonomy": {
                 "topic_path": ["Geometry", "Circles"],
                 "subject_content_references": ["C1.1"],
-                "skill_tags": ["area_calculation", "precision"],
+                "skill_tags": ["AREA_CALCULATION", "PRECISION"],
                 "cognitive_level": "ProceduralFluency",
                 "difficulty_estimate_0_to_1": 0.6
             },
@@ -507,14 +507,14 @@ class TestRefinementAgent:
                         "step_number": 1,
                         "description_text": "Apply area formula",
                         "mathematical_expression_latex": "A = \\pi r^2",
-                        "skill_applied_tag": "area_formula",
+                        "skill_applied_tag": "FORMULA_APPLICATION",
                         "justification_or_reasoning": "Use the standard formula for circle area"
                     },
                     {
                         "step_number": 2,
                         "description_text": "Substitute and calculate",
                         "mathematical_expression_latex": "A = \\pi \\times 5^2 = 25\\pi = 78.54",
-                        "skill_applied_tag": "calculation",
+                        "skill_applied_tag": "NUMERICAL_CALCULATION",
                         "justification_or_reasoning": "Calculate to 2 decimal places"
                     }
                 ]

@@ -123,7 +123,7 @@ class TestEndToEndPayloadPublish:
 
         # Skip test if Payload not configured
         if not payload_publisher.is_enabled():
-            pytest.skip("Payload API not configured - set PAYLOAD_API_TOKEN and PAYLOAD_API_URL")
+            pytest.skip("Payload API not configured - set PAYLOAD_API_TOKEN or PAYLOAD_EMAIL/PAYLOAD_PASSWORD with PAYLOAD_API_URL")
 
         # Test publishing question
         payload_question_id = await payload_publisher.publish_question(sample_question)
@@ -144,7 +144,7 @@ class TestEndToEndPayloadPublish:
             assert published_question['question_id_global'] == sample_question.question_id_global
             assert published_question['marks'] == sample_question.marks
             assert published_question['command_word'] == sample_question.command_word.value
-            assert sample_question.question_id_local[:8] in published_question['raw_text_content']  # Test ID should be in content
+            assert sample_question.question_id_global.split('_')[-1] in published_question['raw_text_content']  # Test ID should be in content
 
         finally:
             # Cleanup: Delete the test question
@@ -159,7 +159,7 @@ class TestEndToEndPayloadPublish:
         # Skip test if Payload not configured
         publisher = PayloadPublisher()
         if not publisher.is_enabled():
-            pytest.skip("Payload API not configured - set PAYLOAD_API_TOKEN and PAYLOAD_API_URL")
+            pytest.skip("Payload API not configured - set PAYLOAD_API_TOKEN or PAYLOAD_EMAIL/PAYLOAD_PASSWORD with PAYLOAD_API_URL")
 
         # Mock high-quality review scores (triggers auto-approval)
         mock_agents['review_agent'].review_question.return_value = (

@@ -44,8 +44,8 @@ class TestAgentJSONIntegration:
         # Create minimal required objects
         taxonomy = QuestionTaxonomy(
             topic_path=["Mathematics", "Geometry", "Circles"],
-            subject_content_references=["Calculate areas of circles"],
-            skill_tags=["calculation", "geometry", "circles"],
+            subject_content_references=["C5.3"],  # Actual syllabus code: Circles, arcs and sectors
+            skill_tags=["AREA_CALCULATION", "CIRCLE_PROPERTIES", "FORMULA_APPLICATION"],
             cognitive_level="Application"
         )
 
@@ -76,19 +76,19 @@ class TestAgentJSONIntegration:
                     step_number=1,
                     description_text="Apply formula πr²",
                     mathematical_expression_latex="A = \\pi r^2",
-                    skill_applied_tag="formula_application"
+                    skill_applied_tag="FORMULA_APPLICATION"
                 ),
                 SolverStep(
                     step_number=2,
                     description_text="Substitute r=5",
                     mathematical_expression_latex="A = \\pi \\times 5^2",
-                    skill_applied_tag="substitution"
+                    skill_applied_tag="SUBSTITUTION"
                 ),
                 SolverStep(
                     step_number=3,
                     description_text="Calculate result",
                     mathematical_expression_latex="A = 78.54 \\text{ cm}^2",
-                    skill_applied_tag="calculation"
+                    skill_applied_tag="NUMERICAL_CALCULATION"
                 )
             ]
         )
