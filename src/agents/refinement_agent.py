@@ -354,7 +354,25 @@ Please provide an improved version in this exact JSON format:
             return None
 
     def _extract_json_from_response(self, response: str) -> Optional[str]:
-        """Extract JSON object from LLM response."""
+        """Extract JSON object from LLM response using robust parser."""
+        try:
+            from ..utils.json_parser import extract_json_robust
+
+            result = extract_json_robust(response)
+            if result.success:
+                logger.debug(f"JSON extracted using method: {result.extraction_method}")
+                return result.raw_json
+            else:
+                logger.warning(f"JSON extraction failed: {result.error}")
+                return None
+
+        except Exception as e:
+            logger.error(f"Error in robust JSON extraction: {str(e)}")
+            # Fallback to original method if robust parser fails
+            return self._extract_json_from_response_fallback(response)
+
+    def _extract_json_from_response_fallback(self, response: str) -> Optional[str]:
+        """Fallback JSON extraction method (original implementation)."""
         try:
             # Look for JSON between ```json and ``` or just {} brackets
             import re

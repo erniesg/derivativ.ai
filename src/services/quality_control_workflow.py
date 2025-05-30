@@ -16,6 +16,7 @@ from src.agents.review_agent import ReviewAgent
 from src.agents.refinement_agent import RefinementAgent
 from src.agents.question_generator import QuestionGeneratorAgent
 from src.services.database_manager import DatabaseManager
+from src.services.payload_publisher import PayloadPublisher
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,8 @@ class QualityControlWorkflow:
         refinement_agent: RefinementAgent,
         generator_agent: QuestionGeneratorAgent,
         database_manager: DatabaseManager,
-        quality_thresholds: Optional[Dict[str, float]] = None
+        quality_thresholds: Optional[Dict[str, float]] = None,
+        auto_publish: bool = False
     ):
         """
         Initialize the Quality Control Workflow.
@@ -49,11 +51,16 @@ class QualityControlWorkflow:
             generator_agent: Agent for generating new questions
             database_manager: Database manager for persistence
             quality_thresholds: Custom quality thresholds (optional)
+            auto_publish: Whether to auto-publish approved questions to Payload CMS
         """
         self.review_agent = review_agent
         self.refinement_agent = refinement_agent
         self.generator_agent = generator_agent
         self.database_manager = database_manager
+        self.auto_publish = auto_publish
+
+        # Initialize Payload publisher if auto-publish is enabled
+        self.payload_publisher = PayloadPublisher() if auto_publish else None
 
         # Default quality thresholds
         self.thresholds = quality_thresholds or {
@@ -67,7 +74,7 @@ class QualityControlWorkflow:
         self.max_refinement_iterations = 3
         self.max_regeneration_attempts = 2
 
-    def process_question(
+    async def process_question(
         self,
         question: CandidateQuestion,
         session_id: str,
@@ -99,7 +106,9 @@ class QualityControlWorkflow:
             'approved_question': None,
             'manual_review_required': False,
             'total_iterations': 0,
-            'success': False
+            'success': False,
+            'auto_publish_enabled': self.auto_publish,
+            'payload_question_id': None
         }
 
         try:
@@ -114,7 +123,7 @@ class QualityControlWorkflow:
             # Handle final decision
             if final_decision == QualityDecision.AUTO_APPROVE:
                 # Insert approved question into database
-                self._insert_approved_question(final_question, session_id, workflow_result)
+                await self._insert_approved_question(final_question, session_id, workflow_result)
                 workflow_result['success'] = True
 
             elif final_decision == QualityDecision.MANUAL_REVIEW:
@@ -311,21 +320,42 @@ class QualityControlWorkflow:
             workflow_step['regeneration_error'] = str(e)
             return None
 
-    def _insert_approved_question(
+    async def _insert_approved_question(
         self,
         question: CandidateQuestion,
         session_id: str,
         workflow_result: Dict[str, Any]
     ):
-        """Insert an approved question into the database."""
+        """Insert an approved question into the database and optionally into Payload CMS."""
         try:
             # Update question status
             question.status = "approved"
 
-            # Save to database
+            # Save to internal database
             self.database_manager.save_candidate_question(session_id, question)
 
             logger.info(f"Question {question.question_id_local} approved and saved to database")
+
+            # Auto-publish to Payload CMS if enabled
+            if self.auto_publish and self.payload_publisher and self.payload_publisher.is_enabled():
+                try:
+                    payload_question_id = await self.payload_publisher.publish_question(question)
+                    if payload_question_id:
+                        workflow_result['payload_question_id'] = payload_question_id
+                        workflow_result['payload_published'] = True
+                        logger.info(f"Question {question.question_id_local} auto-published to Payload with ID {payload_question_id}")
+                    else:
+                        workflow_result['payload_published'] = False
+                        workflow_result['payload_error'] = "Failed to publish to Payload"
+                        logger.error(f"Failed to auto-publish question {question.question_id_local} to Payload")
+                except Exception as e:
+                    workflow_result['payload_published'] = False
+                    workflow_result['payload_error'] = str(e)
+                    logger.error(f"Error auto-publishing question {question.question_id_local} to Payload: {str(e)}")
+            else:
+                workflow_result['payload_published'] = False
+                if self.auto_publish:
+                    workflow_result['payload_error'] = "Payload publishing disabled - no API token"
 
         except Exception as e:
             logger.error(f"Failed to save approved question: {str(e)}")
@@ -410,3 +440,10 @@ class QualityControlWorkflow:
         """Update quality control thresholds."""
         self.thresholds.update(new_thresholds)
         logger.info(f"Quality thresholds updated: {self.thresholds}")
+
+    def enable_auto_publish(self, enabled: bool = True):
+        """Enable or disable auto-publishing to Payload CMS."""
+        self.auto_publish = enabled
+        if enabled and not self.payload_publisher:
+            self.payload_publisher = PayloadPublisher()
+        logger.info(f"Auto-publish {'enabled' if enabled else 'disabled'}")

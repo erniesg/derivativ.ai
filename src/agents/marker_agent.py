@@ -259,8 +259,25 @@ class MarkerAgent:
             return self._create_fallback_marking_scheme(config)
 
     def _extract_json_from_response(self, response: str) -> str:
-        """Extract JSON content from LLM response, handling various formats"""
+        """Extract JSON content from LLM response using robust parser"""
+        try:
+            from ..utils.json_parser import extract_json_robust
 
+            result = extract_json_robust(response)
+            if result.success:
+                return result.raw_json
+            else:
+                # Fallback to original method
+                return self._extract_json_from_response_fallback(response)
+
+        except Exception as e:
+            if self.debug:
+                print(f"❌ Robust JSON extraction failed: {e}")
+            # Fallback to original method
+            return self._extract_json_from_response_fallback(response)
+
+    def _extract_json_from_response_fallback(self, response: str) -> str:
+        """Fallback JSON extraction method (original implementation)"""
         # First, try to find JSON blocks
         if "```json" in response:
             start = response.find("```json") + 7

@@ -387,7 +387,7 @@ Part {part.get('question_number_display', i)}: {part.get('command_word', 'Work o
             raise
 
     def _parse_llm_response(self, response: str) -> Optional[Dict[str, Any]]:
-        """Parse the LLM response to extract JSON question data"""
+        """Parse the LLM response to extract JSON question data using robust parser"""
         try:
             self._debug_print(f"[DEBUG] =================== JSON PARSING START ===================")
             self._debug_print(f"[DEBUG] Original response length: {len(response)} characters")
@@ -399,7 +399,39 @@ Part {part.get('question_number_display', i)}: {part.get('command_word', 'Work o
             if len(content) != len(response):
                 self._debug_print(f"[DEBUG] Removed {len(response) - len(content)} characters of thinking tokens")
 
-            # Step 2: Try to extract JSON from code blocks first
+            # Step 2: Use robust JSON parser
+            try:
+                from ..utils.json_parser import extract_json_robust
+
+                self._debug_print(f"[DEBUG] Using robust JSON parser...")
+                result = extract_json_robust(content)
+
+                if result.success:
+                    self._debug_print(f"[DEBUG] ✅ Successfully extracted JSON using method: {result.extraction_method}")
+                    self._debug_print(f"[DEBUG] Extracted JSON keys: {list(result.data.keys())}")
+                    return result.data
+                else:
+                    self._debug_print(f"[DEBUG] ❌ Robust parser failed: {result.error}")
+                    # Fallback to original method
+                    return self._parse_llm_response_fallback(content)
+
+            except Exception as e:
+                self._debug_print(f"[DEBUG] ⚠️ Robust parser exception: {e}")
+                # Fallback to original method
+                return self._parse_llm_response_fallback(content)
+
+        except Exception as e:
+            print(f"[ERROR] Exception in _parse_llm_response: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    def _parse_llm_response_fallback(self, content: str) -> Optional[Dict[str, Any]]:
+        """Fallback JSON parsing using original method"""
+        try:
+            self._debug_print(f"[DEBUG] Using fallback JSON parsing...")
+
+            # Try to extract JSON from code blocks first
             self._debug_print(f"[DEBUG] Attempting to extract JSON from code blocks...")
             json_from_code_block = self._extract_json_from_code_block(content)
             if json_from_code_block:
@@ -409,7 +441,7 @@ Part {part.get('question_number_display', i)}: {part.get('command_word', 'Work o
 
             self._debug_print(f"[DEBUG] No JSON found in code blocks, trying raw JSON extraction...")
 
-            # Step 3: Try to find raw JSON in the response
+            # Try to find raw JSON in the response
             json_from_raw = self._extract_raw_json(content)
             if json_from_raw:
                 self._debug_print(f"[DEBUG] ✅ Successfully extracted raw JSON!")
@@ -422,9 +454,7 @@ Part {part.get('question_number_display', i)}: {part.get('command_word', 'Work o
             return None
 
         except Exception as e:
-            print(f"[ERROR] Exception in _parse_llm_response: {e}")
-            import traceback
-            traceback.print_exc()
+            print(f"[ERROR] Exception in _parse_llm_response_fallback: {e}")
             return None
 
     def _strip_thinking_tokens(self, text: str) -> str:

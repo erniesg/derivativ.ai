@@ -11,6 +11,7 @@ Tests the complete workflow:
 
 import pytest
 import uuid
+import json
 from unittest.mock import Mock, MagicMock
 from datetime import datetime
 
@@ -23,6 +24,7 @@ from src.models.question_models import (
 )
 
 
+@pytest.mark.asyncio
 class TestQualityControlWorkflow:
     """Test cases for the Quality Control Workflow."""
 
@@ -106,7 +108,7 @@ class TestQualityControlWorkflow:
             validation_errors=[]
         )
 
-    def test_auto_approve_workflow(self, mock_agents_and_services, sample_question):
+    async def test_auto_approve_workflow(self, mock_agents_and_services, sample_question):
         """Test workflow with high-quality question that gets auto-approved."""
 
         # Setup mocks
@@ -128,7 +130,7 @@ class TestQualityControlWorkflow:
         # Process question
         session_id = str(uuid.uuid4())
         config = {"type": "geometry_basic"}
-        result = workflow.process_question(sample_question, session_id, config)
+        result = await workflow.process_question(sample_question, session_id, config)
 
         # Verify results
         assert result['success'] == True
@@ -140,7 +142,7 @@ class TestQualityControlWorkflow:
         mocks['database_manager'].save_candidate_question.assert_called_once()
         mocks['database_manager'].save_llm_interaction.assert_called_once()
 
-    def test_refinement_workflow(self, mock_agents_and_services, sample_question):
+    async def test_refinement_workflow(self, mock_agents_and_services, sample_question):
         """Test workflow with medium-quality question that gets refined and then approved."""
 
         # Setup mocks
@@ -189,7 +191,7 @@ class TestQualityControlWorkflow:
         # Process question
         session_id = str(uuid.uuid4())
         config = {"type": "geometry_basic"}
-        result = workflow.process_question(sample_question, session_id, config)
+        result = await workflow.process_question(sample_question, session_id, config)
 
         # Verify results
         assert result['success'] == True
@@ -203,7 +205,7 @@ class TestQualityControlWorkflow:
         # Verify final question is the refined one
         assert result['approved_question'].question_id_local == refined_question.question_id_local
 
-    def test_manual_review_workflow(self, mock_agents_and_services, sample_question):
+    async def test_manual_review_workflow(self, mock_agents_and_services, sample_question):
         """Test workflow with borderline question that requires manual review."""
 
         # Setup mocks
@@ -225,7 +227,7 @@ class TestQualityControlWorkflow:
         # Process question
         session_id = str(uuid.uuid4())
         config = {"type": "geometry_basic"}
-        result = workflow.process_question(sample_question, session_id, config)
+        result = await workflow.process_question(sample_question, session_id, config)
 
         # Verify results
         assert result['success'] == True
@@ -236,7 +238,7 @@ class TestQualityControlWorkflow:
         # Verify question is saved for manual review
         mocks['database_manager'].save_candidate_question.assert_called()
 
-    def test_regeneration_workflow(self, mock_agents_and_services, sample_question):
+    async def test_regeneration_workflow(self, mock_agents_and_services, sample_question):
         """Test workflow with low-quality question that gets regenerated."""
 
         # Setup mocks
@@ -284,7 +286,7 @@ class TestQualityControlWorkflow:
         # Process question
         session_id = str(uuid.uuid4())
         config = {"type": "geometry_basic"}
-        result = workflow.process_question(sample_question, session_id, config)
+        result = await workflow.process_question(sample_question, session_id, config)
 
         # Verify results
         assert result['success'] == True
@@ -297,7 +299,7 @@ class TestQualityControlWorkflow:
         # Verify final question is the regenerated one
         assert result['approved_question'].question_id_local == regenerated_question.question_id_local
 
-    def test_rejection_workflow(self, mock_agents_and_services, sample_question):
+    async def test_rejection_workflow(self, mock_agents_and_services, sample_question):
         """Test workflow with very low-quality question that gets rejected."""
 
         # Setup mocks
@@ -319,7 +321,7 @@ class TestQualityControlWorkflow:
         # Process question
         session_id = str(uuid.uuid4())
         config = {"type": "geometry_basic"}
-        result = workflow.process_question(sample_question, session_id, config)
+        result = await workflow.process_question(sample_question, session_id, config)
 
         # Verify results
         assert result['success'] == False
@@ -329,7 +331,7 @@ class TestQualityControlWorkflow:
         # Verify rejection was logged
         mocks['database_manager'].save_error_log.assert_called_once()
 
-    def test_max_refinement_iterations(self, mock_agents_and_services, sample_question):
+    async def test_max_refinement_iterations(self, mock_agents_and_services, sample_question):
         """Test that workflow stops after max refinement iterations."""
 
         # Setup mocks
@@ -362,7 +364,7 @@ class TestQualityControlWorkflow:
         # Process question
         session_id = str(uuid.uuid4())
         config = {"type": "geometry_basic"}
-        result = workflow.process_question(sample_question, session_id, config)
+        result = await workflow.process_question(sample_question, session_id, config)
 
         # Verify it stops after max iterations and goes to manual review
         assert result['final_decision'] == QualityDecision.MANUAL_REVIEW
@@ -371,7 +373,7 @@ class TestQualityControlWorkflow:
         # Should have called refinement agent max_refinement_iterations times
         assert mocks['refinement_agent'].refine_question.call_count == 2
 
-    def test_custom_quality_thresholds(self, mock_agents_and_services, sample_question):
+    async def test_custom_quality_thresholds(self, mock_agents_and_services, sample_question):
         """Test workflow with custom quality thresholds."""
 
         # Setup mocks
@@ -399,7 +401,7 @@ class TestQualityControlWorkflow:
         # Process question
         session_id = str(uuid.uuid4())
         config = {"type": "geometry_basic"}
-        result = workflow.process_question(sample_question, session_id, config)
+        result = await workflow.process_question(sample_question, session_id, config)
 
         # With custom thresholds, 0.80 should require manual review
         assert result['final_decision'] == QualityDecision.MANUAL_REVIEW
@@ -463,17 +465,15 @@ class TestRefinementAgent:
     def test_successful_refinement(self, mock_model, mock_config_manager, sample_question):
         """Test successful question refinement."""
 
-        # Mock model response with complete valid JSON matching the full schema
-        mock_response = Mock()
-        mock_response.content = '''
-        {
+        # The refinement agent expects a complete structure with ALL required fields
+        response_data = {
             "question_id_local": "Ref_Q1234",
             "question_id_global": "ref_original_567",
             "question_number_display": "Refined Question",
             "marks": 3,
             "command_word": "Calculate",
             "raw_text_content": "Calculate the area of a circle with radius 5 cm. Give your answer to 2 decimal places.",
-            "formatted_text_latex": null,
+            "formatted_text_latex": None,
             "taxonomy": {
                 "topic_path": ["Geometry", "Circles"],
                 "subject_content_references": ["C1.1"],
@@ -520,7 +520,10 @@ class TestRefinementAgent:
                 ]
             }
         }
-        '''
+
+        # Mock model response with properly escaped JSON in code block format
+        mock_response = Mock()
+        mock_response.content = f"```json\n{json.dumps(response_data)}\n```"
         mock_model.chat.return_value = mock_response
 
         # Create refinement agent
@@ -561,16 +564,14 @@ class TestRefinementAgent:
         # Mock model responses - first fails, second succeeds
         responses = [
             "Invalid response without JSON",  # First attempt fails
-            '''
-            {
+            '''{
                 "question_text": "Improved question via fallback",
                 "answer": "78.54 cm²",
                 "working": "Improved working",
                 "marks": 3,
                 "topic": "Geometry",
                 "difficulty": "Foundation"
-            }
-            '''  # Fallback succeeds
+            }'''  # Fallback succeeds
         ]
 
         mock_model.chat.side_effect = [Mock(content=resp) for resp in responses]
@@ -595,7 +596,7 @@ class TestRefinementAgent:
 
         # Verify fallback was used
         assert refined_question is not None
-        assert refined_question.question_text == "Improved question via fallback"
+        assert refined_question.raw_text_content == "Improved question via fallback"
         assert interaction_data['success'] == True
         assert interaction_data['attempt_number'] == 2  # Used fallback
 
