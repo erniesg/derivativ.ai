@@ -19,6 +19,7 @@ from src.agents.review_agent import ReviewAgent
 from src.agents.question_generator import QuestionGeneratorAgent
 from src.agents.marker_agent import MarkerAgent
 from src.models.question_models import CandidateQuestion, CommandWord, LLMModel
+from src.models import QuestionTaxonomy, SolutionAndMarkingScheme, SolverAlgorithm, AnswerSummary, MarkAllocationCriterion, SolverStep
 import uuid
 
 
@@ -40,6 +41,58 @@ class TestAgentJSONIntegration:
     @pytest.fixture
     def sample_question(self):
         """Create a sample question for testing."""
+        # Create minimal required objects
+        taxonomy = QuestionTaxonomy(
+            topic_path=["Mathematics", "Geometry", "Circles"],
+            subject_content_references=["Calculate areas of circles"],
+            skill_tags=["calculation", "geometry", "circles"],
+            cognitive_level="Application"
+        )
+
+        marking_scheme = SolutionAndMarkingScheme(
+            final_answers_summary=[
+                AnswerSummary(
+                    answer_text="78.54 cm²",
+                    value_numeric=78.54,
+                    unit="cm²"
+                )
+            ],
+            mark_allocation_criteria=[
+                MarkAllocationCriterion(
+                    criterion_id="M1",
+                    criterion_text="Use correct formula",
+                    mark_code_display="M1",
+                    marks_value=1.0,
+                    mark_type_primary="M",
+                    qualifiers_and_notes="oe"
+                )
+            ],
+            total_marks_for_part=3
+        )
+
+        solver = SolverAlgorithm(
+            steps=[
+                SolverStep(
+                    step_number=1,
+                    description_text="Apply formula πr²",
+                    mathematical_expression_latex="A = \\pi r^2",
+                    skill_applied_tag="formula_application"
+                ),
+                SolverStep(
+                    step_number=2,
+                    description_text="Substitute r=5",
+                    mathematical_expression_latex="A = \\pi \\times 5^2",
+                    skill_applied_tag="substitution"
+                ),
+                SolverStep(
+                    step_number=3,
+                    description_text="Calculate result",
+                    mathematical_expression_latex="A = 78.54 \\text{ cm}^2",
+                    skill_applied_tag="calculation"
+                )
+            ]
+        )
+
         return CandidateQuestion(
             question_id_local=str(uuid.uuid4()),
             question_id_global=str(uuid.uuid4()),
@@ -48,9 +101,9 @@ class TestAgentJSONIntegration:
             command_word=CommandWord.CALCULATE,
             raw_text_content="Calculate area of circle radius 5",
             formatted_text_latex=None,
-            taxonomy=None,
-            solution_and_marking_scheme=None,
-            solver_algorithm=None,
+            taxonomy=taxonomy,
+            solution_and_marking_scheme=marking_scheme,
+            solver_algorithm=solver,
             generation_id=uuid.uuid4(),
             target_grade_input=8,
             llm_model_used_generation=LLMModel.GPT_4O.value,

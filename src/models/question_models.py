@@ -65,7 +65,7 @@ class GenerationConfig(BaseModel):
     target_grade: int = Field(ge=1, le=9)
     calculator_policy: CalculatorPolicy
     desired_marks: int = Field(ge=1, le=5)
-    subject_content_references: List[str] = Field(min_items=1)
+    subject_content_references: List[str] = Field(min_length=1)
     command_word_override: Optional[CommandWord] = None
 
     # Model configuration
@@ -123,9 +123,9 @@ class SolverAlgorithm(BaseModel):
 
 class QuestionTaxonomy(BaseModel):
     """Taxonomic classification of a question"""
-    topic_path: List[str] = Field(min_items=1)
-    subject_content_references: List[str] = Field(min_items=1)
-    skill_tags: List[str] = Field(min_items=1)
+    topic_path: List[str] = Field(min_length=1)
+    subject_content_references: List[str] = Field(min_length=1)
+    skill_tags: List[str] = Field(min_length=1)
     cognitive_level: Optional[Literal["Recall", "ProceduralFluency", "ConceptualUnderstanding", "Application", "ProblemSolving", "Analysis"]] = None
     difficulty_estimate_0_to_1: Optional[float] = Field(None, ge=0.0, le=1.0)
 
@@ -174,7 +174,7 @@ class CandidateQuestion(BaseModel):
 class GenerationRequest(BaseModel):
     """Request to generate candidate questions"""
     seed_question_id: Optional[str] = None
-    target_grades: List[int] = Field(min_items=1)
+    target_grades: List[int] = Field(min_length=1)
     count_per_grade: int = Field(default=1, ge=1, le=10)
     subject_content_references: Optional[List[str]] = None
     calculator_policy: CalculatorPolicy = CalculatorPolicy.NOT_ALLOWED
