@@ -16,6 +16,10 @@ import uuid
 import asyncio
 from unittest.mock import Mock
 from datetime import datetime
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 from src.services.quality_control_workflow import QualityControlWorkflow, QualityDecision
 from src.services.payload_publisher import PayloadPublisher
@@ -50,7 +54,7 @@ class TestEndToEndPayloadPublish:
             taxonomy=QuestionTaxonomy(
                 topic_path=["Test", "Geometry", "Circles"],
                 subject_content_references=["C1.1", "C1.6"],
-                skill_tags=["area_calculation", "test_question", f"test_{unique_id}"],
+                skill_tags=["AREA_CALCULATION", "CIRCLE_PROPERTIES", "FORMULA_APPLICATION"],
                 cognitive_level="ProceduralFluency",
                 difficulty_estimate_0_to_1=0.7  # Grade 6-7 range
             ),
@@ -76,13 +80,13 @@ class TestEndToEndPayloadPublish:
                         step_number=1,
                         description_text="Apply area formula",
                         mathematical_expression_latex="A = \\pi r^2",
-                        skill_applied_tag="area_formula"
+                        skill_applied_tag="FORMULA_APPLICATION"
                     ),
                     SolverStep(
                         step_number=2,
                         description_text="Substitute and calculate",
                         mathematical_expression_latex="A = \\pi \\times 5^2 = 25\\pi = 78.54",
-                        skill_applied_tag="calculation"
+                        skill_applied_tag="NUMERICAL_CALCULATION"
                     )
                 ]
             ),
