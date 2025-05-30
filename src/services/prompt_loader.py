@@ -1,0 +1,176 @@
+"""
+Prompt Loader Service - Handles loading and formatting prompt templates.
+
+This service manages prompt templates for different purposes (generation, marking, review)
+and provides template rendering with proper context substitution.
+"""
+
+import os
+from typing import Dict, Any, Optional
+
+
+class PromptLoader:
+    """Service for loading and formatting prompt templates"""
+
+    def __init__(self, prompts_dir: str = "prompts"):
+        self.prompts_dir = prompts_dir
+        self._template_cache = {}
+
+    def load_template(self, template_name: str, version: str = "v1.0") -> str:
+        """
+        Load a prompt template from file.
+
+        Args:
+            template_name: Name of template (e.g., "question_generation", "marking_scheme")
+            version: Template version (e.g., "v1.0", "v1.1")
+
+        Returns:
+            Raw template string with placeholders
+        """
+        template_key = f"{template_name}_{version}"
+
+        # Check cache first
+        if template_key in self._template_cache:
+            return self._template_cache[template_key]
+
+        # Construct filename
+        filename = f"{template_name}_{version}.txt"
+        filepath = os.path.join(self.prompts_dir, filename)
+
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                template_content = f.read()
+
+            # Cache the template
+            self._template_cache[template_key] = template_content
+            return template_content
+
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Prompt template not found: {filepath}")
+
+    def format_marking_scheme_prompt(
+        self,
+        template_version: str,
+        question_text: str,
+        target_grade: int,
+        desired_marks: int,
+        subject_content_references: list,
+        calculator_policy: str,
+        marking_principles: str,
+        mark_types: str,
+        expected_answer: Optional[str] = None,
+        solution_steps: Optional[list] = None
+    ) -> str:
+        """
+        Format marking scheme prompt template with provided context.
+
+        Args:
+            template_version: Version of marking template to use
+            question_text: The question to create marking scheme for
+            target_grade: Target grade level
+            desired_marks: Number of marks for the question
+            subject_content_references: List of syllabus references
+            calculator_policy: Calculator policy string
+            marking_principles: Cambridge marking principles text
+            mark_types: Mark types reference text
+            expected_answer: Expected answer (optional)
+            solution_steps: Solution steps list (optional)
+
+        Returns:
+            Formatted prompt ready for LLM
+        """
+        template = self.load_template("marking_scheme", template_version)
+
+        # Prepare context variables
+        subject_refs_str = ', '.join(subject_content_references)
+
+        # Handle optional context
+        expected_answer_context = ""
+        if expected_answer:
+            expected_answer_context = f"**Expected Answer:** {expected_answer}"
+
+        solution_steps_context = ""
+        if solution_steps:
+            steps_str = '\n'.join(f"{i+1}. {step}" for i, step in enumerate(solution_steps))
+            solution_steps_context = f"**Solution Steps:**\n{steps_str}"
+
+        # Format template with all variables
+        formatted_prompt = template.format(
+            question_text=question_text,
+            target_grade=target_grade,
+            desired_marks=desired_marks,
+            subject_content_references=subject_refs_str,
+            calculator_policy=calculator_policy,
+            marking_principles=marking_principles,
+            mark_types=mark_types,
+            expected_answer_context=expected_answer_context,
+            solution_steps_context=solution_steps_context
+        )
+
+        return formatted_prompt
+
+    def format_question_generation_prompt(
+        self,
+        template_version: str,
+        **context_vars
+    ) -> str:
+        """
+        Format question generation prompt template.
+
+        Args:
+            template_version: Version of generation template to use
+            **context_vars: All context variables for the template
+
+        Returns:
+            Formatted prompt ready for LLM
+        """
+        template = self.load_template("question_generation", template_version)
+        return template.format(**context_vars)
+
+    def format_review_prompt(
+        self,
+        template_version: str,
+        **context_vars
+    ) -> str:
+        """
+        Format review prompt template.
+
+        Args:
+            template_version: Version of review template to use
+            **context_vars: All context variables for the template
+
+        Returns:
+            Formatted prompt ready for LLM
+        """
+        template = self.load_template("review", template_version)
+        return template.format(**context_vars)
+
+    def list_available_templates(self) -> Dict[str, list]:
+        """
+        List all available prompt templates by type.
+
+        Returns:
+            Dictionary mapping template types to available versions
+        """
+        templates = {}
+
+        if not os.path.exists(self.prompts_dir):
+            return templates
+
+        for filename in os.listdir(self.prompts_dir):
+            if filename.endswith('.txt'):
+                # Parse filename: template_name_version.txt
+                name_parts = filename[:-4].split('_')  # Remove .txt
+                if len(name_parts) >= 2:
+                    version = name_parts[-1]  # Last part is version
+                    template_name = '_'.join(name_parts[:-1])  # Everything else is name
+
+                    if template_name not in templates:
+                        templates[template_name] = []
+                    templates[template_name].append(version)
+
+        # Sort versions for each template
+        for template_name in templates:
+            templates[template_name].sort()
+
+        return templates

@@ -1,0 +1,104 @@
+You are a Cambridge IGCSE Mathematics marking scheme specialist. Your task is to create a detailed, accurate marking scheme for the given question following official Cambridge standards.
+
+**CRITICAL: You MUST respond with a COMPLETE, VALID JSON object following the EXACT schema below. No thinking tags, no code blocks, no additional text - just the JSON.**
+
+## Context Information
+
+**Question Text:** {question_text}
+**Target Grade:** {target_grade} (where 1-3 = Foundation, 4-6 = Intermediate, 7-9 = Advanced)
+**Total Marks:** {desired_marks}
+**Subject Content:** {subject_content_references}
+**Calculator Policy:** {calculator_policy}
+
+{expected_answer_context}
+
+{solution_steps_context}
+
+## Cambridge Marking Principles
+{marking_principles}
+
+## Mark Types Reference
+{mark_types}
+
+## REQUIRED JSON SCHEMA
+
+You MUST return a JSON object with ALL of these fields filled out completely:
+
+```json
+{{
+  "final_answers_summary": [
+    {{
+      "answer_text": "Clear final answer as text",
+      "value_numeric": numeric_value_if_applicable,
+      "unit": "unit_if_applicable"
+    }}
+  ],
+  "mark_allocation_criteria": [
+    {{
+      "criterion_id": "crit_1",
+      "criterion_text": "Detailed description of what earns this mark",
+      "mark_code_display": "M1",
+      "marks_value": 1.0,
+      "mark_type_primary": "M",
+      "qualifiers_and_notes": "oe"
+    }}
+  ],
+  "total_marks_for_part": {desired_marks}
+}}
+```
+
+## FIELD REQUIREMENTS
+
+**ALL fields are mandatory. Here's what each must contain:**
+
+1. **final_answers_summary**: Array with at least one answer object
+   - answer_text: Clear final answer as string
+   - value_numeric: Numeric value if applicable (or null)
+   - unit: Unit string if applicable (or null)
+
+2. **mark_allocation_criteria**: Array with detailed marking criteria
+   - criterion_id: Unique identifier (e.g., "crit_1", "crit_2")
+   - criterion_text: Specific description of what earns this mark
+   - mark_code_display: Cambridge mark code (M1, A1, B1, etc.)
+   - marks_value: Numeric mark value (must be whole numbers)
+   - mark_type_primary: "M" (Method), "A" (Accuracy), or "B" (Independent)
+   - qualifiers_and_notes: Cambridge qualifiers like "oe", "cao", "ft", etc.
+
+3. **total_marks_for_part**: Must equal {desired_marks}
+
+## MARK ALLOCATION GUIDELINES
+
+**Method Marks (M):** Award for correct mathematical methods/approaches
+**Accuracy Marks (A):** Award for correct calculations/final answers (dependent on method)
+**Independent Marks (B):** Award for correct results regardless of method shown
+
+**Common Qualifiers:**
+- "oe" = or equivalent
+- "cao" = correct answer only
+- "ft" = follow through from previous error
+- "awrt" = answers which round to
+- "soi" = seen or implied
+
+## MARK DISTRIBUTION EXAMPLES
+
+**For {desired_marks} marks, consider these patterns:**
+
+**1 mark:** B1 (single correct answer)
+**2 marks:** M1 A1 (method + accuracy) or B2 (independent result worth 2)
+**3 marks:** M1 M1 A1 (two methods + accuracy) or M1 A1 B1 (method + accuracy + independent)
+**4 marks:** M1 A1 M1 A1 (two complete method-accuracy pairs) or M1 M1 A1 A1
+
+## CRITICAL REQUIREMENTS
+
+- Total marks MUST equal {desired_marks}
+- Use appropriate Cambridge mark types (M/A/B)
+- Include appropriate qualifiers ("oe", "cao", "ft", etc.)
+- Be specific about what constitutes correct method vs accuracy
+- Consider partial credit and follow-through marking
+- Ensure marks can be awarded independently where appropriate
+
+## FINAL INSTRUCTION
+
+Create a comprehensive marking scheme for the given question that follows Cambridge IGCSE standards and awards exactly {desired_marks} mark(s).
+
+**RESPOND WITH THE COMPLETE JSON OBJECT ONLY. NO CODE BLOCKS, NO THINKING TAGS, NO EXTRA TEXT.**
