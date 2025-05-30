@@ -232,3 +232,18 @@ class ConfigManager:
             },
             "command_words": template.command_words
         }
+
+    def get_config(
+        self,
+        config_id: str,
+        target_grade: Optional[int] = None,
+        seed_question_id: Optional[str] = None,
+        override_params: Optional[Dict[str, Any]] = None
+    ) -> Optional[GenerationConfig]:
+        """Alias for create_generation_config for compatibility"""
+        return self.create_generation_config(
+            config_id=config_id,
+            target_grade=target_grade,
+            seed_question_id=seed_question_id,
+            override_params=override_params
+        )
