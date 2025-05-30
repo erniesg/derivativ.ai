@@ -10,21 +10,40 @@ import os
 from typing import List, Dict, Any, Optional
 from uuid import uuid4
 
-from smolagents import LiteLLMModel, OpenAIServerModel
-from ..models.question_models import (
-    GenerationRequest, GenerationResponse, GenerationConfig,
-    CandidateQuestion, LLMModel, CalculatorPolicy, CommandWord
-)
-from ..database.neon_client import NeonDBClient
-from ..agents.question_generator import QuestionGeneratorAgent
+# Handle imports with fallback for standalone usage
+try:
+    from smolagents import LiteLLMModel, OpenAIServerModel, InferenceClientModel
+    from ..models.question_models import (
+        GenerationRequest, GenerationResponse, GenerationConfig,
+        CandidateQuestion, LLMModel, CalculatorPolicy, CommandWord
+    )
+    from ..database.neon_client import NeonDBClient
+    from ..agents.question_generator import QuestionGeneratorAgent
+except ImportError:
+    # Fallback for standalone usage
+    import sys
+    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    from smolagents import LiteLLMModel, OpenAIServerModel, InferenceClientModel
+    from models.question_models import (
+        GenerationRequest, GenerationResponse, GenerationConfig,
+        CandidateQuestion, LLMModel, CalculatorPolicy, CommandWord
+    )
+    from database.neon_client import NeonDBClient
+    from agents.question_generator import QuestionGeneratorAgent
 
 
 class QuestionGenerationService:
     """Main service for coordinating question generation"""
 
-    def __init__(self, database_url: str):
+    def __init__(self, database_url: str, debug: bool = None):
         self.db_client = NeonDBClient(database_url)
         self.generators = {}  # Cache of generator agents by model
+
+        # Set debug mode from parameter, environment variable, or default to False
+        if debug is not None:
+            self.debug = debug
+        else:
+            self.debug = os.getenv("DEBUG", "false").lower() in ("true", "1", "yes", "on")
 
         # Load configuration
         self.config = self._load_config()
@@ -89,6 +108,20 @@ class QuestionGenerationService:
                     max_tokens=self.config["generation_parameters"]["max_tokens"],
                     response_format={"type": "json_object"}
                 )
+            elif model.value == "deepseek-ai/DeepSeek-R1-0528":
+                llm_model = InferenceClientModel(
+                    model_id="deepseek-ai/DeepSeek-R1-0528",
+                    provider="auto",  # Let HF choose the best available provider
+                    token=os.getenv("HF_TOKEN"),
+                    max_tokens=self.config["generation_parameters"]["max_tokens"]
+                )
+            elif model.value == "Qwen/Qwen3-235B-A22B":
+                llm_model = InferenceClientModel(
+                    model_id="Qwen/Qwen3-235B-A22B",
+                    provider="auto",  # Use auto to fallback to any available provider
+                    token=os.getenv("HF_TOKEN"),
+                    max_tokens=self.config["generation_parameters"]["max_tokens"]
+                )
             else:
                 # Default to OpenAI GPT-4o
                 llm_model = OpenAIServerModel(
@@ -100,7 +133,7 @@ class QuestionGenerationService:
                     response_format={"type": "json_object"}
                 )
 
-            self.generators[model.value] = QuestionGeneratorAgent(llm_model, self.db_client)
+            self.generators[model.value] = QuestionGeneratorAgent(llm_model, self.db_client, debug=self.debug)
 
         return self.generators[model.value]
 
