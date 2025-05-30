@@ -14,6 +14,7 @@ from dataclasses import asdict
 from .orchestrator import GenerationSession, LLMInteraction, InsertionStatus
 from ..models import CandidateQuestion
 from ..agents import ReviewFeedback
+from ..validation import validate_question, ValidationSeverity
 
 
 class DatabaseManager:
@@ -261,7 +262,22 @@ class DatabaseManager:
         mark_interaction_id: str = None,
         review_interaction_id: str = None
     ):
-        """Save question with lineage"""
+        """Save question with lineage and validation"""
+
+        # Pre-insertion validation
+        validation_result = validate_question(question)
+
+        if not validation_result.can_insert:
+            print(f"❌ Question {question.question_id_local} failed validation - cannot insert")
+            for issue in validation_result.issues:
+                if issue.severity == ValidationSeverity.CRITICAL:
+                    print(f"   🚨 {issue.field}: {issue.message}")
+            return False
+
+        if validation_result.warnings_count > 0:
+            print(f"⚠️ Question {question.question_id_local} has {validation_result.warnings_count} validation warnings")
+
+        # Proceed with insertion
         await conn.execute("""
             INSERT INTO candidate_questions_extended (
                 question_id, session_id, generation_interaction_id,
@@ -277,6 +293,8 @@ class DatabaseManager:
             json.dumps(question.model_dump(mode='json')),
             'pending'  # Default status
         )
+
+        return True
 
     async def save_review_result(self, conn, feedback: ReviewFeedback, question_id: str):
         """Save review feedback"""

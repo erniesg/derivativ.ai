@@ -24,6 +24,7 @@ from ..agents import (
 )
 from ..services.prompt_loader import PromptLoader
 from ..services.config_manager import ConfigManager
+from ..validation import validate_question, ValidationSeverity
 
 
 class InsertionStatus(Enum):
@@ -273,15 +274,53 @@ class MultiAgentOrchestrator:
                 question = await self.generator_agent.generate_question(config)
                 # Note: In a full implementation, we'd modify the agents to return both
                 # the question and the raw interaction data (prompt + response)
-                generation_interaction.raw_response = "[Raw response captured by agent]"
-                generation_interaction.parsed_response = question.model_dump(mode='json')
-                generation_interaction.processing_time_ms = int((time.time() - start_time) * 1000)
-                generation_interaction.success = True
+
+                if question:
+                    generation_interaction.success = True
+                    generation_interaction.processing_time_ms = int((time.time() - start_time) * 1000)
+                    generation_interaction.raw_response = f"Generated question: {question.question_id_local}"
+                    generation_interaction.parsed_response = {"question_id": question.question_id_local}
+                else:
+                    raise Exception("Question generation returned None")
 
             except Exception as e:
                 generation_interaction.success = False
                 generation_interaction.error_message = str(e)
-                raise
+                generation_interaction.processing_time_ms = int((time.time() - start_time) * 1000)
+                raise e
+
+            # Step 1.5: Comprehensive Validation
+            self.logger.debug("🔍 Step 1.5: Validating question...")
+            validation_start = time.time()
+
+            try:
+                validation_result = validate_question(question, verbose=self.debug)
+                validation_time = int((time.time() - validation_start) * 1000)
+
+                # Log validation results
+                if validation_result.can_insert:
+                    if validation_result.warnings_count > 0:
+                        self.logger.warning(f"⚠️ Question validation passed with {validation_result.warnings_count} warnings")
+                    else:
+                        self.logger.debug("✅ Question validation passed")
+                else:
+                    # Critical validation errors - log but continue to review for learning
+                    self.logger.error(f"❌ Question failed validation: {validation_result.critical_errors_count} critical errors")
+                    for issue in validation_result.issues:
+                        if issue.severity == ValidationSeverity.CRITICAL:
+                            self.logger.error(f"   🚨 {issue.field}: {issue.message}")
+
+                # Add validation metadata to question
+                if hasattr(question, 'validation_errors'):
+                    question.validation_errors = [
+                        f"{issue.field}: {issue.message}"
+                        for issue in validation_result.issues
+                        if issue.severity == ValidationSeverity.CRITICAL
+                    ]
+
+            except Exception as e:
+                self.logger.error(f"❌ Validation process failed: {e}")
+                validation_result = None
 
             finally:
                 session.llm_interactions.append(generation_interaction)
