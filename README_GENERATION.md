@@ -145,7 +145,7 @@ CREATE TABLE candidate_questions (
   "models": {
     "generator": {"default": "gpt-4o"},
     "marker": {"default": "gpt-4o"},
-    "reviewer": {"default": "claude-3-5-sonnet"}
+    "reviewer": {"default": "us.anthropic.claude-sonnet-4-20250514-v1:0"}
   },
   "generation_parameters": {
     "temperature": 0.7,
@@ -297,7 +297,7 @@ Switch between different LLM providers for different tasks:
 ```python
 config = GenerationConfig(
     llm_model_generation=LLMModel.GPT_4O,
-    llm_model_marking_scheme=LLMModel.CLAUDE_3_5_SONNET,
+    llm_model_marking_scheme=LLMModel.CLAUDE_4_SONNET,
     llm_model_review=LLMModel.GEMINI_PRO
 )
 ```

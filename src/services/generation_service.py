@@ -102,6 +102,13 @@ class QuestionGenerationService:
                     max_tokens=self.config["generation_parameters"]["max_tokens"],
                     response_format={"type": "json_object"}
                 )
+            elif model == LLMModel.CLAUDE_4_SONNET or model == LLMModel.CLAUDE_4_OPUS:
+                # Claude 4 models via Amazon Bedrock
+                from smolagents import AmazonBedrockServerModel
+                llm_model = AmazonBedrockServerModel(
+                    model_id=model.value,
+                    client_kwargs={'region_name': os.getenv("AWS_REGION", "us-east-1")}
+                )
             elif model.value == "deepseek-ai/DeepSeek-R1-0528":
                 llm_model = InferenceClientModel(
                     model_id="deepseek-ai/DeepSeek-R1-0528",

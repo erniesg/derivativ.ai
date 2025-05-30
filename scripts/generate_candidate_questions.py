@@ -9,7 +9,7 @@ batch generation, and saves all results to the Neon database.
 Usage:
     python scripts/generate_candidate_questions.py --config basic_arithmetic_gpt4o
     python scripts/generate_candidate_questions.py --batch comprehensive_review
-    python scripts/generate_candidate_questions.py --config algebra_claude --grade 5 --count 3
+    python scripts/generate_candidate_questions.py --config algebra_claude4 --grade 5 --count 3
 """
 
 import asyncio
@@ -28,7 +28,7 @@ from src.database import NeonDBClient
 from src.agents import QuestionGeneratorAgent
 from src.models import CandidateQuestion, GenerationConfig
 
-from smolagents import OpenAIServerModel, LiteLLMModel
+from smolagents import OpenAIServerModel, LiteLLMModel, AmazonBedrockServerModel
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -58,10 +58,21 @@ class CandidateQuestionGenerator:
                     model_id=model_name,
                     api_key=os.getenv("OPENAI_API_KEY")
                 )
-            elif model_name == 'claude-3-5-sonnet':
-                return LiteLLMModel(
-                    model_id="claude-3-5-sonnet-20241022",
-                    api_key=os.getenv("ANTHROPIC_API_KEY")
+            elif model_name.startswith('anthropic.claude') or model_name.startswith('us.anthropic.claude'):
+                # Claude 4 models via Amazon Bedrock
+                return AmazonBedrockServerModel(
+                    model_id=model_name,
+                    client_kwargs={'region_name': os.getenv("AWS_REGION", "us-east-1")}
+                )
+            elif model_name == 'claude-4-sonnet' or model_name == 'claude-4-opus':
+                # Legacy names - map to Bedrock model IDs
+                bedrock_model_id = (
+                    "us.anthropic.claude-sonnet-4-20250514-v1:0" if "sonnet" in model_name
+                    else "us.anthropic.claude-opus-4-20250514-v1:0"
+                )
+                return AmazonBedrockServerModel(
+                    model_id=bedrock_model_id,
+                    client_kwargs={'region_name': os.getenv("AWS_REGION", "us-east-1")}
                 )
             elif model_name == 'gemini-pro':
                 return OpenAIServerModel(

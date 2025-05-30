@@ -2,15 +2,15 @@
   "models": {
     "generator": {
       "default": "gpt-4o",
-      "alternatives": ["gpt-4o-mini", "claude-3-5-sonnet", "gemini-pro"]
+      "alternatives": ["gpt-4o-mini", "claude-3-5-sonnet", "us.anthropic.claude-sonnet-4-20250514-v1:0", "gemini-pro"]
     },
     "marker": {
       "default": "gpt-4o",
-      "alternatives": ["claude-3-5-sonnet", "gpt-4o-mini"]
+      "alternatives": ["claude-3-5-sonnet", "us.anthropic.claude-sonnet-4-20250514-v1:0", "gpt-4o-mini"]
     },
     "reviewer": {
-      "default": "claude-3-5-sonnet",
-      "alternatives": ["gpt-4o", "gemini-pro"]
+      "default": "us.anthropic.claude-sonnet-4-20250514-v1:0",
+      "alternatives": ["claude-3-5-sonnet", "gpt-4o", "us.anthropic.claude-opus-4-20250514-v1:0", "gemini-pro"]
     }
   },
   "prompt_templates": {

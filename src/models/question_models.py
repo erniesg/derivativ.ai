@@ -23,7 +23,9 @@ class LLMModel(str, Enum):
     """Available LLM models"""
     GPT_4O = "gpt-4o"
     GPT_4O_MINI = "gpt-4o-mini"
-    CLAUDE_3_5_SONNET = "claude-3-5-sonnet"
+    CLAUDE_3_5_SONNET = "claude-3-5-sonnet"  # Legacy - deprecated
+    CLAUDE_4_SONNET = "us.anthropic.claude-sonnet-4-20250514-v1:0"
+    CLAUDE_4_OPUS = "us.anthropic.claude-opus-4-20250514-v1:0"
     GEMINI_PRO = "gemini-pro"
     GEMINI_FLASH = "gemini-flash"
     DEEPSEEK_R1 = "deepseek-ai/DeepSeek-R1-0528"
@@ -70,7 +72,7 @@ class GenerationConfig(BaseModel):
     # Model configuration
     llm_model_generation: LLMModel = LLMModel.GPT_4O
     llm_model_marking_scheme: LLMModel = LLMModel.GPT_4O
-    llm_model_review: LLMModel = LLMModel.CLAUDE_3_5_SONNET
+    llm_model_review: LLMModel = LLMModel.CLAUDE_4_SONNET
 
     # Prompt versions
     prompt_template_version_generation: str = "v1.0"
