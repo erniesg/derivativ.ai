@@ -39,7 +39,6 @@ class CommandWord(str, Enum):
     DETERMINE = "Determine"
     DESCRIBE = "Describe"
     EXPLAIN = "Explain"
-    FIND = "Find"
     GIVE = "Give"
     PLOT = "Plot"
     SHOW = "Show (that)"

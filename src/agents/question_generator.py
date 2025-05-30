@@ -140,19 +140,64 @@ class QuestionGeneratorAgent:
 
     async def _get_syllabus_context(self, content_refs: List[str]) -> str:
         """Get formatted syllabus content for the prompt"""
-        syllabus_data = await self.db_client.get_syllabus_content(content_refs)
+        if not self.db_client:
+            # Fallback when no database client is available
+            return self._get_fallback_syllabus_context(content_refs)
 
-        if not syllabus_data:
-            return "No syllabus content found for provided references."
+        try:
+            syllabus_data = await self.db_client.get_syllabus_content(content_refs)
 
-        context_parts = []
-        for item in syllabus_data:
-            context_parts.append(f"""
+            if not syllabus_data:
+                return self._get_fallback_syllabus_context(content_refs)
+
+            context_parts = []
+            for item in syllabus_data:
+                context_parts.append(f"""
 **{item['ref']}: {item['title']}**
 - Topic: {item['topic']}
 - Details: {'; '.join(item['details'])}
 - Examples: {'; '.join(item['notes_and_examples'])}
 """)
+
+            return "\n".join(context_parts)
+        except Exception as e:
+            self._debug_print(f"[DEBUG] Error getting syllabus content: {e}")
+            return self._get_fallback_syllabus_context(content_refs)
+
+    def _get_fallback_syllabus_context(self, content_refs: List[str]) -> str:
+        """Provide fallback syllabus context when database is not available"""
+        context_parts = []
+
+        # Basic syllabus mapping for common references
+        syllabus_mapping = {
+            "A1.1": "Number: Natural numbers, integers, rational and irrational numbers",
+            "A1.2": "Number: Order of operations (BODMAS/PEMDAS)",
+            "A1.3": "Number: Basic arithmetic operations",
+            "C1.1": "Number: Natural numbers, integers, prime numbers",
+            "C1.4": "Number: Fractions, decimals, percentages",
+            "C1.5": "Number: Ordering and comparing numbers",
+            "C1.6": "Number: Four operations with whole numbers and decimals",
+            "C1.7": "Number: Indices and powers",
+            "C1.8": "Number: Standard form (scientific notation)",
+            "C1.11": "Number: Ratio and proportion",
+            "C1.13": "Number: Percentage calculations",
+            "G1.1": "Geometry: Properties of shapes and angles",
+            "G1.2": "Geometry: Perimeter and area calculations",
+            "S1.1": "Statistics: Data collection and representation",
+            "S1.2": "Statistics: Mean, median, mode and range"
+        }
+
+        for ref in content_refs:
+            title = syllabus_mapping.get(ref, f"Topic {ref}: Mathematical concepts and problem solving")
+            context_parts.append(f"""
+**{ref}**: {title}
+- Focus on grade-appropriate mathematical understanding
+- Apply problem-solving techniques
+- Show clear working and reasoning
+""")
+
+        if not context_parts:
+            context_parts.append("Focus on appropriate IGCSE Mathematics concepts for the target grade level.")
 
         return "\n".join(context_parts)
 
@@ -161,13 +206,42 @@ class QuestionGeneratorAgent:
         if not command_word:
             return "Standard mathematical instruction word - follow typical IGCSE usage."
 
-        definition = await self.db_client.get_command_word_definition(command_word.value)
-        return definition or "Follow standard IGCSE usage for this command word."
+        if not self.db_client:
+            return self._get_fallback_command_word_definition(command_word)
+
+        try:
+            definition = await self.db_client.get_command_word_definition(command_word.value)
+            return definition or self._get_fallback_command_word_definition(command_word)
+        except Exception as e:
+            self._debug_print(f"[DEBUG] Error getting command word definition: {e}")
+            return self._get_fallback_command_word_definition(command_word)
+
+    def _get_fallback_command_word_definition(self, command_word: CommandWord) -> str:
+        """Provide fallback command word definitions"""
+        definitions = {
+            CommandWord.CALCULATE: "Work out from given facts, figures or information",
+            CommandWord.CONSTRUCT: "Make an accurate drawing",
+            CommandWord.DETERMINE: "Establish with certainty",
+            CommandWord.DESCRIBE: "State the points of a topic / give characteristics and main features",
+            CommandWord.EXPLAIN: "Set out purposes or reasons / make the relationships between things clear / say why and/or how and support with relevant evidence",
+            CommandWord.GIVE: "Produce an answer from a given source or recall/memory",
+            CommandWord.PLOT: "Mark point(s) on a graph",
+            CommandWord.SHOW: "Provide structured evidence that leads to a given result",
+            CommandWord.SKETCH: "Make a simple freehand drawing showing the key features",
+            CommandWord.STATE: "Express in clear terms",
+            CommandWord.WORK_OUT: "Calculate from given facts, figures or information with or without the use of a calculator",
+            CommandWord.WRITE: "Give an answer in a specific form",
+            CommandWord.WRITE_DOWN: "Give an answer without significant working"
+        }
+        return definitions.get(command_word, "Follow standard IGCSE mathematical instruction usage.")
 
     async def _get_seed_context(self, seed_question_id: str) -> str:
         """Get context from seed question if provided"""
         if not seed_question_id:
             return ""
+
+        if not self.db_client:
+            return f"Seed question {seed_question_id} referenced but no database connection available - create an original question."
 
         try:
             # Use the new intelligent question set retrieval
@@ -197,7 +271,7 @@ class QuestionGeneratorAgent:
                     seed_data = local_questions[0] if local_questions else None
 
                 if not seed_data:
-                    return f"Seed question {seed_question_id} not found."
+                    return f"Seed question {seed_question_id} not found - create an original question."
 
                 return self._format_single_seed_context(seed_data)
 
@@ -211,7 +285,7 @@ class QuestionGeneratorAgent:
 
         except Exception as e:
             self._debug_print(f"[DEBUG] Error getting seed context: {e}")
-            return f"Error retrieving seed question {seed_question_id}"
+            return f"Error retrieving seed question {seed_question_id} - create an original question."
 
     def _format_single_seed_context(self, seed_data: Dict[str, Any]) -> str:
         """Format a single seed question for context"""

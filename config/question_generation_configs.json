@@ -15,7 +15,7 @@
       "prompt_template_version_review": "v1.0",
       "temperature": 0.7,
       "max_tokens": 3000,
-      "command_words": ["Calculate", "Work out", "Find"]
+      "command_words": ["Calculate", "Work out", "Give"]
     },
     "algebra_claude4": {
       "config_id": "algebra_claude4",
@@ -32,7 +32,7 @@
       "prompt_template_version_review": "v1.0",
       "temperature": 0.8,
       "max_tokens": 4000,
-      "command_words": ["Solve", "Find", "Calculate", "Show that"]
+      "command_words": ["Calculate", "Work out", "Determine", "Show (that)"]
     },
     "geometry_gemini": {
       "config_id": "geometry_gemini",
@@ -49,7 +49,7 @@
       "prompt_template_version_review": "v1.0",
       "temperature": 0.7,
       "max_tokens": 4000,
-      "command_words": ["Calculate", "Find", "Show that", "Determine"]
+      "command_words": ["Calculate", "Determine", "Show (that)", "Construct"]
     },
     "advanced_math_deepseek": {
       "config_id": "advanced_math_deepseek",
@@ -66,7 +66,7 @@
       "prompt_template_version_review": "v1.0",
       "temperature": 0.6,
       "max_tokens": 5000,
-      "command_words": ["Prove", "Show that", "Determine", "Calculate"]
+      "command_words": ["Determine", "Show (that)", "Calculate", "Explain"]
     },
     "probability_qwen": {
       "config_id": "probability_qwen",
@@ -83,7 +83,7 @@
       "prompt_template_version_review": "v1.0",
       "temperature": 0.7,
       "max_tokens": 4000,
-      "command_words": ["Calculate", "Find", "Determine", "Work out"]
+      "command_words": ["Calculate", "Determine", "Work out", "State"]
     },
     "mixed_review_gpt4o_mini": {
       "config_id": "mixed_review_gpt4o_mini",
@@ -100,7 +100,7 @@
       "prompt_template_version_review": "v1.0",
       "temperature": 0.7,
       "max_tokens": 3500,
-      "command_words": ["Calculate", "Work out", "Find", "Give"]
+      "command_words": ["Calculate", "Work out", "Give", "State"]
     }
   },
   "batch_configs": {
