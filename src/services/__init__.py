@@ -8,6 +8,7 @@ from .generation_service import QuestionGenerationService
 from .config_manager import ConfigManager
 from .prompt_loader import PromptLoader
 from .orchestrator import MultiAgentOrchestrator, GenerationSession, InsertionCriteria, InsertionStatus
+from .quality_control_workflow import QualityControlWorkflow, QualityDecision
 
 __all__ = [
     "QuestionGenerationService",
@@ -16,5 +17,7 @@ __all__ = [
     "MultiAgentOrchestrator",
     "GenerationSession",
     "InsertionCriteria",
-    "InsertionStatus"
+    "InsertionStatus",
+    "QualityControlWorkflow",
+    "QualityDecision"
 ]

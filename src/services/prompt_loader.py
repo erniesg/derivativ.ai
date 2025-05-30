@@ -145,6 +145,98 @@ class PromptLoader:
         template = self.load_template("review", template_version)
         return template.format(**context_vars)
 
+    def format_refinement_prompt(
+        self,
+        original_question: Dict[str, Any],
+        review_feedback: Dict[str, Any],
+        template_version: str = "v1.0"
+    ) -> str:
+        """
+        Format refinement prompt template with original question and review feedback.
+
+        Args:
+            original_question: Dictionary containing original question data
+            review_feedback: Dictionary containing review feedback
+            template_version: Version of refinement template to use
+
+        Returns:
+            Formatted prompt ready for LLM
+        """
+        template = self.load_template("refinement", template_version)
+
+        # Extract feedback information with defaults
+        overall_score = review_feedback.get('overall_score', 'Not available')
+        feedback_issues = self._format_feedback_issues(review_feedback)
+
+        # Extract individual scores with defaults
+        clarity_score = review_feedback.get('clarity_score', 'Not available')
+        difficulty_score = review_feedback.get('difficulty_score', 'Not available')
+        curriculum_alignment_score = review_feedback.get('curriculum_alignment_score', 'Not available')
+        mathematical_accuracy_score = review_feedback.get('mathematical_accuracy_score', 'Not available')
+
+        # Format the original question
+        original_question_str = self._format_original_question(original_question)
+
+        # Format template with all variables
+        formatted_prompt = template.format(
+            original_question=original_question_str,
+            overall_score=overall_score,
+            feedback_issues=feedback_issues,
+            clarity_score=clarity_score,
+            difficulty_score=difficulty_score,
+            curriculum_alignment_score=curriculum_alignment_score,
+            mathematical_accuracy_score=mathematical_accuracy_score
+        )
+
+        return formatted_prompt
+
+    def _format_feedback_issues(self, review_feedback: Dict[str, Any]) -> str:
+        """Format feedback issues into a readable string."""
+        issues = []
+
+        # Check for specific issues based on scores and comments
+        if review_feedback.get('clarity_score', 1.0) < 0.7:
+            issues.append("- Question clarity needs improvement")
+
+        if review_feedback.get('difficulty_score', 1.0) < 0.7:
+            issues.append("- Difficulty level may not match intended grade")
+
+        if review_feedback.get('curriculum_alignment_score', 1.0) < 0.7:
+            issues.append("- Better alignment with curriculum objectives needed")
+
+        if review_feedback.get('mathematical_accuracy_score', 1.0) < 0.7:
+            issues.append("- Mathematical accuracy requires attention")
+
+        # Add any specific feedback comments
+        if 'feedback' in review_feedback and review_feedback['feedback']:
+            issues.append(f"- Review comment: {review_feedback['feedback']}")
+
+        return '\n'.join(issues) if issues else "No specific issues identified"
+
+    def _format_original_question(self, original_question: Dict[str, Any]) -> str:
+        """Format original question data into a readable string."""
+        formatted_parts = []
+
+        if 'question_text' in original_question:
+            formatted_parts.append(f"Question: {original_question['question_text']}")
+
+        if 'answer' in original_question:
+            formatted_parts.append(f"Answer: {original_question['answer']}")
+
+        if 'working' in original_question and original_question['working']:
+            formatted_parts.append(f"Working: {original_question['working']}")
+
+        if 'marks' in original_question:
+            formatted_parts.append(f"Marks: {original_question['marks']}")
+
+        if 'topic' in original_question:
+            formatted_parts.append(f"Topic: {original_question['topic']}")
+
+        if 'difficulty' in original_question:
+            formatted_parts.append(f"Difficulty: {original_question['difficulty']}")
+
+        return '\n'.join(formatted_parts)
+
     def list_available_templates(self) -> Dict[str, list]:
         """
         List all available prompt templates by type.

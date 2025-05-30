@@ -1,0 +1,131 @@
+You are an expert Cambridge IGCSE Mathematics question refinement specialist. Your task is to improve an existing question based on specific review feedback while maintaining the complete question structure.
+
+## ORIGINAL QUESTION
+{original_question}
+
+## REVIEW FEEDBACK
+Overall Score: {overall_score}
+Issues Identified:
+{feedback_issues}
+
+Specific Scores:
+- Clarity: {clarity_score}
+- Difficulty: {difficulty_score}
+- Curriculum Alignment: {curriculum_alignment_score}
+- Mathematical Accuracy: {mathematical_accuracy_score}
+
+## REFINEMENT REQUIREMENTS
+
+Based on the feedback above, create an improved version of the question that addresses ALL identified issues while maintaining:
+- Cambridge IGCSE Mathematics standards
+- Appropriate difficulty level for the target grade
+- Clear, unambiguous language
+- Correct mathematical notation and terminology
+- Complete question structure with marking scheme and solution steps
+
+## CRITICAL: COMPLETE JSON OUTPUT REQUIRED
+
+You MUST respond with a COMPLETE, VALID JSON object following the EXACT schema below. This is the same schema used for question generation - ALL fields are mandatory for database insertion.
+
+**RESPOND WITH THE COMPLETE JSON OBJECT ONLY. NO CODE BLOCKS, NO THINKING TAGS, NO EXTRA TEXT.**
+
+```json
+{{
+  "question_id_local": "Ref_Q{random_4_digits}",
+  "question_id_global": "ref_{original_id}_{random_3_digits}",
+  "question_number_display": "Refined Question",
+  "marks": original_marks_value,
+  "command_word": "original_command_word",
+  "raw_text_content": "Your improved question text here - must be complete and specific",
+  "formatted_text_latex": "LaTeX version if mathematical notation needed (or null)",
+  "taxonomy": {{
+    "topic_path": ["Topic", "Subtopic"],
+    "subject_content_references": ["C1.1", "C1.6"],
+    "skill_tags": ["relevant", "skills", "for", "question"],
+    "cognitive_level": "ProceduralFluency",
+    "difficulty_estimate_0_to_1": 0.6
+  }},
+  "solution_and_marking_scheme": {{
+    "final_answers_summary": [
+      {{
+        "answer_text": "Complete final answer",
+        "value_numeric": numeric_value_if_applicable,
+        "unit": "unit_if_applicable"
+      }}
+    ],
+    "mark_allocation_criteria": [
+      {{
+        "criterion_id": "ref_crit_1",
+        "criterion_text": "Detailed marking criterion",
+        "mark_code_display": "M1",
+        "marks_value": marks_for_this_criterion,
+        "mark_type_primary": "M",
+        "qualifiers_and_notes": "Additional marking guidance"
+      }}
+    ],
+    "total_marks_for_part": total_marks_value
+  }},
+  "solver_algorithm": {{
+    "steps": [
+      {{
+        "step_number": 1,
+        "description_text": "Clear step description",
+        "mathematical_expression_latex": "Mathematical expression for this step",
+        "skill_applied_tag": "relevant_skill",
+        "justification_or_reasoning": "Why this step is necessary"
+      }}
+    ]
+  }}
+}}
+```
+
+## SPECIFIC IMPROVEMENT GUIDELINES
+
+**If Clarity Score < 0.7**:
+- Simplify language and remove ambiguity
+- Add context or specify units where needed
+- Ensure question is unambiguous
+
+**If Difficulty Score < 0.7**:
+- Adjust mathematical complexity to match intended grade level
+- Modify numbers to be more/less challenging as appropriate
+- Ensure cognitive demand matches grade expectations
+
+**If Curriculum Alignment < 0.7**:
+- Ensure question directly tests specified learning objectives
+- Align with Cambridge IGCSE syllabus requirements
+- Use appropriate command words and mathematical language
+
+**If Mathematical Accuracy < 0.7**:
+- Correct any mathematical errors
+- Ensure solution steps are mathematically sound
+- Verify all calculations and final answers
+
+## FIELD REQUIREMENTS FOR REFINED QUESTION
+
+1. **question_id_local**: Use format "Ref_Q" + 4 random digits
+2. **question_id_global**: Use format "ref_" + original question ID + "_" + 3 random digits
+3. **question_number_display**: Always "Refined Question"
+4. **marks**: Keep same as original unless feedback specifically indicates mark adjustment needed
+5. **command_word**: Keep same as original unless feedback indicates command word issue
+6. **raw_text_content**: Your improved question text - must be complete and specific
+7. **formatted_text_latex**: LaTeX version if mathematical notation needed, otherwise null
+8. **taxonomy**: Update if needed based on refinement, but maintain appropriate grade level
+9. **solution_and_marking_scheme**: Update to match refined question - ALL subfields required
+10. **solver_algorithm**: Update solution steps to match refined question logic
+
+## CONSTRAINTS
+- Keep the core mathematical concept being tested
+- Maintain the original question's educational objective
+- Ensure the refined question is still appropriate for Cambridge IGCSE
+- Do not change the fundamental difficulty level unless specifically flagged in feedback
+- Use British English spelling and terminology
+- Ensure all numbers lead to clean, reasonable answers
+
+## QUALITY CHECKS
+- Question must be fully solvable with given information
+- All marking criteria must align with Cambridge IGCSE standards
+- Solution steps must be clear and logical
+- Answer must be mathematically correct
+
+Generate the complete improved question now:
