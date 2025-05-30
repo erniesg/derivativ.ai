@@ -1,0 +1,136 @@
+{
+  "configs": {
+    "basic_arithmetic_gpt4o": {
+      "config_id": "basic_arithmetic_gpt4o",
+      "description": "Basic arithmetic questions using GPT-4o",
+      "target_grades": [1, 2, 3],
+      "subject_content_references": ["N1.1", "N1.2", "N1.3", "N2.1"],
+      "calculator_policy": "not_allowed",
+      "desired_marks": 1,
+      "llm_model_generation": "gpt-4o",
+      "llm_model_marking_scheme": "gpt-4o",
+      "llm_model_review": "claude-3-5-sonnet",
+      "prompt_template_version_generation": "v1.1",
+      "prompt_template_version_marking_scheme": "v1.0",
+      "prompt_template_version_review": "v1.0",
+      "temperature": 0.7,
+      "max_tokens": 3000,
+      "command_words": ["Calculate", "Work out", "Find"]
+    },
+    "algebra_claude": {
+      "config_id": "algebra_claude",
+      "description": "Algebra questions using Claude",
+      "target_grades": [4, 5, 6],
+      "subject_content_references": ["A1.1", "A1.2", "A1.3", "A2.1", "A2.2"],
+      "calculator_policy": "allowed",
+      "desired_marks": 2,
+      "llm_model_generation": "claude-3-5-sonnet",
+      "llm_model_marking_scheme": "claude-3-5-sonnet",
+      "llm_model_review": "gpt-4o",
+      "prompt_template_version_generation": "v1.1",
+      "prompt_template_version_marking_scheme": "v1.0",
+      "prompt_template_version_review": "v1.0",
+      "temperature": 0.8,
+      "max_tokens": 4000,
+      "command_words": ["Solve", "Find", "Calculate", "Show that"]
+    },
+    "geometry_gemini": {
+      "config_id": "geometry_gemini",
+      "description": "Geometry questions using Gemini",
+      "target_grades": [5, 6, 7],
+      "subject_content_references": ["G1.1", "G1.2", "G2.1", "G2.2", "G3.1"],
+      "calculator_policy": "varies_by_question",
+      "desired_marks": 3,
+      "llm_model_generation": "gemini-pro",
+      "llm_model_marking_scheme": "gpt-4o",
+      "llm_model_review": "claude-3-5-sonnet",
+      "prompt_template_version_generation": "v1.1",
+      "prompt_template_version_marking_scheme": "v1.0",
+      "prompt_template_version_review": "v1.0",
+      "temperature": 0.7,
+      "max_tokens": 4000,
+      "command_words": ["Calculate", "Find", "Show that", "Determine"]
+    },
+    "advanced_math_deepseek": {
+      "config_id": "advanced_math_deepseek",
+      "description": "Advanced mathematics using DeepSeek R1",
+      "target_grades": [7, 8, 9],
+      "subject_content_references": ["A3.1", "A3.2", "C1.1", "C1.2", "T1.1"],
+      "calculator_policy": "allowed",
+      "desired_marks": 4,
+      "llm_model_generation": "deepseek-ai/DeepSeek-R1-0528",
+      "llm_model_marking_scheme": "gpt-4o",
+      "llm_model_review": "claude-3-5-sonnet",
+      "prompt_template_version_generation": "v1.1",
+      "prompt_template_version_marking_scheme": "v1.0",
+      "prompt_template_version_review": "v1.0",
+      "temperature": 0.6,
+      "max_tokens": 5000,
+      "command_words": ["Prove", "Show that", "Determine", "Calculate"]
+    },
+    "probability_qwen": {
+      "config_id": "probability_qwen",
+      "description": "Probability and statistics using Qwen3",
+      "target_grades": [6, 7, 8, 9],
+      "subject_content_references": ["P1.1", "P1.2", "P2.1", "S1.1", "S1.2"],
+      "calculator_policy": "allowed",
+      "desired_marks": 3,
+      "llm_model_generation": "Qwen/Qwen3-235B-A22B",
+      "llm_model_marking_scheme": "gpt-4o",
+      "llm_model_review": "claude-3-5-sonnet",
+      "prompt_template_version_generation": "v1.1",
+      "prompt_template_version_marking_scheme": "v1.0",
+      "prompt_template_version_review": "v1.0",
+      "temperature": 0.7,
+      "max_tokens": 4000,
+      "command_words": ["Calculate", "Find", "Determine", "Work out"]
+    },
+    "mixed_review_gpt4o_mini": {
+      "config_id": "mixed_review_gpt4o_mini",
+      "description": "Mixed topic review using cost-effective GPT-4o-mini",
+      "target_grades": [3, 4, 5, 6],
+      "subject_content_references": ["N2.1", "A1.1", "G1.1", "P1.1"],
+      "calculator_policy": "not_allowed",
+      "desired_marks": 2,
+      "llm_model_generation": "gpt-4o-mini",
+      "llm_model_marking_scheme": "gpt-4o-mini",
+      "llm_model_review": "claude-3-5-sonnet",
+      "prompt_template_version_generation": "v1.1",
+      "prompt_template_version_marking_scheme": "v1.0",
+      "prompt_template_version_review": "v1.0",
+      "temperature": 0.7,
+      "max_tokens": 3500,
+      "command_words": ["Calculate", "Work out", "Find", "Give"]
+    }
+  },
+  "batch_configs": {
+    "comprehensive_review": {
+      "description": "Generate comprehensive review questions across all topics",
+      "configs_to_use": [
+        "basic_arithmetic_gpt4o",
+        "algebra_claude",
+        "geometry_gemini",
+        "probability_qwen"
+      ],
+      "questions_per_config": 3,
+      "total_questions": 12
+    },
+    "budget_friendly": {
+      "description": "Cost-effective generation using smaller models",
+      "configs_to_use": [
+        "mixed_review_gpt4o_mini"
+      ],
+      "questions_per_config": 10,
+      "total_questions": 10
+    },
+    "advanced_only": {
+      "description": "High-level questions for advanced students",
+      "configs_to_use": [
+        "advanced_math_deepseek",
+        "geometry_gemini"
+      ],
+      "questions_per_config": 5,
+      "total_questions": 10
+    }
+  }
+}
