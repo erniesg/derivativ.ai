@@ -1,0 +1,54 @@
+{
+  "models": {
+    "generator": {
+      "default": "gpt-4o",
+      "alternatives": ["gpt-4o-mini", "claude-3-5-sonnet", "gemini-pro"]
+    },
+    "marker": {
+      "default": "gpt-4o",
+      "alternatives": ["claude-3-5-sonnet", "gpt-4o-mini"]
+    },
+    "reviewer": {
+      "default": "claude-3-5-sonnet",
+      "alternatives": ["gpt-4o", "gemini-pro"]
+    }
+  },
+  "prompt_templates": {
+    "generator": {
+      "version": "v1.0",
+      "template_id": "basic_question_generation"
+    },
+    "marker": {
+      "version": "v1.0",
+      "template_id": "marking_scheme_generation"
+    },
+    "reviewer": {
+      "version": "v1.0",
+      "template_id": "question_review"
+    }
+  },
+  "generation_parameters": {
+    "temperature": 0.7,
+    "max_tokens": 4000,
+    "top_p": 0.9,
+    "target_grades": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+    "question_types": {
+      "non_diagram": true,
+      "diagram": false
+    },
+    "calculator_policies": ["allowed", "not_allowed"],
+    "max_marks_per_question": 5,
+    "min_marks_per_question": 1
+  },
+  "validation": {
+    "enable_json_schema_validation": true,
+    "enable_mathematical_correctness_check": true,
+    "enable_syllabus_alignment_check": true,
+    "auto_reject_threshold": 0.3
+  },
+  "database": {
+    "candidate_questions_table": "candidate_questions",
+    "generation_logs_table": "generation_logs",
+    "batch_size": 10
+  }
+}
