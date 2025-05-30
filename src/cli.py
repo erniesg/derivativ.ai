@@ -7,8 +7,8 @@ import os
 # Add the src directory to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from services.generation_service import QuestionGenerationService
-from models.generation_config import GenerationConfig
+from .services import QuestionGenerationService
+from .models import GenerationConfig
 
 @click.group()
 @click.option('--debug', is_flag=True, help='Enable debug output')

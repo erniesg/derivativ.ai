@@ -7,10 +7,13 @@ Validates the end-to-end pipeline from configuration to database storage.
 import asyncio
 import os
 import json
+import sys
 from dotenv import load_dotenv
 
-from src.services.generation_service import QuestionGenerationService
-from src.models.question_models import GenerationRequest, CalculatorPolicy, CommandWord
+# Add parent directory to Python path to find src module
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from src import QuestionGenerationService, GenerationRequest, CalculatorPolicy, CommandWord
 
 
 async def test_basic_generation():

@@ -10,33 +10,27 @@ import os
 from typing import List, Dict, Any, Optional
 from uuid import uuid4
 
-# Handle imports with fallback for standalone usage
-try:
-    from smolagents import LiteLLMModel, OpenAIServerModel, InferenceClientModel
-    from ..models.question_models import (
-        GenerationRequest, GenerationResponse, GenerationConfig,
-        CandidateQuestion, LLMModel, CalculatorPolicy, CommandWord
-    )
-    from ..database.neon_client import NeonDBClient
-    from ..agents.question_generator import QuestionGeneratorAgent
-except ImportError:
-    # Fallback for standalone usage
-    import sys
-    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-    from smolagents import LiteLLMModel, OpenAIServerModel, InferenceClientModel
-    from models.question_models import (
-        GenerationRequest, GenerationResponse, GenerationConfig,
-        CandidateQuestion, LLMModel, CalculatorPolicy, CommandWord
-    )
-    from database.neon_client import NeonDBClient
-    from agents.question_generator import QuestionGeneratorAgent
+from smolagents import LiteLLMModel, OpenAIServerModel, InferenceClientModel
+
+from ..models import (
+    GenerationRequest, GenerationResponse, GenerationConfig,
+    CandidateQuestion, LLMModel, CalculatorPolicy, CommandWord
+)
+from ..database import NeonDBClient
+from ..agents import QuestionGeneratorAgent
 
 
 class QuestionGenerationService:
     """Main service for coordinating question generation"""
 
-    def __init__(self, database_url: str, debug: bool = None):
-        self.db_client = NeonDBClient(database_url)
+    def __init__(self, database_url: str = None, debug: bool = None):
+        # For local testing, database_url can be None
+        if database_url:
+            self.db_client = NeonDBClient(database_url)
+        else:
+            # Use a dummy database URL for local testing
+            self.db_client = NeonDBClient("postgresql://dummy:dummy@dummy/dummy")
+
         self.generators = {}  # Cache of generator agents by model
 
         # Set debug mode from parameter, environment variable, or default to False

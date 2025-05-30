@@ -47,13 +47,16 @@ async def test_llm_integration():
         print("📤 Sending test request...")
         response = model(messages)
 
-        print(f"📥 Response received (length: {len(response)})")
+        print(f"📥 Response received (length: {len(str(response))})")
         print(f"Response: {response}")
+
+        # Extract content if response is a ChatMessage object
+        content = getattr(response, "content", response)
 
         # Try to parse as JSON
         import json
         try:
-            parsed = json.loads(response)
+            parsed = json.loads(content)
             print("✅ Valid JSON response!")
             print(f"Parsed: {parsed}")
             return True

@@ -12,24 +12,12 @@ import asyncio
 
 from smolagents import CodeAgent, LiteLLMModel, OpenAIServerModel
 
-# Handle imports with fallback for standalone usage
-try:
-    from ..models.question_models import (
-        GenerationConfig, CandidateQuestion, CommandWord,
-        CalculatorPolicy, QuestionTaxonomy, SolutionAndMarkingScheme,
-        SolverAlgorithm, AnswerSummary, MarkAllocationCriterion, SolverStep
-    )
-    from ..database.neon_client import NeonDBClient
-except ImportError:
-    # Fallback for standalone usage
-    import sys
-    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-    from models.question_models import (
-        GenerationConfig, CandidateQuestion, CommandWord,
-        CalculatorPolicy, QuestionTaxonomy, SolutionAndMarkingScheme,
-        SolverAlgorithm, AnswerSummary, MarkAllocationCriterion, SolverStep
-    )
-    from database.neon_client import NeonDBClient
+from ..models import (
+    GenerationConfig, CandidateQuestion, CommandWord,
+    CalculatorPolicy, QuestionTaxonomy, SolutionAndMarkingScheme,
+    SolverAlgorithm, AnswerSummary, MarkAllocationCriterion, SolverStep
+)
+from ..database import NeonDBClient
 
 
 class QuestionGeneratorAgent:

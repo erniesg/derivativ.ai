@@ -23,7 +23,8 @@ async def generate_questions_cli(
     calculator_policy: str = "not_allowed",
     command_word: str = None,
     seed_question_id: str = None,
-    model: str = "gpt-4o"
+    model: str = "gpt-4o",
+    debug: bool = False
 ):
     """Generate questions via CLI interface"""
 
@@ -41,6 +42,8 @@ async def generate_questions_cli(
     print(f"Questions per Grade: {count_per_grade}")
     print(f"Model: {model}")
     print(f"Calculator Policy: {calculator_policy}")
+    if debug:
+        print("🐛 Debug mode: ENABLED")
 
     if subject_refs:
         print(f"Subject References: {', '.join(subject_refs)}")
@@ -51,8 +54,8 @@ async def generate_questions_cli(
 
     print("-" * 50)
 
-    # Initialize service
-    service = QuestionGenerationService(database_url)
+    # Initialize service with debug flag
+    service = QuestionGenerationService(database_url, debug=debug)
 
     try:
         await service.initialize()
@@ -120,7 +123,7 @@ async def generate_questions_cli(
         await service.shutdown()
 
 
-async def list_questions_cli(grade: int = None, limit: int = 20):
+async def list_questions_cli(grade: int = None, limit: int = 20, debug: bool = False):
     """List generated questions"""
 
     load_dotenv()
@@ -130,7 +133,7 @@ async def list_questions_cli(grade: int = None, limit: int = 20):
         print("❌ Error: NEON_DATABASE_URL not found")
         return
 
-    service = QuestionGenerationService(database_url)
+    service = QuestionGenerationService(database_url, debug=debug)
 
     try:
         await service.initialize()
@@ -158,7 +161,7 @@ async def list_questions_cli(grade: int = None, limit: int = 20):
         await service.shutdown()
 
 
-async def stats_cli():
+async def stats_cli(debug: bool = False):
     """Show generation statistics"""
 
     load_dotenv()
@@ -168,7 +171,7 @@ async def stats_cli():
         print("❌ Error: NEON_DATABASE_URL not found")
         return
 
-    service = QuestionGenerationService(database_url)
+    service = QuestionGenerationService(database_url, debug=debug)
 
     try:
         await service.initialize()
@@ -221,8 +224,8 @@ Examples:
   # Generate questions on specific topics
   python main.py generate --grades 4 6 --subject-refs C1.6 C1.4 --count 1
 
-  # Generate with specific command word
-  python main.py generate --grades 5 --command-word "Calculate" --count 3
+  # Generate with specific command word and debug mode
+  python main.py generate --grades 5 --command-word "Calculate" --count 3 --debug
 
   # Generate from a seed question
   python main.py generate --grades 4 5 6 --seed-question 0580_s15_qp_01_q1a --count 2
@@ -234,6 +237,9 @@ Examples:
   python main.py stats
         """
     )
+
+    # Global debug flag
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
@@ -277,12 +283,13 @@ Examples:
             calculator_policy=args.calculator_policy,
             command_word=args.command_word,
             seed_question_id=args.seed_question,
-            model=args.model
+            model=args.model,
+            debug=args.debug
         ))
     elif args.command == "list":
-        asyncio.run(list_questions_cli(args.grade, args.limit))
+        asyncio.run(list_questions_cli(args.grade, args.limit, debug=args.debug))
     elif args.command == "stats":
-        asyncio.run(stats_cli())
+        asyncio.run(stats_cli(debug=args.debug))
     else:
         parser.print_help()
 

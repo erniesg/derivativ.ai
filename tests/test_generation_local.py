@@ -7,11 +7,10 @@ import asyncio
 import sys
 import os
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+# Add parent directory to path to import src
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from services.generation_service import QuestionGenerationService
-from models.generation_config import GenerationConfig
+from src import QuestionGenerationService, GenerationConfig
 
 async def test_generation_with_local_seed():
     """Test question generation using a local file seed question"""

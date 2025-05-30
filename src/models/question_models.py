@@ -26,6 +26,8 @@ class LLMModel(str, Enum):
     CLAUDE_3_5_SONNET = "claude-3-5-sonnet"
     GEMINI_PRO = "gemini-pro"
     GEMINI_FLASH = "gemini-flash"
+    DEEPSEEK_R1 = "deepseek-ai/DeepSeek-R1-0528"
+    QWEN3_235B = "Qwen/Qwen3-235B-A22B"
 
 
 class CommandWord(str, Enum):
@@ -54,7 +56,9 @@ class CalculatorPolicy(str, Enum):
 
 
 class GenerationConfig(BaseModel):
-    """Configuration for a single question generation"""
+    """Configuration for a single question generation
+    llm_model_generation, llm_model_marking_scheme, and llm_model_review can be any value from LLMModel, including Hugging Face models (deepseek-ai/DeepSeek-R1-0528, Qwen/Qwen3-235B-A22B).
+    """
     generation_id: UUID = Field(default_factory=uuid4)
     seed_question_id: Optional[str] = None
     target_grade: int = Field(ge=1, le=9)
