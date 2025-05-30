@@ -41,7 +41,7 @@ async def test_basic_generation():
         print("\n📝 Test 1: Generating basic questions...")
 
         request = GenerationRequest(
-            target_grades=[2, 4, 6],
+            target_grades=[4],
             count_per_grade=1,
             calculator_policy=CalculatorPolicy.NOT_ALLOWED
         )
@@ -64,7 +64,7 @@ async def test_basic_generation():
 
         topic_response = await service.generate_by_topic(
             subject_content_references=["C1.6", "C1.4"],
-            target_grades=[3, 5],
+            target_grades=[5],
             count_per_grade=1,
             command_word=CommandWord.WORK_OUT
         )

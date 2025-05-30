@@ -137,9 +137,9 @@ class NeonDBClient:
                     question.command_word.value,
                     question.raw_text_content,
                     question.formatted_text_latex,
-                    question.taxonomy.model_dump(),
-                    question.solution_and_marking_scheme.model_dump(),
-                    question.solver_algorithm.model_dump(),
+                    json.dumps(question.taxonomy.model_dump()),  # Serialize to JSON string
+                    json.dumps(question.solution_and_marking_scheme.model_dump()),  # Serialize to JSON string
+                    json.dumps(question.solver_algorithm.model_dump()),  # Serialize to JSON string
                     question.seed_question_id,
                     question.target_grade_input,
                     question.llm_model_used_generation,
@@ -152,7 +152,7 @@ class NeonDBClient:
                     question.status.value,
                     question.reviewer_notes,
                     question.confidence_score,
-                    question.validation_errors
+                    json.dumps(question.validation_errors)  # Serialize to JSON string
                 )
             return True
         except Exception as e:
