@@ -81,6 +81,19 @@ async def demo_react_workflow():
     # Also show our direct references
     print(f"   Generator Agent: {orchestrator.generator_agent.name}")
     print(f"   Reviewer Agent: {orchestrator.reviewer_agent.name}")
+    print(f"   Marking Scheme Agent: {orchestrator.marking_scheme_agent.name}")
+    print(f"   Refinement Agent: {orchestrator.refinement_agent.name}")
+
+    # Show integration status
+    print(f"\n🔗 Real Agent Integration:")
+    print(f"   Database Manager: {'✅ Connected' if db_manager else '❌ Not connected'}")
+    if hasattr(orchestrator, 'real_generator_agent'):
+        print(f"   QuestionGeneratorAgent: ✅ Live")
+        print(f"   ReviewAgent: ✅ Live")
+        print(f"   MarkerAgent: ✅ Live")
+        print(f"   RefinementAgent: ✅ Live")
+    else:
+        print(f"   Real Agents: ❌ Not integrated (no database)")
 
     # Demo 1: Simple ReAct demonstration
     print("\n" + "="*50)
@@ -175,7 +188,11 @@ async def demo_react_workflow():
 
     print("\n🏭 Production Features:")
     print("   ✅ ReAct reasoning with audit trail")
-    print("   ✅ Multi-agent coordination")
+    print("   ✅ Multi-agent coordination (4 specialists)")
+    print("   ✅ Question generation (QuestionGeneratorAgent)")
+    print("   ✅ Quality review and assessment (ReviewAgent)")
+    print("   ✅ Detailed marking schemes (MarkerAgent)")
+    print("   ✅ Question refinement (RefinementAgent)")
     print("   ✅ Quality control integration")
     print("   ✅ Payload CMS auto-publishing")
     print("   ✅ Database persistence")
@@ -187,10 +204,11 @@ async def demo_react_workflow():
     print("="*50)
     print("The system is ready for production use with:")
     print("🧠 Advanced reasoning capabilities")
-    print("🤝 Multi-agent coordination")
+    print("🤝 Multi-agent coordination (4 specialists)")
     print("🔄 ReAct pattern implementation")
     print("📊 Complete audit trails")
     print("🚀 Auto-publishing to Payload CMS")
+    print("⚙️ Live agent integration (when database available)")
 
 
 if __name__ == "__main__":

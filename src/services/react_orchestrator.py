@@ -41,6 +41,9 @@ from ..services.payload_publisher import PayloadPublisher
 from ..services.quality_control_workflow import QualityControlWorkflow, QualityDecision
 from ..validation import validate_question
 
+# Global reference for current orchestrator (set by _inject_real_agents_into_tools)
+_current_orchestrator = None
+
 
 class ReAceGenerationSession:
     """Session tracking for ReAct-based generation workflow"""
@@ -87,42 +90,51 @@ def generate_igcse_question(
         Dictionary with question data and metadata
     """
     try:
-        # TODO: Interface with actual QuestionGeneratorAgent
-        # from ..agents import QuestionGeneratorAgent
-        # from ..services.config_manager import ConfigManager
-        #
-        # config_manager = ConfigManager()
-        # config = config_manager.get_config(config_id)
-        # if config:
-        #     # Override with specific parameters if provided
-        #     if topic: config.topic_focus = topic
-        #     if difficulty: config.difficulty = difficulty
-        #     if question_type: config.question_type = question_type
-        #
-        #     generator = QuestionGeneratorAgent(config.llm_model_generation, db_client, debug=True)
-        #     question = await generator.generate_question(config)
-        #
-        #     return {
-        #         "status": "success",
-        #         "question_id": question.question_id_local,
-        #         "question_data": question.model_dump(),
-        #         "config_used": config_id,
-        #         "topic": topic or config.topic_focus,
-        #         "difficulty": difficulty or config.difficulty,
-        #         "question_type": question_type or config.question_type,
-        #         "message": f"Question generated successfully with config {config_id}"
-        #     }
+        # Check if we have a live orchestrator with real agents
+        if _current_orchestrator and hasattr(_current_orchestrator, 'real_generator_agent'):
+            from ..services.config_manager import ConfigManager
 
-        # For now, return mock data
+            config_manager = ConfigManager()
+            config = config_manager.get_config(config_id)
+
+            if config:
+                # Override with specific parameters if provided
+                if topic:
+                    config.topic_focus = topic
+                if difficulty:
+                    config.difficulty = difficulty
+                if question_type:
+                    config.question_type = question_type
+
+                # Generate question with real agent
+                question = _current_orchestrator.real_generator_agent.generate_question(config)
+
+                return {
+                    "status": "success",
+                    "question_id": question.question_id_local,
+                    "question_data": question.model_dump(),
+                    "config_used": config_id,
+                    "topic": topic or getattr(config, 'topic_focus', 'general'),
+                    "difficulty": difficulty or getattr(config, 'difficulty', 'foundation'),
+                    "question_type": question_type or getattr(config, 'question_type', 'short_answer'),
+                    "message": f"Question generated successfully with config {config_id}"
+                }
+            else:
+                return {
+                    "status": "error",
+                    "message": f"Configuration {config_id} not found"
+                }
+
+        # Fallback: orchestrator not available or no real agents
         return {
-            "status": "success",
-            "question_id": str(uuid.uuid4()),
+            "status": "integration_needed",
+            "message": "Real QuestionGeneratorAgent integration pending - orchestrator instance needed",
             "config_used": config_id,
             "topic": topic or "algebra",
             "difficulty": difficulty or "foundation",
-            "question_type": question_type or "short_answer",
-            "message": f"Question generated successfully with config {config_id}"
+            "question_type": question_type or "short_answer"
         }
+
     except Exception as e:
         return {
             "status": "error",
@@ -144,51 +156,171 @@ def review_question_quality(question_id: str, detailed_analysis: bool = True) ->
         Dictionary with review results and quality scores
     """
     try:
-        # TODO: Interface with actual ReviewAgent
-        # from ..agents import ReviewAgent
-        #
-        # # Retrieve question from database
-        # question = db_client.get_candidate_question(question_id)
-        # if not question:
-        #     return {"status": "error", "message": f"Question {question_id} not found"}
-        #
-        # reviewer = ReviewAgent(llm_model, db_client, debug=True)
-        # review_result, interaction = reviewer.review_question(question, str(uuid.uuid4()))
-        #
-        # return {
-        #     "status": "success",
-        #     "question_id": question_id,
-        #     "overall_score": review_result.overall_score,
-        #     "outcome": review_result.outcome.value,
-        #     "syllabus_compliance": review_result.syllabus_compliance,
-        #     "difficulty_alignment": review_result.difficulty_alignment,
-        #     "marking_quality": review_result.marking_quality,
-        #     "feedback_summary": review_result.feedback_summary,
-        #     "suggested_improvements": review_result.suggested_improvements,
-        #     "detailed_analysis": detailed_analysis
-        # }
+        # Check if we have a live orchestrator with real agents
+        if _current_orchestrator and hasattr(_current_orchestrator, 'real_review_agent'):
 
-        # For now, return mock data
+            # Retrieve question from database
+            question = _current_orchestrator.database_manager.get_candidate_question(question_id)
+            if not question:
+                return {"status": "error", "message": f"Question {question_id} not found"}
+
+            # Review with real agent
+            review_result, interaction = _current_orchestrator.real_review_agent.review_question(
+                question, str(uuid.uuid4())
+            )
+
+            return {
+                "status": "success",
+                "question_id": question_id,
+                "overall_score": review_result.overall_score,
+                "outcome": review_result.outcome.value,
+                "syllabus_compliance": getattr(review_result, 'syllabus_compliance', 0.0),
+                "difficulty_alignment": getattr(review_result, 'difficulty_alignment', 0.0),
+                "marking_quality": getattr(review_result, 'marking_quality', 0.0),
+                "feedback_summary": review_result.feedback_summary,
+                "suggested_improvements": getattr(review_result, 'suggested_improvements', []),
+                "detailed_analysis": detailed_analysis
+            }
+
+        # Fallback: orchestrator not available
         return {
-            "status": "success",
+            "status": "integration_needed",
+            "message": "Real ReviewAgent integration pending - orchestrator instance needed",
             "question_id": question_id,
-            "overall_score": 0.87,  # Example score
-            "outcome": "approve",
-            "syllabus_compliance": 0.92,
-            "difficulty_alignment": 0.85,
-            "marking_quality": 0.84,
-            "feedback_summary": "High-quality question with minor formatting improvements needed",
-            "suggested_improvements": [
-                "Add clearer diagram labels",
-                "Improve answer space formatting"
-            ],
             "detailed_analysis": detailed_analysis
         }
+
     except Exception as e:
         return {
             "status": "error",
             "error": str(e),
             "message": f"Failed to review question {question_id}: {e}"
+        }
+
+
+@tool
+def generate_marking_scheme(question_text: str, expected_answer: str = None, marks: int = 3) -> Dict[str, Any]:
+    """
+    Generate a detailed marking scheme for a question using MarkerAgent.
+
+    Args:
+        question_text: The question text to create marking scheme for
+        expected_answer: Optional expected final answer
+        marks: Number of marks for the question
+
+    Returns:
+        Dictionary with marking scheme data
+    """
+    try:
+        # Check if we have a live orchestrator with real agents
+        if _current_orchestrator and hasattr(_current_orchestrator, 'real_marker_agent'):
+            from ..models import GenerationConfig
+
+            # Create minimal config for marking
+            config = GenerationConfig(
+                target_grade=7,  # Default
+                desired_marks=marks,
+                subject_content_references=["C1.1"],  # Default
+                calculator_policy="allowed"
+            )
+
+            # Generate marking scheme with real agent
+            marking_scheme = _current_orchestrator.real_marker_agent.generate_marking_scheme(
+                question_text, config, expected_answer=expected_answer
+            )
+
+            return {
+                "status": "success",
+                "question_text": question_text[:100] + "...",
+                "marks": marks,
+                "marking_scheme": marking_scheme.model_dump(),
+                "criteria_count": len(marking_scheme.mark_allocation_criteria),
+                "total_marks": marking_scheme.total_marks_for_part,
+                "message": "Marking scheme generated successfully"
+            }
+
+        # Fallback: orchestrator not available
+        return {
+            "status": "integration_needed",
+            "message": "Real MarkerAgent integration pending - orchestrator instance needed",
+            "question_text": question_text[:50] + "...",
+            "marks": marks
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "message": f"Failed to generate marking scheme: {e}"
+        }
+
+
+@tool
+def refine_question_content(question_id: str, feedback: str, refinement_type: str = "quality") -> Dict[str, Any]:
+    """
+    Refine a question based on review feedback using RefinementAgent.
+
+    Args:
+        question_id: ID of the question to refine
+        feedback: Review feedback to address
+        refinement_type: Type of refinement (quality, clarity, difficulty, etc.)
+
+    Returns:
+        Dictionary with refined question data
+    """
+    try:
+        # Check if we have a live orchestrator with real agents
+        if _current_orchestrator and hasattr(_current_orchestrator, 'real_refinement_agent'):
+
+            # Retrieve original question from database
+            original_question = _current_orchestrator.database_manager.get_candidate_question(question_id)
+            if not original_question:
+                return {"status": "error", "message": f"Question {question_id} not found"}
+
+            # Parse feedback into review format
+            review_feedback = {
+                "feedback_summary": feedback,
+                "suggested_improvements": [feedback],
+                "refinement_type": refinement_type
+            }
+
+            # Refine with real agent
+            refined_question, interaction = _current_orchestrator.real_refinement_agent.refine_question(
+                original_question, review_feedback, str(uuid.uuid4())
+            )
+
+            if refined_question:
+                return {
+                    "status": "success",
+                    "question_id": question_id,
+                    "original_question_id": original_question.question_id_local,
+                    "refined_question_id": refined_question.question_id_local,
+                    "refinement_type": refinement_type,
+                    "feedback_addressed": feedback[:100] + "...",
+                    "refined_question_data": refined_question.model_dump(),
+                    "message": "Question refined successfully"
+                }
+            else:
+                return {
+                    "status": "error",
+                    "message": "Refinement failed - could not improve question",
+                    "question_id": question_id
+                }
+
+        # Fallback: orchestrator not available
+        return {
+            "status": "integration_needed",
+            "message": "Real RefinementAgent integration pending - orchestrator instance needed",
+            "question_id": question_id,
+            "refinement_type": refinement_type,
+            "feedback_addressed": feedback[:50] + "..."
+        }
+
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "message": f"Failed to refine question {question_id}: {e}"
         }
 
 
@@ -310,6 +442,36 @@ class QualityReviewSpecialistAgent(ToolCallingAgent):
         self.orchestrator = orchestrator_ref
 
 
+class MarkingSchemeSpecialistAgent(ToolCallingAgent):
+    """Specialized agent for generating detailed marking schemes"""
+
+    def __init__(self, model, orchestrator_ref=None, **kwargs):
+        super().__init__(
+            tools=[generate_marking_scheme],
+            model=model,
+            name="marking_scheme_specialist",
+            description="Specialized agent for creating detailed Cambridge-style marking schemes with proper mark allocation criteria.",
+            max_steps=3,
+            **kwargs
+        )
+        self.orchestrator = orchestrator_ref
+
+
+class RefinementSpecialistAgent(ToolCallingAgent):
+    """Specialized agent for question refinement and improvement"""
+
+    def __init__(self, model, orchestrator_ref=None, **kwargs):
+        super().__init__(
+            tools=[refine_question_content],
+            model=model,
+            name="refinement_specialist",
+            description="Specialized agent for refining and improving questions based on review feedback and quality issues.",
+            max_steps=4,
+            **kwargs
+        )
+        self.orchestrator = orchestrator_ref
+
+
 class ReActMultiAgentOrchestrator:
     """
     ReAct-based Multi-Agent Orchestrator using smolagents framework.
@@ -343,11 +505,21 @@ class ReActMultiAgentOrchestrator:
             orchestrator_ref=self
         )
 
+        self.marking_scheme_agent = MarkingSchemeSpecialistAgent(
+            specialist_model,
+            orchestrator_ref=self
+        )
+
+        self.refinement_agent = RefinementSpecialistAgent(
+            specialist_model,
+            orchestrator_ref=self
+        )
+
         # Initialize manager agent with all specialists
         self.manager_agent = CodeAgent(
             tools=[get_session_status],  # Manager gets session management tools
             model=manager_model,
-            managed_agents=[self.generator_agent, self.reviewer_agent],
+            managed_agents=[self.generator_agent, self.reviewer_agent, self.marking_scheme_agent, self.refinement_agent],
             additional_authorized_imports=["json", "uuid", "datetime", "time"],
             name="question_generation_manager",
             description="Manager agent that coordinates question generation, review, and quality control workflow."
@@ -356,15 +528,23 @@ class ReActMultiAgentOrchestrator:
         # Quality control integration
         if database_manager:
             # Initialize quality control workflow
-            from ..agents import QuestionGeneratorAgent, RefinementAgent
+            from ..agents import QuestionGeneratorAgent, RefinementAgent, ReviewAgent, MarkerAgent
+
+            self.real_generator_agent = QuestionGeneratorAgent(specialist_model, database_manager, debug)
+            self.real_review_agent = ReviewAgent(specialist_model, database_manager, debug)
+            self.real_refinement_agent = RefinementAgent(specialist_model, database_manager, debug)
+            self.real_marker_agent = MarkerAgent(specialist_model, database_manager, debug)
 
             self.quality_workflow = QualityControlWorkflow(
-                review_agent=ReviewAgent(specialist_model, database_manager, debug),
-                refinement_agent=RefinementAgent(specialist_model, database_manager, debug),
-                generator_agent=QuestionGeneratorAgent(specialist_model, database_manager, debug),
+                review_agent=self.real_review_agent,
+                refinement_agent=self.real_refinement_agent,
+                generator_agent=self.real_generator_agent,
                 database_manager=database_manager,
                 auto_publish=auto_publish
             )
+
+            # Inject real agents into tools for live functionality
+            self._inject_real_agents_into_tools()
 
         # Session tracking
         self.active_sessions: Dict[str, ReAceGenerationSession] = {}
@@ -386,6 +566,19 @@ class ReActMultiAgentOrchestrator:
             logger.addHandler(handler)
 
         return logger
+
+    def _inject_real_agents_into_tools(self):
+        """Inject real agent instances into smolagents tools for live functionality."""
+        try:
+            # Store orchestrator reference in a way that tools can access it
+            # This allows tools to call the real agents
+            import src.services.react_orchestrator as orchestrator_module
+            orchestrator_module._current_orchestrator = self
+
+            self.logger.debug("✅ Real agents injected into tools")
+
+        except Exception as e:
+            self.logger.error(f"❌ Failed to inject real agents: {e}")
 
     async def generate_questions_with_react(
         self,
@@ -505,7 +698,7 @@ Session ID: {session.session_id}
                 "reasoning_steps": len(session.reasoning_steps),
                 "actions_taken": len(session.actions_taken),
                 "manager_agent_used": True,
-                "specialist_agents_coordinated": ["question_generator", "quality_reviewer"]
+                "specialist_agents_coordinated": ["question_generator", "quality_reviewer", "marking_scheme", "refinement"]
             },
             "results": {
                 "questions_requested": session.num_questions,
