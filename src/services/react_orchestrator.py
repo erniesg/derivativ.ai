@@ -98,27 +98,69 @@ def generate_igcse_question(
             config = config_manager.get_config(config_id)
 
             if config:
-                # Override with specific parameters if provided
-                if topic:
-                    config.topic_focus = topic
-                if difficulty:
-                    config.difficulty = difficulty
-                if question_type:
-                    config.question_type = question_type
+                # Note: topic, difficulty, question_type are handled by the config itself
+                # Don't modify the config object as it doesn't have these fields
 
                 # Generate question with real agent
-                question = _current_orchestrator.real_generator_agent.generate_question(config)
+                import asyncio
 
-                return {
-                    "status": "success",
-                    "question_id": question.question_id_local,
-                    "question_data": question.model_dump(),
-                    "config_used": config_id,
-                    "topic": topic or getattr(config, 'topic_focus', 'general'),
-                    "difficulty": difficulty or getattr(config, 'difficulty', 'foundation'),
-                    "question_type": question_type or getattr(config, 'question_type', 'short_answer'),
-                    "message": f"Question generated successfully with config {config_id}"
-                }
+                # Create a simple async wrapper function
+                async def generate_async():
+                    return await _current_orchestrator.real_generator_agent.generate_question(config)
+
+                # Run it synchronously
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    question = loop.run_until_complete(generate_async())
+                    loop.close()
+                except Exception as e:
+                    print(f"Async generation failed: {e}")
+                    question = None
+
+                if question:
+                    # Save question to database
+                    if _current_orchestrator.database_manager:
+                        try:
+                            # Save synchronously using the same loop
+                            async def save_question():
+                                async with _current_orchestrator.database_manager.pool.acquire() as conn:
+                                    await conn.execute("""
+                                        INSERT INTO candidate_questions_extended (
+                                            question_id, question_data, insertion_status, created_at
+                                        ) VALUES ($1, $2, $3, $4)
+                                    """,
+                                    str(question.question_id_local),
+                                    question.model_dump(),
+                                    'pending',
+                                    question.generation_timestamp
+                                    )
+
+                            # Run in the same loop context
+                            loop = asyncio.new_event_loop()
+                            asyncio.set_event_loop(loop)
+                            loop.run_until_complete(save_question())
+                            loop.close()
+
+                        except Exception as e:
+                            print(f"Warning: Failed to save question to database: {e}")
+
+                    return {
+                        "status": "success",
+                        "question_id": question.question_id_local,
+                        "question_data": question.model_dump(),
+                        "config_used": config_id,
+                        "topic": topic or "general",
+                        "difficulty": difficulty or "foundation",
+                        "question_type": question_type or "short_answer",
+                        "message": f"Question generated and saved to database with config {config_id}",
+                        "saved_to_database": True
+                    }
+                else:
+                    return {
+                        "status": "error",
+                        "message": "Question generation failed - no question returned"
+                    }
             else:
                 return {
                     "status": "error",
@@ -159,28 +201,48 @@ def review_question_quality(question_id: str, detailed_analysis: bool = True) ->
         # Check if we have a live orchestrator with real agents
         if _current_orchestrator and hasattr(_current_orchestrator, 'real_review_agent'):
 
-            # Retrieve question from database
-            question = _current_orchestrator.database_manager.get_candidate_question(question_id)
-            if not question:
-                return {"status": "error", "message": f"Question {question_id} not found"}
+            # Create async wrapper
+            async def review_async():
+                # Retrieve question from database
+                question = await _current_orchestrator.database_manager.get_candidate_question(question_id)
+                if not question:
+                    return {"status": "error", "message": f"Question {question_id} not found"}
 
-            # Review with real agent
-            review_result, interaction = _current_orchestrator.real_review_agent.review_question(
-                question, str(uuid.uuid4())
-            )
+                # Review with real agent
+                review_result, interaction = await _current_orchestrator.real_review_agent.review_question(
+                    question, str(uuid.uuid4())
+                )
+                return review_result
 
-            return {
-                "status": "success",
-                "question_id": question_id,
-                "overall_score": review_result.overall_score,
-                "outcome": review_result.outcome.value,
-                "syllabus_compliance": getattr(review_result, 'syllabus_compliance', 0.0),
-                "difficulty_alignment": getattr(review_result, 'difficulty_alignment', 0.0),
-                "marking_quality": getattr(review_result, 'marking_quality', 0.0),
-                "feedback_summary": review_result.feedback_summary,
-                "suggested_improvements": getattr(review_result, 'suggested_improvements', []),
-                "detailed_analysis": detailed_analysis
-            }
+            # Run it synchronously
+            try:
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                review_result = loop.run_until_complete(review_async())
+                loop.close()
+
+                if isinstance(review_result, dict) and review_result.get("status") == "error":
+                    return review_result
+
+                return {
+                    "status": "success",
+                    "question_id": question_id,
+                    "overall_score": review_result.overall_score,
+                    "outcome": review_result.outcome.value,
+                    "syllabus_compliance": getattr(review_result, 'syllabus_compliance', 0.0),
+                    "difficulty_alignment": getattr(review_result, 'difficulty_alignment', 0.0),
+                    "marking_quality": getattr(review_result, 'marking_quality', 0.0),
+                    "feedback_summary": review_result.feedback_summary,
+                    "suggested_improvements": getattr(review_result, 'suggested_improvements', []),
+                    "detailed_analysis": detailed_analysis
+                }
+            except Exception as e:
+                return {
+                    "status": "error",
+                    "error": str(e),
+                    "message": f"Failed to review question {question_id}: {e}"
+                }
 
         # Fallback: orchestrator not available
         return {
@@ -216,28 +278,45 @@ def generate_marking_scheme(question_text: str, expected_answer: str = None, mar
         if _current_orchestrator and hasattr(_current_orchestrator, 'real_marker_agent'):
             from ..models import GenerationConfig
 
-            # Create minimal config for marking
-            config = GenerationConfig(
-                target_grade=7,  # Default
-                desired_marks=marks,
-                subject_content_references=["C1.1"],  # Default
-                calculator_policy="allowed"
-            )
+            # Create async wrapper
+            async def marking_async():
+                # Create minimal config for marking
+                config = GenerationConfig(
+                    target_grade=7,  # Default
+                    desired_marks=marks,
+                    subject_content_references=["C1.1"],  # Default
+                    calculator_policy="allowed"
+                )
 
-            # Generate marking scheme with real agent
-            marking_scheme = _current_orchestrator.real_marker_agent.generate_marking_scheme(
-                question_text, config, expected_answer=expected_answer
-            )
+                # Generate marking scheme with real agent
+                marking_scheme = await _current_orchestrator.real_marker_agent.generate_marking_scheme(
+                    question_text, config, expected_answer=expected_answer
+                )
+                return marking_scheme
 
-            return {
-                "status": "success",
-                "question_text": question_text[:100] + "...",
-                "marks": marks,
-                "marking_scheme": marking_scheme.model_dump(),
-                "criteria_count": len(marking_scheme.mark_allocation_criteria),
-                "total_marks": marking_scheme.total_marks_for_part,
-                "message": "Marking scheme generated successfully"
-            }
+            # Run it synchronously
+            try:
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                marking_scheme = loop.run_until_complete(marking_async())
+                loop.close()
+
+                return {
+                    "status": "success",
+                    "question_text": question_text[:100] + "...",
+                    "marks": marks,
+                    "marking_scheme": marking_scheme.model_dump(),
+                    "criteria_count": len(marking_scheme.mark_allocation_criteria),
+                    "total_marks": marking_scheme.total_marks_for_part,
+                    "message": "Marking scheme generated successfully"
+                }
+            except Exception as e:
+                return {
+                    "status": "error",
+                    "error": str(e),
+                    "message": f"Failed to generate marking scheme: {e}"
+                }
 
         # Fallback: orchestrator not available
         return {
@@ -272,39 +351,62 @@ def refine_question_content(question_id: str, feedback: str, refinement_type: st
         # Check if we have a live orchestrator with real agents
         if _current_orchestrator and hasattr(_current_orchestrator, 'real_refinement_agent'):
 
-            # Retrieve original question from database
-            original_question = _current_orchestrator.database_manager.get_candidate_question(question_id)
-            if not original_question:
-                return {"status": "error", "message": f"Question {question_id} not found"}
+            # Create async wrapper
+            async def refinement_async():
+                # Retrieve original question from database
+                original_question = await _current_orchestrator.database_manager.get_candidate_question(question_id)
+                if not original_question:
+                    return {"status": "error", "message": f"Question {question_id} not found"}
 
-            # Parse feedback into review format
-            review_feedback = {
-                "feedback_summary": feedback,
-                "suggested_improvements": [feedback],
-                "refinement_type": refinement_type
-            }
-
-            # Refine with real agent
-            refined_question, interaction = _current_orchestrator.real_refinement_agent.refine_question(
-                original_question, review_feedback, str(uuid.uuid4())
-            )
-
-            if refined_question:
-                return {
-                    "status": "success",
-                    "question_id": question_id,
-                    "original_question_id": original_question.question_id_local,
-                    "refined_question_id": refined_question.question_id_local,
-                    "refinement_type": refinement_type,
-                    "feedback_addressed": feedback[:100] + "...",
-                    "refined_question_data": refined_question.model_dump(),
-                    "message": "Question refined successfully"
+                # Parse feedback into review format
+                review_feedback = {
+                    "feedback_summary": feedback,
+                    "suggested_improvements": [feedback],
+                    "refinement_type": refinement_type
                 }
-            else:
+
+                # Refine with real agent
+                refined_question, interaction = await _current_orchestrator.real_refinement_agent.refine_question(
+                    original_question, review_feedback, str(uuid.uuid4())
+                )
+                return {"original": original_question, "refined": refined_question}
+
+            # Run it synchronously
+            try:
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                result = loop.run_until_complete(refinement_async())
+                loop.close()
+
+                if result.get("status") == "error":
+                    return result
+
+                original_question = result["original"]
+                refined_question = result["refined"]
+
+                if refined_question:
+                    return {
+                        "status": "success",
+                        "question_id": question_id,
+                        "original_question_id": original_question.question_id_local,
+                        "refined_question_id": refined_question.question_id_local,
+                        "refinement_type": refinement_type,
+                        "feedback_addressed": feedback[:100] + "...",
+                        "refined_question_data": refined_question.model_dump(),
+                        "message": "Question refined successfully"
+                    }
+                else:
+                    return {
+                        "status": "error",
+                        "message": "Refinement failed - could not improve question",
+                        "question_id": question_id
+                    }
+            except Exception as e:
                 return {
                     "status": "error",
-                    "message": "Refinement failed - could not improve question",
-                    "question_id": question_id
+                    "error": str(e),
+                    "message": f"Failed to refine question {question_id}: {e}"
                 }
 
         # Fallback: orchestrator not available
@@ -515,6 +617,9 @@ class ReActMultiAgentOrchestrator:
             orchestrator_ref=self
         )
 
+        # Setup logging first
+        self.logger = self._setup_logging()
+
         # Initialize manager agent with all specialists
         self.manager_agent = CodeAgent(
             tools=[get_session_status],  # Manager gets session management tools
@@ -529,10 +634,14 @@ class ReActMultiAgentOrchestrator:
         if database_manager:
             # Initialize quality control workflow
             from ..agents import QuestionGeneratorAgent, RefinementAgent, ReviewAgent, MarkerAgent
+            from ..services.config_manager import ConfigManager
+
+            # Initialize config manager for RefinementAgent
+            config_manager = ConfigManager()
 
             self.real_generator_agent = QuestionGeneratorAgent(specialist_model, database_manager, debug)
             self.real_review_agent = ReviewAgent(specialist_model, database_manager, debug)
-            self.real_refinement_agent = RefinementAgent(specialist_model, database_manager, debug)
+            self.real_refinement_agent = RefinementAgent(specialist_model, config_manager)
             self.real_marker_agent = MarkerAgent(specialist_model, database_manager, debug)
 
             self.quality_workflow = QualityControlWorkflow(
@@ -548,9 +657,6 @@ class ReActMultiAgentOrchestrator:
 
         # Session tracking
         self.active_sessions: Dict[str, ReAceGenerationSession] = {}
-
-        # Setup logging
-        self.logger = self._setup_logging()
 
     def _setup_logging(self) -> logging.Logger:
         """Setup logging for orchestrator"""

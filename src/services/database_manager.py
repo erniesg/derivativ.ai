@@ -348,6 +348,26 @@ class DatabaseManager:
             return [dict(row) for row in rows]
 
     async def close(self):
-        """Close database connections"""
+        """Close database connection pool"""
         if self.pool:
             await self.pool.close()
+
+    async def get_candidate_question(self, question_id: str) -> Optional[CandidateQuestion]:
+        """Retrieve a candidate question by ID"""
+        try:
+            async with self.pool.acquire() as conn:
+                row = await conn.fetchrow("""
+                    SELECT question_data FROM candidate_questions_extended
+                    WHERE question_id = $1 OR
+                          (question_data->>'question_id_local') = $1 OR
+                          (question_data->>'question_id_global') = $1
+                """, question_id)
+
+                if row:
+                    question_data = row['question_data']
+                    return CandidateQuestion(**question_data)
+                return None
+
+        except Exception as e:
+            print(f"Error retrieving question {question_id}: {e}")
+            return None
