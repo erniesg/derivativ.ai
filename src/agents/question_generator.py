@@ -125,7 +125,9 @@ class QuestionGeneratorAgent:
 
         command_word = config.command_word_override.value if config.command_word_override else "Work out"
 
-        return self.prompt_template.format(
+        # Use the prompt loader's fallback logic for version
+        return self.prompt_loader.format_question_generation_prompt(
+            template_version=getattr(config, 'prompt_template_version_generation', None),
             target_grade=config.target_grade,
             calculator_policy=config.calculator_policy.value,
             desired_marks=config.desired_marks,

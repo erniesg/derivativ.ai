@@ -8,6 +8,7 @@ and provides template rendering with proper context substitution.
 import os
 from typing import Dict, Any, Optional
 
+LATEST_QUESTION_GENERATION_PROMPT_VERSION = "v1.3"
 
 class PromptLoader:
     """Service for loading and formatting prompt templates"""
@@ -111,23 +112,25 @@ class PromptLoader:
 
     def format_question_generation_prompt(
         self,
-        template_version: str,
+        template_version: str = None,
         **context_vars
     ) -> str:
         """
         Format question generation prompt template.
 
         Args:
-            template_version: Version of generation template to use
+            template_version: Version of generation template to use (optional)
             **context_vars: All context variables for the template
 
         Returns:
             Formatted prompt ready for LLM
         """
-        template = self.load_template("question_generation", template_version)
+        # Use provided version, or fallback to default
+        version = template_version or LATEST_QUESTION_GENERATION_PROMPT_VERSION
+        template = self.load_template("question_generation", version)
 
         # For v1.2 and higher, inject contextual skill tags based on subject content references
-        if template_version >= "v1.2":
+        if version >= "v1.2":
             from .skill_tag_mapper import SkillTagMapper
 
             skill_mapper = SkillTagMapper()

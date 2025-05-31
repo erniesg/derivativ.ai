@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from ..models import GenerationConfig, LLMModel, CalculatorPolicy, CommandWord
 
+DEFAULT_PROMPT_TEMPLATE_VERSION_GENERATION = "v1.3"
 
 @dataclass
 class QuestionGenerationConfigTemplate:
@@ -155,6 +156,10 @@ class ConfigManager:
                 for key, value in override_params.items():
                     if hasattr(config, key):
                         setattr(config, key, value)
+
+            # Ensure prompt_template_version_generation is set
+            if not config.prompt_template_version_generation:
+                config.prompt_template_version_generation = DEFAULT_PROMPT_TEMPLATE_VERSION_GENERATION
 
             return config
 
