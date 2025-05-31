@@ -125,7 +125,78 @@ class PromptLoader:
             Formatted prompt ready for LLM
         """
         template = self.load_template("question_generation", template_version)
+
+        # For v1.2 and higher, inject dynamic skill tags
+        if template_version >= "v1.2":
+            from ..models.enums import get_valid_skill_tags
+
+            # Format skill tags for display
+            skill_tags_list = get_valid_skill_tags()
+            formatted_skill_tags = self._format_skill_tags_for_prompt(skill_tags_list)
+            context_vars['skill_tags'] = formatted_skill_tags
+
         return template.format(**context_vars)
+
+    def _format_skill_tags_for_prompt(self, skill_tags: list) -> str:
+        """
+        Format skill tags list for display in prompt template.
+
+        Args:
+            skill_tags: List of skill tag strings
+
+        Returns:
+            Formatted string for prompt injection
+        """
+        # Group by topic/category for better readability
+        number_tags = []
+        algebra_tags = []
+        geometry_tags = []
+        stats_tags = []
+        transform_tags = []
+        general_tags = []
+
+        for tag in sorted(skill_tags):
+            tag_lower = tag.lower()
+            if any(x in tag_lower for x in ['addition', 'subtraction', 'multiplication', 'division', 'number', 'fraction', 'percentage', 'place_value', 'rounding', 'time', 'prime', 'hcf', 'multiple']):
+                number_tags.append(tag)
+            elif any(x in tag_lower for x in ['algebra', 'equation', 'linear', 'simultaneous', 'substitution', 'factorisation', 'inequality', 'form_equation']):
+                algebra_tags.append(tag)
+            elif any(x in tag_lower for x in ['angle', 'triangle', 'geometry', 'area', 'bearing', 'construction', 'scale', 'parallel', 'alternate', 'symmetry']):
+                geometry_tags.append(tag)
+            elif any(x in tag_lower for x in ['probability', 'tree', 'scatter', 'correlation', 'mode', 'median', 'data', 'diagram']):
+                stats_tags.append(tag)
+            elif any(x in tag_lower for x in ['rotation', 'translation', 'enlargement', 'transformation', 'scale_factor', 'vector']):
+                transform_tags.append(tag)
+            else:
+                general_tags.append(tag)
+
+        formatted = ""
+
+        if number_tags:
+            formatted += "**Number & Arithmetic:**\n"
+            formatted += ", ".join(number_tags) + "\n\n"
+
+        if algebra_tags:
+            formatted += "**Algebra:**\n"
+            formatted += ", ".join(algebra_tags) + "\n\n"
+
+        if geometry_tags:
+            formatted += "**Geometry:**\n"
+            formatted += ", ".join(geometry_tags) + "\n\n"
+
+        if stats_tags:
+            formatted += "**Statistics & Probability:**\n"
+            formatted += ", ".join(stats_tags) + "\n\n"
+
+        if transform_tags:
+            formatted += "**Transformations:**\n"
+            formatted += ", ".join(transform_tags) + "\n\n"
+
+        if general_tags:
+            formatted += "**General:**\n"
+            formatted += ", ".join(general_tags) + "\n\n"
+
+        return formatted.strip()
 
     def format_review_prompt(
         self,

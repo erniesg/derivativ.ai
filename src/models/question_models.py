@@ -26,7 +26,6 @@ class LLMModel(str, Enum):
     """Available LLM models"""
     GPT_4O = "gpt-4o"
     GPT_4O_MINI = "gpt-4o-mini"
-    CLAUDE_3_5_SONNET = "claude-3-5-sonnet"  # Legacy - deprecated
     CLAUDE_4_SONNET = "us.anthropic.claude-sonnet-4-20250514-v1:0"
     CLAUDE_4_OPUS = "us.anthropic.claude-opus-4-20250514-v1:0"
     GEMINI_PRO = "gemini-pro"
