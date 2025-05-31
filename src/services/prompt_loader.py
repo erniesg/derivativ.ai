@@ -126,13 +126,26 @@ class PromptLoader:
         """
         template = self.load_template("question_generation", template_version)
 
-        # For v1.2 and higher, inject dynamic skill tags
+        # For v1.2 and higher, inject contextual skill tags based on subject content references
         if template_version >= "v1.2":
-            from ..models.enums import get_valid_skill_tags
+            from .skill_tag_mapper import SkillTagMapper
 
-            # Format skill tags for display
-            skill_tags_list = get_valid_skill_tags()
-            formatted_skill_tags = self._format_skill_tags_for_prompt(skill_tags_list)
+            skill_mapper = SkillTagMapper()
+
+            # Extract subject content references from context
+            subject_refs = context_vars.get('subject_content_references', [])
+            if isinstance(subject_refs, str):
+                # Parse if it's a string representation of a list
+                import ast
+                try:
+                    subject_refs = ast.literal_eval(subject_refs)
+                except (ValueError, SyntaxError):
+                    # Fallback to splitting by comma
+                    subject_refs = [ref.strip().strip('"\'') for ref in subject_refs.split(',')]
+
+            # Get contextually relevant skill tags
+            relevant_skill_tags = skill_mapper.get_relevant_skill_tags(subject_refs)
+            formatted_skill_tags = self._format_skill_tags_for_prompt(relevant_skill_tags)
             context_vars['skill_tags'] = formatted_skill_tags
 
         return template.format(**context_vars)

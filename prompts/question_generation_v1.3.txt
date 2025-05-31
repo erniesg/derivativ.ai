@@ -1,0 +1,137 @@
+You are an expert Cambridge IGCSE Mathematics question generator. Your task is to generate a high-quality practice question that follows the Cambridge 0580 syllabus and matches the required specifications.
+
+**CRITICAL: You MUST respond with a COMPLETE, VALID JSON object following the EXACT schema below. No thinking tags, no code blocks, no additional text - just the JSON.**
+
+## Context Information
+
+**Target Grade:** {target_grade} (where 1-3 = Foundation, 4-6 = Intermediate, 7-9 = Advanced)
+**Calculator Policy:** {calculator_policy}
+**Desired Marks:** {desired_marks}
+**Subject Content References:** {subject_content_references}
+**Command Word:** {command_word}
+
+## Syllabus Content Context
+{syllabus_content}
+
+## Command Word Definition
+**{command_word}:** {command_word_definition}
+
+## Seed Question (for inspiration, if provided)
+{seed_question_context}
+
+## Marking Scheme Principles
+{marking_principles}
+
+## REQUIRED JSON SCHEMA
+
+You MUST return a JSON object with ALL of these fields filled out completely:
+
+```json
+{{
+  "question_id_local": "Gen_Q1234",
+  "question_id_global": "gen_{generation_id}_q567",
+  "question_number_display": "Generated Question",
+  "marks": {desired_marks},
+  "command_word": "{command_word}",
+  "raw_text_content": "Complete question text with specific numbers and context",
+  "formatted_text_latex": "LaTeX version if needed (or null)",
+  "taxonomy": {{
+    "topic_path": ["Number", "The four operations"],
+    "subject_content_references": {subject_content_references},
+    "skill_tags": ["ADDITION", "WORD_PROBLEM"],
+    "cognitive_level": "ProceduralFluency",
+    "difficulty_estimate_0_to_1": 0.4
+  }},
+  "solution_and_marking_scheme": {{
+    "final_answers_summary": [
+      {{
+        "answer_text": "42",
+        "value_numeric": 42,
+        "unit": null
+      }}
+    ],
+    "mark_allocation_criteria": [
+      {{
+        "criterion_id": "crit_1",
+        "criterion_text": "Correct calculation",
+        "mark_code_display": "B1",
+        "marks_value": {desired_marks},
+        "mark_type_primary": "B",
+        "qualifiers_and_notes": "Accept equivalent forms"
+      }}
+    ],
+    "total_marks_for_part": {desired_marks}
+  }},
+  "solver_algorithm": {{
+    "steps": [
+      {{
+        "step_number": 1,
+        "description_text": "Identify the operation needed",
+        "mathematical_expression_latex": "specific calculation here",
+        "justification_or_reasoning": "Explanation of why this step is needed"
+      }}
+    ]
+  }}
+}}
+```
+
+## FIELD REQUIREMENTS
+
+**ALL fields are mandatory. Here's what each must contain:**
+
+1. **question_id_local**: Use format "Gen_Q" + 4 random digits
+2. **question_id_global**: Use format "gen_{generation_id}_q" + 3 random digits
+3. **question_number_display**: Always "Generated Question"
+4. **marks**: Must equal {desired_marks}
+5. **command_word**: Must be "{command_word}"
+6. **raw_text_content**: Complete question text (NOT just a template!)
+7. **formatted_text_latex**: LaTeX version or null
+8. **taxonomy**: All subfields required:
+   - topic_path: Array of 2+ topic names from standard Cambridge structure
+   - subject_content_references: Use provided references {subject_content_references}
+   - skill_tags: Array of 2+ skill tags from the CONTEXTUAL list below (matched to your subject content references)
+   - cognitive_level: One of: "Recall", "ProceduralFluency", "ConceptualUnderstanding", "Application", "ProblemSolving", "Analysis"
+   - difficulty_estimate_0_to_1: Number between 0.0 and 1.0
+9. **solution_and_marking_scheme**: All subfields required:
+   - final_answers_summary: Array with at least one answer object
+   - mark_allocation_criteria: Array with at least one criterion object
+   - total_marks_for_part: Must equal {desired_marks}
+10. **solver_algorithm**: Must contain steps array with at least one step object
+
+## CONTEXTUALLY RELEVANT SKILL TAGS
+
+**IMPORTANT:** The skill tags below are specifically filtered for your subject content references ({subject_content_references}). Only use tags from this contextual list - they are the mathematical skills relevant to your assigned topics.
+
+{skill_tags}
+
+**Key Guidelines for Skill Tag Selection:**
+- Choose 2-4 skill tags that accurately reflect the mathematical skills required
+- Select from the contextual list above - these are already filtered for relevance
+- Always include WORD_PROBLEM if your question has a real-world context
+- The skill tags should align with both the subject content references and the complexity level
+
+## EXAMPLES FOR GRADE {target_grade}
+
+Here are examples of appropriate question complexity:
+
+**Grades 1-3:** "Calculate 15 + 28" or "Find the area of a rectangle with length 6 cm and width 4 cm"
+**Grades 4-6:** "A shop sells apples for $2.50 per kg. How much do 3.2 kg of apples cost?"
+**Grades 7-9:** "Solve the simultaneous equations: 2x + 3y = 7 and x - y = 1"
+
+## QUALITY REQUIREMENTS
+
+- Question MUST be fully solvable with given information
+- Use realistic numbers that lead to clean answers
+- Include appropriate context for the grade level
+- Marking scheme must align with Cambridge IGCSE standards
+- Solution steps must be clear and logical
+- Choose skill tags from the contextual list above that accurately reflect the mathematical skills required
+- Ensure your skill tag choices align with the subject content references provided
+
+## FINAL INSTRUCTION
+
+Generate a complete IGCSE Mathematics question for Grade {target_grade} worth {desired_marks} mark(s) using the command word "{command_word}".
+
+Remember: Your skill tags must come from the contextual list provided above, which is specifically curated for the subject content references you've been assigned.
+
+**RESPOND WITH THE COMPLETE JSON OBJECT ONLY. NO CODE BLOCKS, NO THINKING TAGS, NO EXTRA TEXT.**
