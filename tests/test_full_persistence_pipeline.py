@@ -16,6 +16,7 @@ import sys
 import asyncpg
 from datetime import datetime
 import uuid
+import pytest
 
 # Add project root to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -30,6 +31,7 @@ load_dotenv()
 from src.models import GenerationConfig, CalculatorPolicy, CommandWord, LLMModel
 
 
+@pytest.mark.asyncio
 async def test_complete_pipeline():
     """Test the complete pipeline end-to-end"""
 
@@ -126,7 +128,7 @@ async def test_complete_pipeline():
         # 3. Test database persistence
         if session.questions:
             print(f"\n💾 Testing database persistence...")
-            await test_database_operations(session)
+            await _test_database_operations_internal(session)
         else:
             print("⚠️ No questions generated, skipping database test")
 
@@ -140,7 +142,103 @@ async def test_complete_pipeline():
         return None
 
 
-async def test_database_operations(session):
+@pytest.mark.asyncio
+async def test_database_operations():
+    """Test database operations with a mock session"""
+    # Create a mock session for testing
+    from src.services.orchestrator import GenerationSession, LLMInteraction
+    from src.agents import ReviewOutcome, ReviewFeedback
+    from src.models import CandidateQuestion, CommandWord, QuestionTaxonomy, SolutionAndMarkingScheme, SolverAlgorithm, AnswerSummary, MarkAllocationCriterion, SolverStep
+
+    # Create a simple test question
+    test_question = CandidateQuestion(
+        question_id_local="test_q_" + str(uuid.uuid4())[:8],
+        question_id_global="test_global_" + str(uuid.uuid4())[:8],
+        question_number_display="Test Question",
+        marks=2,
+        command_word=CommandWord.CALCULATE,
+        raw_text_content="Calculate 2 + 2.",
+        formatted_text_latex=None,
+        taxonomy=QuestionTaxonomy(
+            topic_path=["Arithmetic", "Addition"],
+            subject_content_references=["C1.1"],
+            skill_tags=["BASIC_ADDITION"],
+            cognitive_level="Recall",
+            difficulty_estimate_0_to_1=0.1
+        ),
+        solution_and_marking_scheme=SolutionAndMarkingScheme(
+            final_answers_summary=[
+                AnswerSummary(answer_text="4", value_numeric=4.0, unit=None)
+            ],
+            mark_allocation_criteria=[
+                MarkAllocationCriterion(
+                    criterion_id="test_crit_1",
+                    criterion_text="Correct addition",
+                    mark_code_display="M2",
+                    marks_value=2.0,
+                    mark_type_primary="M"
+                )
+            ],
+            total_marks_for_part=2
+        ),
+        solver_algorithm=SolverAlgorithm(
+            steps=[
+                SolverStep(
+                    step_number=1,
+                    description_text="Add the numbers",
+                    mathematical_expression_latex="2 + 2 = 4",
+                    skill_applied_tag="BASIC_ADDITION"
+                )
+            ]
+        ),
+        generation_id=uuid.uuid4(),
+        target_grade_input=1,
+        llm_model_used_generation="gpt-4o-mini",
+        llm_model_used_marking_scheme="gpt-4o-mini",
+        prompt_template_version_generation="v1.0",
+        prompt_template_version_marking_scheme="v1.0"
+    )
+
+    session = GenerationSession("test_config", 1)
+    session.session_id = str(uuid.uuid4())
+    session.status = "completed"
+    session.questions_generated = 1
+    session.questions = [test_question]
+
+    # Add mock interactions
+    session.llm_interactions = [
+        LLMInteraction(
+            agent_type="generator",
+            model_used="gpt-4o-mini",
+            prompt_text="Test generation prompt",
+            raw_response=f"Generated question {test_question.question_id_local}",
+            success=True,
+            processing_time_ms=1000
+        )
+    ]
+    session.llm_interactions[0].interaction_id = str(uuid.uuid4())
+
+    # Add mock review feedback
+    mock_feedback = ReviewFeedback(
+        outcome=ReviewOutcome.APPROVE,
+        overall_score=0.85,
+        feedback_summary="Good quality test question",
+        specific_feedback={"content": "Clear and appropriate"},
+        suggested_improvements=[],
+        syllabus_compliance=0.8,
+        difficulty_alignment=0.85,
+        marking_quality=0.9
+    )
+    session.review_feedbacks = [mock_feedback]
+
+    # Test the database operations
+    await _test_database_operations_internal(session)
+
+    # Clean up test data
+    await _cleanup_test_data(session.session_id)
+
+
+async def _test_database_operations_internal(session):
     """Test database operations manually"""
 
     connection_string = os.getenv("NEON_DATABASE_URL")
@@ -274,7 +372,7 @@ async def test_database_operations(session):
         await conn.close()
 
 
-async def cleanup_test_data(session_id: str):
+async def _cleanup_test_data(session_id: str):
     """Clean up test data"""
     print(f"\n🧹 Cleaning up test data...")
 
@@ -310,14 +408,14 @@ async def main():
             # Ask if user wants to keep test data
             keep_data = input(f"\n🤔 Keep test data in database? (y/n): ").lower().strip()
             if keep_data != 'y':
-                await cleanup_test_data(session_id)
+                await _cleanup_test_data(session_id)
         else:
             print(f"\n❌ Full persistence pipeline test FAILED!")
 
     except Exception as e:
         print(f"💥 Test failed: {e}")
         if session_id:
-            await cleanup_test_data(session_id)
+            await _cleanup_test_data(session_id)
 
 
 if __name__ == "__main__":

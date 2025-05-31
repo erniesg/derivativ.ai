@@ -11,6 +11,7 @@ from typing import List, Dict, Any, Optional
 from uuid import UUID
 import asyncpg
 from datetime import datetime
+import uuid
 
 # Import with error handling for when used as standalone
 try:
@@ -25,15 +26,22 @@ except ImportError:
 class NeonDBClient:
     """Client for interacting with Neon PostgreSQL database with Payload CMS collections"""
 
-    def __init__(self, database_url: str = None):
-        self.database_url = database_url or os.getenv("NEON_DATABASE_URL")
-        if not self.database_url:
-            raise ValueError("NEON_DATABASE_URL must be provided")
+    def __init__(self, connection_string: str = None):
+        self.connection_string = connection_string
         self.pool = None
 
     async def connect(self):
-        """Initialize connection pool"""
-        self.pool = await asyncpg.create_pool(self.database_url)
+        """Create connection pool"""
+        if self.connection_string and self.connection_string != "postgresql://dummy:dummy@dummy/dummy":
+            try:
+                self.pool = await asyncpg.create_pool(self.connection_string)
+                print("✅ Database connection established")
+            except Exception as e:
+                print(f"❌ Database connection failed: {e}")
+                self.pool = None
+        else:
+            print("⚠️ Using dummy database URL - no actual database operations")
+            self.pool = None
 
     async def close(self):
         """Close connection pool"""
@@ -41,118 +49,116 @@ class NeonDBClient:
             await self.pool.close()
 
     async def create_candidate_questions_table(self):
-        """Create the candidate questions table if it doesn't exist"""
+        """Create the deriv_candidate_questions table if it doesn't exist (updated schema)"""
         create_table_sql = """
-        CREATE TABLE IF NOT EXISTS candidate_questions (
-            id SERIAL PRIMARY KEY,
-            generation_id UUID UNIQUE NOT NULL,
-            question_id_local VARCHAR(50) NOT NULL,
-            question_id_global VARCHAR(100) UNIQUE NOT NULL,
-            question_number_display VARCHAR(20),
-            marks INTEGER NOT NULL,
-            command_word VARCHAR(50) NOT NULL,
-            raw_text_content TEXT NOT NULL,
-            formatted_text_latex TEXT,
+        CREATE TABLE IF NOT EXISTS deriv_candidate_questions (
+            question_id UUID PRIMARY KEY,
+            session_id UUID,  -- Can be null for standalone questions
 
-            -- Taxonomy (stored as JSONB)
-            taxonomy JSONB NOT NULL,
+            -- Lineage tracking
+            generation_interaction_id UUID,
+            marking_interaction_id UUID,
+            review_interaction_id UUID,
 
-            -- Solution and marking scheme (stored as JSONB)
-            solution_and_marking_scheme JSONB NOT NULL,
+            -- Question content (stored as JSONB for flexibility)
+            question_data JSONB NOT NULL,
 
-            -- Solver algorithm (stored as JSONB)
-            solver_algorithm JSONB NOT NULL,
+            -- Educational metadata (extracted for indexing)
+            subject_content_refs TEXT[],
+            topic_path TEXT[],
+            command_word VARCHAR(50),
+            target_grade INT CHECK (target_grade BETWEEN 1 AND 12),
+            marks INT CHECK (marks > 0),
+            calculator_policy VARCHAR(20) CHECK (calculator_policy IN ('allowed', 'not_allowed', 'assumed')),
+            curriculum_type VARCHAR(50) DEFAULT 'cambridge_igcse',
 
-            -- Generation metadata
-            seed_question_id VARCHAR(100),
-            target_grade_input INTEGER NOT NULL CHECK (target_grade_input >= 1 AND target_grade_input <= 9),
+            -- Quality control
+            insertion_status VARCHAR(30) CHECK (insertion_status IN (
+                'pending', 'auto_approved', 'manual_review',
+                'auto_rejected', 'manually_approved', 'manually_rejected',
+                'needs_revision', 'archived'
+            )) DEFAULT 'pending',
 
-            -- Model tracking
-            llm_model_used_generation VARCHAR(100) NOT NULL,
-            llm_model_used_marking_scheme VARCHAR(100) NOT NULL,
-            llm_model_used_review VARCHAR(100),
+            -- Validation results
+            validation_passed BOOLEAN,
+            validation_warnings INT DEFAULT 0,
+            validation_errors JSONB,
 
-            -- Prompt tracking
-            prompt_template_version_generation VARCHAR(50) NOT NULL,
-            prompt_template_version_marking_scheme VARCHAR(50) NOT NULL,
-            prompt_template_version_review VARCHAR(50),
+            -- Review workflow
+            review_score DECIMAL(3,2) CHECK (review_score BETWEEN 0 AND 1),
+            insertion_timestamp TIMESTAMP,
+            approved_by VARCHAR(100),
+            rejection_reason TEXT,
+            manual_notes TEXT,
 
-            -- Status and review
-            generation_timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            status VARCHAR(50) DEFAULT 'candidate' CHECK (status IN (
-                'candidate',
-                'human_reviewed_accepted',
-                'human_reviewed_rejected',
-                'llm_reviewed_needs_human',
-                'auto_rejected'
-            )),
-            reviewer_notes TEXT,
+            -- Version control
+            version INT DEFAULT 1,
+            parent_question_id UUID REFERENCES deriv_candidate_questions(question_id),
 
-            -- Quality metrics
-            confidence_score DECIMAL(3,2) CHECK (confidence_score >= 0.0 AND confidence_score <= 1.0),
-            validation_errors JSONB DEFAULT '[]'::jsonb,
-
-            -- Indexing
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            -- Timestamps
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
         );
 
         -- Create indexes for common queries
-        CREATE INDEX IF NOT EXISTS idx_candidate_questions_generation_id ON candidate_questions(generation_id);
-        CREATE INDEX IF NOT EXISTS idx_candidate_questions_status ON candidate_questions(status);
-        CREATE INDEX IF NOT EXISTS idx_candidate_questions_target_grade ON candidate_questions(target_grade_input);
-        CREATE INDEX IF NOT EXISTS idx_candidate_questions_created_at ON candidate_questions(created_at);
-        CREATE INDEX IF NOT EXISTS idx_candidate_questions_seed_id ON candidate_questions(seed_question_id);
+        CREATE INDEX IF NOT EXISTS idx_deriv_candidate_questions_session_id ON deriv_candidate_questions(session_id);
+        CREATE INDEX IF NOT EXISTS idx_deriv_candidate_questions_insertion_status ON deriv_candidate_questions(insertion_status);
+        CREATE INDEX IF NOT EXISTS idx_deriv_candidate_questions_target_grade ON deriv_candidate_questions(target_grade);
+        CREATE INDEX IF NOT EXISTS idx_deriv_candidate_questions_created_at ON deriv_candidate_questions(created_at);
+        CREATE INDEX IF NOT EXISTS idx_deriv_candidate_questions_validation_passed ON deriv_candidate_questions(validation_passed);
+        CREATE INDEX IF NOT EXISTS idx_deriv_candidate_questions_subject_content ON deriv_candidate_questions USING GIN(subject_content_refs);
         """
 
-        async with self.pool.acquire() as conn:
-            await conn.execute(create_table_sql)
+        if self.pool:
+            async with self.pool.acquire() as conn:
+                await conn.execute(create_table_sql)
 
-    async def save_candidate_question(self, question: CandidateQuestion) -> bool:
-        """Save a candidate question to the database"""
+    async def save_candidate_question(self, question: CandidateQuestion, session_id: str = None) -> bool:
+        """Save a candidate question to the deriv_candidate_questions table"""
+        if not self.pool:
+            print("⚠️ No database pool available - skipping save")
+            return False
+
         insert_sql = """
-        INSERT INTO candidate_questions (
-            generation_id, question_id_local, question_id_global, question_number_display,
-            marks, command_word, raw_text_content, formatted_text_latex,
-            taxonomy, solution_and_marking_scheme, solver_algorithm,
-            seed_question_id, target_grade_input,
-            llm_model_used_generation, llm_model_used_marking_scheme, llm_model_used_review,
-            prompt_template_version_generation, prompt_template_version_marking_scheme,
-            prompt_template_version_review,
-            generation_timestamp, status, reviewer_notes, confidence_score, validation_errors
+        INSERT INTO deriv_candidate_questions (
+            question_id, session_id, question_data,
+            subject_content_refs, topic_path, command_word,
+            target_grade, marks, calculator_policy,
+            insertion_status, validation_passed, validation_warnings
         ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
         )
         """
 
         try:
+            # Generate UUID for question_id
+            question_uuid = str(uuid.uuid4())
+
+            # Extract metadata for indexing
+            subject_content_refs = question.taxonomy.subject_content_references if question.taxonomy else []
+            topic_path = question.taxonomy.topic_path if question.taxonomy else []
+
+            # Convert calculator policy enum to string
+            if hasattr(question, 'calculator_policy'):
+                calculator_policy = question.calculator_policy.value if question.calculator_policy else 'not_allowed'
+            else:
+                calculator_policy = 'not_allowed'
+
             async with self.pool.acquire() as conn:
                 await conn.execute(
                     insert_sql,
-                    question.generation_id,
-                    question.question_id_local,
-                    question.question_id_global,
-                    question.question_number_display,
-                    question.marks,
-                    question.command_word.value,
-                    question.raw_text_content,
-                    question.formatted_text_latex,
-                    json.dumps(question.taxonomy.model_dump()),  # Serialize to JSON string
-                    json.dumps(question.solution_and_marking_scheme.model_dump()),  # Serialize to JSON string
-                    json.dumps(question.solver_algorithm.model_dump()),  # Serialize to JSON string
-                    question.seed_question_id,
-                    question.target_grade_input,
-                    question.llm_model_used_generation,
-                    question.llm_model_used_marking_scheme,
-                    question.llm_model_used_review,
-                    question.prompt_template_version_generation,
-                    question.prompt_template_version_marking_scheme,
-                    question.prompt_template_version_review,
-                    question.generation_timestamp,
-                    question.status.value,
-                    question.reviewer_notes,
-                    question.confidence_score,
-                    json.dumps(question.validation_errors)  # Serialize to JSON string
+                    question_uuid,  # question_id
+                    session_id,  # session_id (can be None)
+                    question.model_dump_json(),  # question_data as JSON
+                    subject_content_refs,  # subject_content_refs array
+                    topic_path,  # topic_path array
+                    question.command_word.value,  # command_word
+                    question.target_grade_input,  # target_grade
+                    question.marks,  # marks
+                    calculator_policy,  # calculator_policy
+                    'pending',  # insertion_status
+                    True,  # validation_passed (assume true for now)
+                    0  # validation_warnings
                 )
             return True
         except Exception as e:
@@ -349,17 +355,20 @@ class NeonDBClient:
             print(f"Error fetching command word definition: {e}")
             return None
 
-    async def update_question_status(self, generation_id: UUID, status: GenerationStatus, reviewer_notes: str = None) -> bool:
+    async def update_question_status(self, question_id: str, status: str, reviewer_notes: str = None) -> bool:
         """Update the status and reviewer notes for a candidate question"""
+        if not self.pool:
+            return False
+
         update_sql = """
-        UPDATE candidate_questions
-        SET status = $1, reviewer_notes = $2, updated_at = NOW()
-        WHERE generation_id = $3
+        UPDATE deriv_candidate_questions
+        SET insertion_status = $1, manual_notes = $2, updated_at = NOW()
+        WHERE question_id = $3
         """
 
         try:
             async with self.pool.acquire() as conn:
-                result = await conn.execute(update_sql, status.value, reviewer_notes, generation_id)
+                result = await conn.execute(update_sql, status, reviewer_notes, question_id)
                 return "UPDATE 1" in result
         except Exception as e:
             print(f"Error updating question status: {e}")
@@ -367,30 +376,35 @@ class NeonDBClient:
 
     async def get_candidate_questions(
         self,
-        status: Optional[GenerationStatus] = None,
+        status: Optional[str] = None,
         target_grade: Optional[int] = None,
         limit: int = 100
     ) -> List[Dict[str, Any]]:
         """Fetch candidate questions with optional filters"""
+        if not self.pool:
+            return []
+
         conditions = []
         params = []
         param_count = 0
 
         if status:
             param_count += 1
-            conditions.append(f"status = ${param_count}")
-            params.append(status.value)
+            conditions.append(f"insertion_status = ${param_count}")
+            params.append(status)
 
         if target_grade:
             param_count += 1
-            conditions.append(f"target_grade_input = ${param_count}")
+            conditions.append(f"target_grade = ${param_count}")
             params.append(target_grade)
 
         where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
 
         param_count += 1
         query_sql = f"""
-        SELECT * FROM candidate_questions
+        SELECT question_id, question_data, insertion_status, target_grade,
+               marks, command_word, validation_passed, created_at
+        FROM deriv_candidate_questions
         {where_clause}
         ORDER BY created_at DESC
         LIMIT ${param_count}
@@ -400,35 +414,42 @@ class NeonDBClient:
         try:
             async with self.pool.acquire() as conn:
                 rows = await conn.fetch(query_sql, *params)
-                return [dict(row) for row in rows]
+                result = []
+                for row in rows:
+                    # Parse the JSON data and add metadata
+                    question_data = json.loads(row['question_data'])
+                    question_data.update({
+                        'question_id': str(row['question_id']),
+                        'insertion_status': row['insertion_status'],
+                        'target_grade': row['target_grade'],
+                        'marks': row['marks'],
+                        'command_word': row['command_word'],
+                        'validation_passed': row['validation_passed'],
+                        'created_at': row['created_at']
+                    })
+                    result.append(question_data)
+                return result
         except Exception as e:
             print(f"Error fetching candidate questions: {e}")
             return []
 
     async def get_generation_stats(self) -> Dict[str, Any]:
         """Get statistics about generated questions"""
-        stats_sql = """
-        SELECT
-            COUNT(*) as total_questions,
-            COUNT(*) FILTER (WHERE status = 'candidate') as pending_review,
-            COUNT(*) FILTER (WHERE status = 'human_reviewed_accepted') as accepted,
-            COUNT(*) FILTER (WHERE status = 'human_reviewed_rejected') as rejected,
-            COUNT(*) FILTER (WHERE status = 'auto_rejected') as auto_rejected,
-            AVG(confidence_score) as avg_confidence,
-            target_grade_input,
-            COUNT(*) as count_per_grade
-        FROM candidate_questions
-        GROUP BY target_grade_input
-        ORDER BY target_grade_input
-        """
+        if not self.pool:
+            return {}
 
         try:
             async with self.pool.acquire() as conn:
-                rows = await conn.fetch(stats_sql)
-                return {
-                    "grade_distribution": [dict(row) for row in rows],
-                    "timestamp": datetime.utcnow().isoformat()
-                }
+                stats = await conn.fetchrow("""
+                    SELECT
+                        COUNT(*) as total_questions,
+                        COUNT(CASE WHEN validation_passed = true THEN 1 END) as validated_questions,
+                        COUNT(CASE WHEN insertion_status = 'auto_approved' THEN 1 END) as approved_questions,
+                        COUNT(CASE WHEN created_at > NOW() - INTERVAL '24 hours' THEN 1 END) as questions_today,
+                        COUNT(CASE WHEN created_at > NOW() - INTERVAL '7 days' THEN 1 END) as questions_this_week
+                    FROM deriv_candidate_questions
+                """)
+                return dict(stats)
         except Exception as e:
             print(f"Error fetching generation stats: {e}")
             return {}

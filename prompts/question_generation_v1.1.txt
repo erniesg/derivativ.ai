@@ -36,9 +36,9 @@ You MUST return a JSON object with ALL of these fields filled out completely:
   "raw_text_content": "Complete question text with specific numbers and context",
   "formatted_text_latex": "LaTeX version if needed (or null)",
   "taxonomy": {{
-    "topic_path": ["Number", "Arithmetic Operations"],
+    "topic_path": ["Number", "The four operations"],
     "subject_content_references": {subject_content_references},
-    "skill_tags": ["calculation", "arithmetic", "problem_solving"],
+    "skill_tags": ["ADDITION", "WORD_PROBLEM"],
     "cognitive_level": "ProceduralFluency",
     "difficulty_estimate_0_to_1": 0.4
   }},
@@ -87,9 +87,9 @@ You MUST return a JSON object with ALL of these fields filled out completely:
 6. **raw_text_content**: Complete question text (NOT just a template!)
 7. **formatted_text_latex**: LaTeX version or null
 8. **taxonomy**: All subfields required:
-   - topic_path: Array of 2+ topic names
+   - topic_path: Array of 2+ topic names from standard Cambridge structure
    - subject_content_references: Use provided references {subject_content_references}
-   - skill_tags: Array of 2+ relevant skills
+   - skill_tags: Array of 2+ skill tags from standardized list (see examples below)
    - cognitive_level: One of: "Recall", "ProceduralFluency", "ConceptualUnderstanding", "Application", "ProblemSolving", "Analysis"
    - difficulty_estimate_0_to_1: Number between 0.0 and 1.0
 9. **solution_and_marking_scheme**: All subfields required:
@@ -97,6 +97,39 @@ You MUST return a JSON object with ALL of these fields filled out completely:
    - mark_allocation_criteria: Array with at least one criterion object
    - total_marks_for_part: Must equal {desired_marks}
 10. **solver_algorithm**: Must contain steps array with at least one step object
+
+## SKILL TAGS - USE THESE EXACT TAGS
+
+For **Number topics**, use tags like:
+- ADDITION, SUBTRACTION, MULTIPLICATION
+- PLACE_VALUE, ROUNDING, ORDER_OF_OPERATIONS
+- FRACTION_OF_QUANTITY, PERCENTAGES_SUM_TO_100
+- PRIME_FACTORIZATION, HCF, MULTIPLE
+- TIME_CALCULATION, TIME_ZONES
+
+For **Algebra topics**, use tags like:
+- SUBSTITUTION, SOLVE_LINEAR_EQUATION
+- FACTORISATION_COMMON_FACTOR, FORM_EQUATION
+- SIMULTANEOUS_LINEAR_EQUATIONS, ELIMINATION_METHOD
+- INEQUALITIES, INEQUALITY_FROM_NUMBER_LINE
+
+For **Geometry topics**, use tags like:
+- ANGLE_PROPERTIES, ANGLES_IN_A_TRIANGLE
+- ALTERNATE_ANGLES, ANGLES_ON_A_STRAIGHT_LINE
+- AREA_COMPOSITE_SHAPES, AREA_PARALLELOGRAM
+- BEARINGS, CONSTRUCTION, SCALE_DRAWING
+
+For **Statistics topics**, use tags like:
+- MODE, MEDIAN, UNGROUPED_DATA
+- SCATTER_DIAGRAM, CORRELATION_TYPE
+- TREE_DIAGRAM_USE, PROBABILITY_COMPLEMENT
+
+For **Transformations**, use tags like:
+- ROTATION, TRANSLATION, ENLARGEMENT
+- SCALE_FACTOR, CENTER_OF_ROTATION
+- DESCRIBE_TRANSFORMATION
+
+Always include WORD_PROBLEM if the question has a real-world context.
 
 ## EXAMPLES FOR GRADE {target_grade}
 
@@ -113,6 +146,7 @@ Here are examples of appropriate question complexity:
 - Include appropriate context for the grade level
 - Marking scheme must align with Cambridge IGCSE standards
 - Solution steps must be clear and logical
+- Use skill tags exactly as listed above
 
 ## FINAL INSTRUCTION
 

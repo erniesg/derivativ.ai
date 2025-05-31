@@ -13,6 +13,7 @@ from dataclasses import asdict
 
 from .orchestrator import GenerationSession, LLMInteraction, InsertionStatus
 from ..models import CandidateQuestion
+from ..models.database_schema import TableNames, DatabaseSchemas, DatabaseIndexes
 from ..agents import ReviewFeedback
 from ..validation import validate_question, ValidationSeverity
 
@@ -32,140 +33,21 @@ class DatabaseManager:
     async def create_tables(self):
         """Create all required tables if they don't exist"""
 
-        # TODO: Implement table creation
-        # This would create:
-        # - generation_sessions
-        # - llm_interactions
-        # - candidate_questions_extended
-        # - review_results
-        # - error_logs
-        # - manual_review_queue
-
         async with self.pool.acquire() as conn:
-            # Generation Sessions table
-            await conn.execute("""
-                CREATE TABLE IF NOT EXISTS generation_sessions (
-                    session_id UUID PRIMARY KEY,
-                    config_id VARCHAR NOT NULL,
-                    timestamp TIMESTAMP DEFAULT NOW(),
-                    status VARCHAR CHECK (status IN ('running', 'completed', 'failed')),
-                    total_questions_requested INT NOT NULL,
-                    questions_generated INT DEFAULT 0,
-                    questions_approved INT DEFAULT 0,
-                    error_count INT DEFAULT 0,
-                    summary_metrics JSONB
-                )
-            """)
+            # Use centralized schema definitions
+            schemas = DatabaseSchemas.get_all_schemas()
 
-            # LLM Interactions table
-            await conn.execute("""
-                CREATE TABLE IF NOT EXISTS llm_interactions (
-                    interaction_id UUID PRIMARY KEY,
-                    session_id UUID REFERENCES generation_sessions,
-                    agent_type VARCHAR NOT NULL,
-                    model_used VARCHAR NOT NULL,
-                    prompt_text TEXT NOT NULL,
-                    raw_response TEXT,
-                    parsed_response JSONB,
-                    processing_time_ms INT,
-                    success BOOLEAN DEFAULT TRUE,
-                    error_message TEXT,
-                    timestamp TIMESTAMP DEFAULT NOW(),
-                    temperature FLOAT,
-                    max_tokens INT,
-                    token_usage JSONB
-                )
-            """)
+            # Create tables in dependency order
+            for table_name, schema in schemas.items():
+                await conn.execute(schema)
+                print(f"✅ Created/verified table: {table_name}")
 
-            # Extended Candidate Questions table
-            await conn.execute("""
-                CREATE TABLE IF NOT EXISTS candidate_questions_extended (
-                    question_id UUID PRIMARY KEY,
-                    session_id UUID REFERENCES generation_sessions,
-                    generation_interaction_id UUID REFERENCES llm_interactions,
-                    marking_interaction_id UUID REFERENCES llm_interactions,
-                    review_interaction_id UUID REFERENCES llm_interactions,
+            # Create all indexes
+            indexes = DatabaseIndexes.get_all_indexes()
+            for index_sql in indexes:
+                await conn.execute(index_sql)
 
-                    -- Question data (would include all CandidateQuestion fields)
-                    question_data JSONB NOT NULL,
-
-                    -- Quality control
-                    insertion_status VARCHAR CHECK (insertion_status IN (
-                        'pending', 'auto_approved', 'manual_review',
-                        'auto_rejected', 'manually_approved', 'manually_rejected'
-                    )),
-                    insertion_timestamp TIMESTAMP,
-                    approved_by VARCHAR,
-                    rejection_reason TEXT,
-
-                    created_at TIMESTAMP DEFAULT NOW(),
-                    updated_at TIMESTAMP DEFAULT NOW(),
-                    version INT DEFAULT 1
-                )
-            """)
-
-            # Review Results table
-            await conn.execute("""
-                CREATE TABLE IF NOT EXISTS review_results (
-                    review_id UUID PRIMARY KEY,
-                    question_id UUID REFERENCES candidate_questions_extended,
-                    interaction_id UUID REFERENCES llm_interactions,
-
-                    outcome VARCHAR NOT NULL,
-                    overall_score DECIMAL(3,2) CHECK (overall_score BETWEEN 0 AND 1),
-                    syllabus_compliance DECIMAL(3,2) CHECK (syllabus_compliance BETWEEN 0 AND 1),
-                    difficulty_alignment DECIMAL(3,2) CHECK (difficulty_alignment BETWEEN 0 AND 1),
-                    marking_quality DECIMAL(3,2) CHECK (marking_quality BETWEEN 0 AND 1),
-
-                    feedback_summary TEXT,
-                    specific_feedback JSONB,
-                    suggested_improvements JSONB,
-
-                    timestamp TIMESTAMP DEFAULT NOW()
-                )
-            """)
-
-            # Error Logs table
-            await conn.execute("""
-                CREATE TABLE IF NOT EXISTS error_logs (
-                    error_id UUID PRIMARY KEY,
-                    session_id UUID REFERENCES generation_sessions,
-                    interaction_id UUID REFERENCES llm_interactions,
-
-                    error_type VARCHAR NOT NULL,
-                    error_severity VARCHAR CHECK (error_severity IN ('low', 'medium', 'high', 'critical')),
-                    error_message TEXT NOT NULL,
-                    stack_trace TEXT,
-                    context_data JSONB,
-
-                    resolved BOOLEAN DEFAULT FALSE,
-                    resolution_notes TEXT,
-                    resolved_by VARCHAR,
-                    resolved_at TIMESTAMP,
-
-                    timestamp TIMESTAMP DEFAULT NOW()
-                )
-            """)
-
-            # Manual Review Queue table
-            await conn.execute("""
-                CREATE TABLE IF NOT EXISTS manual_review_queue (
-                    queue_id UUID PRIMARY KEY,
-                    question_id UUID REFERENCES candidate_questions_extended,
-                    review_id UUID REFERENCES review_results,
-
-                    priority INT DEFAULT 1,
-                    assigned_to VARCHAR,
-                    status VARCHAR DEFAULT 'pending' CHECK (status IN ('pending', 'in_review', 'completed')),
-
-                    review_started_at TIMESTAMP,
-                    review_completed_at TIMESTAMP,
-                    reviewer_notes TEXT,
-                    final_decision VARCHAR,
-
-                    created_at TIMESTAMP DEFAULT NOW()
-                )
-            """)
+            print(f"✅ Created/verified {len(indexes)} indexes")
 
     async def save_session(self, session: GenerationSession) -> bool:
         """Save complete generation session to database"""
@@ -174,8 +56,8 @@ class DatabaseManager:
             async with self.pool.acquire() as conn:
                 async with conn.transaction():
                     # 1. Save session metadata
-                    await conn.execute("""
-                        INSERT INTO generation_sessions (
+                    await conn.execute(f"""
+                        INSERT INTO {TableNames.GENERATION_SESSIONS} (
                             session_id, config_id, timestamp, status,
                             total_questions_requested, questions_generated,
                             questions_approved, error_count, summary_metrics
@@ -202,9 +84,9 @@ class DatabaseManager:
                     for interaction in session.llm_interactions:
                         await self.save_interaction(conn, interaction, session.session_id)
 
-                    # 3. Save all questions with lineage
-                    for i, question in enumerate(session.questions):
-                        # Find corresponding interactions
+                    # 3. Save questions with lineage tracking
+                    for i, question in enumerate(session.candidate_questions):
+                        # Map interactions to questions (assuming 3 interactions per question)
                         gen_interaction = session.llm_interactions[i*3] if len(session.llm_interactions) > i*3 else None
                         mark_interaction = session.llm_interactions[i*3+1] if len(session.llm_interactions) > i*3+1 else None
                         review_interaction = session.llm_interactions[i*3+2] if len(session.llm_interactions) > i*3+2 else None
@@ -216,25 +98,25 @@ class DatabaseManager:
                             review_interaction.interaction_id if review_interaction else None
                         )
 
-                    # 4. Save review results
-                    for i, feedback in enumerate(session.review_feedbacks):
-                        if i < len(session.questions):
-                            await self.save_review_result(conn, feedback, session.questions[i].question_id_local)
+                    # 4. Save review results and errors
+                    for feedback in session.review_feedbacks:
+                        # Find corresponding question
+                        for question in session.candidate_questions:
+                            await self.save_review_result(conn, feedback, question.question_id_global)
 
-                    # 5. Save errors
                     for error in session.errors:
                         await self.save_error(conn, error, session.session_id)
 
-            return True
+                    return True
 
         except Exception as e:
-            print(f"❌ Error saving session to database: {e}")
+            print(f"Error saving session: {e}")
             return False
 
     async def save_interaction(self, conn, interaction: LLMInteraction, session_id: str):
         """Save LLM interaction"""
-        await conn.execute("""
-            INSERT INTO llm_interactions (
+        await conn.execute(f"""
+            INSERT INTO {TableNames.LLM_INTERACTIONS} (
                 interaction_id, session_id, agent_type, model_used,
                 prompt_text, raw_response, parsed_response,
                 processing_time_ms, success, error_message, timestamp
@@ -262,51 +144,44 @@ class DatabaseManager:
         mark_interaction_id: str = None,
         review_interaction_id: str = None
     ):
-        """Save question with lineage and validation"""
+        """Save candidate question with lineage tracking"""
 
-        # Pre-insertion validation
-        validation_result = validate_question(question)
+        # Extract metadata for indexing
+        subject_content_refs = question.taxonomy.subject_content_references if question.taxonomy else []
+        topic_path = question.taxonomy.topic_path if question.taxonomy else []
 
-        if not validation_result.can_insert:
-            print(f"❌ Question {question.question_id_local} failed validation - cannot insert")
-            for issue in validation_result.issues:
-                if issue.severity == ValidationSeverity.CRITICAL:
-                    print(f"   🚨 {issue.field}: {issue.message}")
-            return False
-
-        if validation_result.warnings_count > 0:
-            print(f"⚠️ Question {question.question_id_local} has {validation_result.warnings_count} validation warnings")
-
-        # Proceed with insertion
-        await conn.execute("""
-            INSERT INTO candidate_questions_extended (
+        await conn.execute(f"""
+            INSERT INTO {TableNames.CANDIDATE_QUESTIONS} (
                 question_id, session_id, generation_interaction_id,
                 marking_interaction_id, review_interaction_id,
-                question_data, insertion_status
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+                question_data, subject_content_refs, topic_path,
+                command_word, target_grade, marks, calculator_policy
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
         """,
-            question.question_id_local,
+            str(question.question_id_global),
             session_id,
             gen_interaction_id,
             mark_interaction_id,
             review_interaction_id,
-            json.dumps(question.model_dump(mode='json')),
-            'pending'  # Default status
+            question.model_dump_json(),
+            subject_content_refs,
+            topic_path,
+            question.command_word.value,
+            question.target_grade_input,
+            question.marks,
+            question.calculator_policy.value if question.calculator_policy else 'not_allowed'
         )
 
-        return True
-
     async def save_review_result(self, conn, feedback: ReviewFeedback, question_id: str):
-        """Save review feedback"""
-        review_id = str(uuid.uuid4())
-        await conn.execute("""
-            INSERT INTO review_results (
+        """Save review result"""
+        await conn.execute(f"""
+            INSERT INTO {TableNames.REVIEW_RESULTS} (
                 review_id, question_id, outcome, overall_score,
                 syllabus_compliance, difficulty_alignment, marking_quality,
                 feedback_summary, specific_feedback, suggested_improvements
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         """,
-            review_id,
+            str(uuid.uuid4()),
             question_id,
             feedback.outcome.value,
             feedback.overall_score,
@@ -314,34 +189,34 @@ class DatabaseManager:
             feedback.difficulty_alignment,
             feedback.marking_quality,
             feedback.feedback_summary,
-            json.dumps(feedback.specific_feedback),
-            json.dumps(feedback.suggested_improvements)
+            json.dumps(asdict(feedback.specific_feedback)) if feedback.specific_feedback else None,
+            json.dumps(feedback.suggested_improvements) if feedback.suggested_improvements else None
         )
 
     async def save_error(self, conn, error: Dict[str, Any], session_id: str):
         """Save error log"""
-        error_id = str(uuid.uuid4())
-        await conn.execute("""
-            INSERT INTO error_logs (
+        await conn.execute(f"""
+            INSERT INTO {TableNames.ERROR_LOGS} (
                 error_id, session_id, error_type, error_severity,
-                error_message, context_data
-            ) VALUES ($1, $2, $3, $4, $5, $6)
+                error_message, stack_trace, context_data
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
         """,
-            error_id,
+            str(uuid.uuid4()),
             session_id,
-            error.get('step', 'unknown'),
-            'medium',  # Default severity
-            error.get('error', ''),
-            json.dumps(error)
+            error.get('type', 'unknown'),
+            error.get('severity', 'medium'),
+            str(error.get('message', '')),
+            error.get('stack_trace'),
+            json.dumps(error.get('context', {}))
         )
 
     async def get_questions_for_manual_review(self) -> List[Dict]:
         """Get questions that need manual review"""
         async with self.pool.acquire() as conn:
-            rows = await conn.fetch("""
-                SELECT q.*, r.overall_score, r.feedback_summary, r.suggested_improvements
-                FROM candidate_questions_extended q
-                JOIN review_results r ON q.question_id = r.question_id
+            rows = await conn.fetch(f"""
+                SELECT q.*, r.overall_score, r.outcome
+                FROM {TableNames.CANDIDATE_QUESTIONS} q
+                JOIN {TableNames.REVIEW_RESULTS} r ON q.question_id = r.question_id
                 WHERE q.insertion_status = 'manual_review'
                 ORDER BY r.overall_score DESC
             """)
@@ -353,21 +228,55 @@ class DatabaseManager:
             await self.pool.close()
 
     async def get_candidate_question(self, question_id: str) -> Optional[CandidateQuestion]:
-        """Retrieve a candidate question by ID"""
-        try:
-            async with self.pool.acquire() as conn:
-                row = await conn.fetchrow("""
-                    SELECT question_data FROM candidate_questions_extended
-                    WHERE question_id = $1 OR
-                          (question_data->>'question_id_local') = $1 OR
-                          (question_data->>'question_id_global') = $1
-                """, question_id)
+        """Retrieve a specific candidate question"""
+        async with self.pool.acquire() as conn:
+            row = await conn.fetchrow(f"""
+                SELECT question_data FROM {TableNames.CANDIDATE_QUESTIONS}
+                WHERE question_id = $1
+            """, question_id)
 
-                if row:
-                    question_data = row['question_data']
-                    return CandidateQuestion(**question_data)
-                return None
-
-        except Exception as e:
-            print(f"Error retrieving question {question_id}: {e}")
+            if row:
+                question_data = row['question_data']
+                return CandidateQuestion.model_validate(question_data)
             return None
+
+    async def get_session_summary(self, session_id: str) -> Dict[str, Any]:
+        """Get comprehensive session summary"""
+        async with self.pool.acquire() as conn:
+            # Get session data
+            session_row = await conn.fetchrow(f"""
+                SELECT * FROM {TableNames.GENERATION_SESSIONS}
+                WHERE session_id = $1
+            """, session_id)
+
+            if not session_row:
+                return {}
+
+            # Get interaction counts
+            interaction_counts = await conn.fetchrow(f"""
+                SELECT
+                    COUNT(*) as total_interactions,
+                    COUNT(*) FILTER (WHERE success = true) as successful_interactions,
+                    COUNT(*) FILTER (WHERE agent_type = 'generator') as generation_interactions,
+                    COUNT(*) FILTER (WHERE agent_type = 'marker') as marking_interactions,
+                    COUNT(*) FILTER (WHERE agent_type = 'reviewer') as review_interactions
+                FROM {TableNames.LLM_INTERACTIONS}
+                WHERE session_id = $1
+            """, session_id)
+
+            # Get question counts
+            question_counts = await conn.fetchrow(f"""
+                SELECT
+                    COUNT(*) as total_questions,
+                    COUNT(*) FILTER (WHERE insertion_status = 'auto_approved') as auto_approved,
+                    COUNT(*) FILTER (WHERE insertion_status = 'manual_review') as manual_review,
+                    COUNT(*) FILTER (WHERE insertion_status = 'auto_rejected') as auto_rejected
+                FROM {TableNames.CANDIDATE_QUESTIONS}
+                WHERE session_id = $1
+            """, session_id)
+
+            return {
+                "session": dict(session_row),
+                "interactions": dict(interaction_counts) if interaction_counts else {},
+                "questions": dict(question_counts) if question_counts else {},
+            }

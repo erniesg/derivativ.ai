@@ -1,73 +1,83 @@
 """
-ReAct Multi-Agent Orchestrator - Smolagents-based question generation system.
+Multi-Agent Orchestrator with ReAct Pattern Integration
+=====================================================
 
-This implements the ReAct framework (Reasoning + Acting) with a Manager Agent that
-coordinates specialized agents for question generation, review, and quality control.
+This module implements a sophisticated multi-agent orchestrator that combines
+the ReAct (Reasoning + Acting) pattern with specialized AI agents for Cambridge
+IGCSE Mathematics question generation.
 
-Architecture:
-                    +------------------+
-                    |  Manager Agent   |  (CodeAgent - Advanced reasoning)
-                    +------------------+
-                              |
-            __________________|___________________
-           |                  |                   |
-    +-------------+    +-------------+    +----------------+
-    | Generator   |    | Reviewer    |    | Quality Control|
-    | Agent       |    | Agent       |    | Agent          |
-    +-------------+    +-------------+    +----------------+
-           |                  |                   |
-    Generate Questions   Review Quality    Auto-Publish/Store
+## Architecture Overview
+
+1. **Manager Agent**: Coordinates overall workflow using ReAct reasoning
+2. **Specialist Agents**: Handle specific tasks (generation, review, marking, refinement)
+3. **Database Integration**: Full persistence and audit trails
+4. **Quality Control**: Automated quality assessment and improvement loops
+5. **Payload Publishing**: Direct integration with Payload CMS
+
+## Usage
+
+```python
+orchestrator = create_react_orchestrator(
+    manager_config={"provider": "openai", "model_id": "gpt-4o"},
+    specialist_config={"provider": "anthropic", "model_id": "claude-3-sonnet"},
+    database_manager=db_manager,
+    auto_publish=True
+)
+
+session = await orchestrator.generate_questions_with_react(
+    config_id="algebra_claude4",
+    num_questions=5,
+    requirements={"difficulty": "higher", "topic": "quadratics"}
+)
+```
 """
 
-import asyncio
-import json
-import uuid
-import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Tuple
 from enum import Enum
+import asyncio
+import uuid
+import logging
 
 from smolagents import CodeAgent, ToolCallingAgent, tool
 from smolagents import LiteLLMModel, OpenAIServerModel, InferenceClientModel
 
-from ..models import (
-    CandidateQuestion, GenerationConfig, LLMModel
-)
-from ..agents import (
-    QuestionGeneratorAgent, ReviewAgent, ReviewOutcome, ReviewFeedback
-)
+from ..models.database_schema import TableNames
 from ..services.database_manager import DatabaseManager
-from ..services.payload_publisher import PayloadPublisher
-from ..services.quality_control_workflow import QualityControlWorkflow, QualityDecision
+from ..services.config_manager import ConfigManager
+from ..agents import QuestionGeneratorAgent, ReviewAgent, MarkerAgent, RefinementAgent
+from ..models import CandidateQuestion, GenerationConfig
 from ..validation import validate_question
 
-# Global reference for current orchestrator (set by _inject_real_agents_into_tools)
+# Global variable to store current orchestrator instance for tool access
 _current_orchestrator = None
 
 
 class ReAceGenerationSession:
-    """Session tracking for ReAct-based generation workflow"""
+    """Session tracking for ReAct-based question generation"""
 
     def __init__(self, config_id: str, num_questions: int):
         self.session_id = str(uuid.uuid4())
         self.config_id = config_id
         self.num_questions = num_questions
-        self.start_time = datetime.utcnow()
-        self.status = "running"
+        self.start_time = datetime.now()
+        self.end_time = None
 
         # Results tracking
-        self.questions_generated = 0
-        self.questions_approved = 0
-        self.questions_published = 0
-        self.questions_rejected = 0
+        self.generated_questions: List[CandidateQuestion] = []
+        self.review_results: List[Any] = []
+        self.refinement_history: List[Dict] = []
+        self.manager_reasoning: List[str] = []
 
-        # Full audit trail
-        self.reasoning_steps: List[str] = []
-        self.actions_taken: List[Dict[str, Any]] = []
-        self.questions: List[CandidateQuestion] = []
-        self.review_feedbacks: List[ReviewFeedback] = []
-        self.quality_decisions: List[Dict[str, Any]] = []
+        # Status tracking
+        self.status = "running"
+        self.current_step = "initialization"
         self.errors: List[str] = []
+
+        # Metrics
+        self.total_agent_calls = 0
+        self.successful_generations = 0
+        self.quality_improvements = 0
 
 
 @tool
@@ -78,60 +88,49 @@ def generate_igcse_question(
     question_type: str = None
 ) -> Dict[str, Any]:
     """
-    Generate a Cambridge IGCSE Mathematics question using the configured pipeline.
+    Generate a Cambridge IGCSE Mathematics question using real agents.
 
     Args:
-        config_id: Configuration ID to use for generation
-        topic: Optional specific topic to focus on
-        difficulty: Optional difficulty level (foundation/higher)
-        question_type: Optional question type (multiple_choice, short_answer, etc.)
+        config_id: Generation configuration ID (e.g., 'algebra_claude4')
+        topic: Optional topic focus (e.g., 'algebra', 'geometry')
+        difficulty: Optional difficulty level ('foundation', 'higher')
+        question_type: Optional question type ('short_answer', 'extended')
 
     Returns:
-        Dictionary with question data and metadata
+        Dictionary with generation results and question data
     """
     try:
         # Check if we have a live orchestrator with real agents
         if _current_orchestrator and hasattr(_current_orchestrator, 'real_generator_agent'):
-            from ..services.config_manager import ConfigManager
-
-            config_manager = ConfigManager()
-            config = config_manager.get_config(config_id)
-
+            # Load configuration
+            config = _current_orchestrator.config_manager.get_config(config_id)
             if config:
-                # Note: topic, difficulty, question_type are handled by the config itself
-                # Don't modify the config object as it doesn't have these fields
-
-                # Generate question with real agent
-                import asyncio
-
-                # Create a simple async wrapper function
+                # Create async wrapper to call real agent
                 async def generate_async():
-                    return await _current_orchestrator.real_generator_agent.generate_question(config)
+                    # Use real QuestionGeneratorAgent
+                    question, interaction = await _current_orchestrator.real_generator_agent.generate_question(
+                        config, str(uuid.uuid4())
+                    )
+                    return question
 
-                # Run it synchronously
+                # Run it synchronously within the tool context
                 try:
-                    loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(loop)
-                    question = loop.run_until_complete(generate_async())
-                    loop.close()
-                except Exception as e:
-                    print(f"Async generation failed: {e}")
-                    question = None
+                    import asyncio
+                    question = asyncio.run(generate_async())
 
-                if question:
-                    # Save question to database
+                    # Try to save to database if available
                     if _current_orchestrator.database_manager:
                         try:
                             # Save synchronously using the same loop
                             async def save_question():
                                 async with _current_orchestrator.database_manager.pool.acquire() as conn:
-                                    await conn.execute("""
-                                        INSERT INTO candidate_questions_extended (
+                                    await conn.execute(f"""
+                                        INSERT INTO {TableNames.CANDIDATE_QUESTIONS} (
                                             question_id, question_data, insertion_status, created_at
                                         ) VALUES ($1, $2, $3, $4)
                                     """,
-                                    str(question.question_id_local),
-                                    question.model_dump(),
+                                    str(question.question_id_global),
+                                    question.model_dump_json(),
                                     'pending',
                                     question.generation_timestamp
                                     )
@@ -147,7 +146,7 @@ def generate_igcse_question(
 
                     return {
                         "status": "success",
-                        "question_id": question.question_id_local,
+                        "question_id": question.question_id_global,
                         "question_data": question.model_dump(),
                         "config_used": config_id,
                         "topic": topic or "general",
@@ -156,10 +155,11 @@ def generate_igcse_question(
                         "message": f"Question generated and saved to database with config {config_id}",
                         "saved_to_database": True
                     }
-                else:
+                except Exception as e:
                     return {
                         "status": "error",
-                        "message": "Question generation failed - no question returned"
+                        "error": str(e),
+                        "message": f"Failed to generate question: {e}"
                     }
             else:
                 return {

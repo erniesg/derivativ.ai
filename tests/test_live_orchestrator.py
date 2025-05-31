@@ -10,8 +10,8 @@ import os
 import sys
 from dotenv import load_dotenv
 
-# Add project root to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+# Add project root to path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.services import create_react_orchestrator
 from src.services.database_manager import DatabaseManager

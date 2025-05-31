@@ -489,7 +489,7 @@ class MultiAgentOrchestrator:
                 "approved": session.questions_approved,
                 "success_rate": session.questions_generated / session.total_questions_requested if session.total_questions_requested > 0 else 0
             },
-            "llm_interactions": {
+            "agent_interactions": {
                 "total": total_interactions,
                 "successful": successful_interactions,
                 "failed": failed_interactions,

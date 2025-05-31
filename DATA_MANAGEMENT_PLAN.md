@@ -56,7 +56,7 @@ class InsertionCriteria:
 
 ```sql
 -- Generation Sessions (top-level tracking)
-generation_sessions (
+deriv_generation_sessions (
     session_id UUID PRIMARY KEY,
     config_id VARCHAR NOT NULL,
     timestamp TIMESTAMP DEFAULT NOW(),
@@ -69,10 +69,10 @@ generation_sessions (
 )
 
 -- Raw LLM Interactions (complete audit trail)
-llm_interactions (
+deriv_llm_interactions (
     interaction_id UUID PRIMARY KEY,
-    session_id UUID REFERENCES generation_sessions,
-    agent_type VARCHAR NOT NULL,  -- 'generator', 'marker', 'reviewer'
+    session_id UUID REFERENCES deriv_generation_sessions,
+    agent_type VARCHAR NOT NULL,  -- 'generator', 'marker', 'reviewer', 'refiner'
     model_used VARCHAR NOT NULL,  -- Model identifier
     prompt_text TEXT NOT NULL,    -- Complete input prompt
     raw_response TEXT,            -- Raw LLM output
@@ -88,43 +88,72 @@ llm_interactions (
     token_usage JSONB  -- Input/output token counts
 )
 
--- Extended Candidate Questions (with full lineage)
-candidate_questions_extended (
+-- Candidate Questions (with full lineage tracking)
+deriv_candidate_questions (
     -- All existing CandidateQuestion fields PLUS:
-    session_id UUID REFERENCES generation_sessions,
-    generation_interaction_id UUID REFERENCES llm_interactions,
-    marking_interaction_id UUID REFERENCES llm_interactions,
-    review_interaction_id UUID REFERENCES llm_interactions,
+    question_id UUID PRIMARY KEY,
+    session_id UUID REFERENCES deriv_generation_sessions,
+    generation_interaction_id UUID REFERENCES deriv_llm_interactions,
+    marking_interaction_id UUID REFERENCES deriv_llm_interactions,
+    review_interaction_id UUID REFERENCES deriv_llm_interactions,
+
+    -- Question content (stored as JSONB for flexibility)
+    question_data JSONB NOT NULL,
+
+    -- Educational metadata (extracted for indexing)
+    subject_content_refs TEXT[],
+    topic_path TEXT[],
+    command_word VARCHAR(50),
+    target_grade INT CHECK (target_grade BETWEEN 1 AND 12),
+    marks INT CHECK (marks > 0),
+    calculator_policy VARCHAR(20) CHECK (calculator_policy IN ('allowed', 'not_allowed', 'assumed')),
+    curriculum_type VARCHAR(50) DEFAULT 'cambridge_igcse',
 
     -- Quality control
-    insertion_status VARCHAR CHECK (insertion_status IN (
+    insertion_status VARCHAR(30) CHECK (insertion_status IN (
         'pending', 'auto_approved', 'manual_review',
-        'auto_rejected', 'manually_approved', 'manually_rejected'
-    )),
-    insertion_timestamp TIMESTAMP,
-    approved_by VARCHAR,  -- 'system' or user_id
-    rejection_reason TEXT,
+        'auto_rejected', 'manually_approved', 'manually_rejected',
+        'needs_revision', 'archived'
+    )) DEFAULT 'pending',
 
-    -- Audit trail
+    -- Validation results
+    validation_passed BOOLEAN,
+    validation_warnings INT DEFAULT 0,
+    validation_errors JSONB,
+
+    -- Review workflow
+    review_score DECIMAL(3,2) CHECK (review_score BETWEEN 0 AND 1),
+    insertion_timestamp TIMESTAMP,
+    approved_by VARCHAR(100),
+    rejection_reason TEXT,
+    manual_notes TEXT,
+
+    -- Version control
+    version INT DEFAULT 1,
+    parent_question_id UUID REFERENCES deriv_candidate_questions(question_id),
+
+    -- Timestamps
     created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
-    version INT DEFAULT 1
+    updated_at TIMESTAMP DEFAULT NOW()
 )
 
 -- Review Results (quality assessment data)
-review_results (
+deriv_review_results (
     review_id UUID PRIMARY KEY,
-    question_id UUID REFERENCES candidate_questions_extended,
-    interaction_id UUID REFERENCES llm_interactions,
+    question_id UUID REFERENCES deriv_candidate_questions,
+    interaction_id UUID REFERENCES deriv_llm_interactions,
 
     -- Review outcomes
     outcome VARCHAR NOT NULL,  -- ReviewOutcome enum values
     overall_score DECIMAL(3,2) CHECK (overall_score BETWEEN 0 AND 1),
 
     -- Component scores
+    mathematical_accuracy DECIMAL(3,2) CHECK (mathematical_accuracy BETWEEN 0 AND 1),
     syllabus_compliance DECIMAL(3,2) CHECK (syllabus_compliance BETWEEN 0 AND 1),
     difficulty_alignment DECIMAL(3,2) CHECK (difficulty_alignment BETWEEN 0 AND 1),
     marking_quality DECIMAL(3,2) CHECK (marking_quality BETWEEN 0 AND 1),
+    pedagogical_soundness DECIMAL(3,2) CHECK (pedagogical_soundness BETWEEN 0 AND 1),
+    technical_quality DECIMAL(3,2) CHECK (technical_quality BETWEEN 0 AND 1),
 
     -- Detailed feedback
     feedback_summary TEXT,
@@ -135,10 +164,11 @@ review_results (
 )
 
 -- Comprehensive Error Logs
-error_logs (
+deriv_error_logs (
     error_id UUID PRIMARY KEY,
-    session_id UUID REFERENCES generation_sessions,
-    interaction_id UUID REFERENCES llm_interactions,
+    session_id UUID REFERENCES deriv_generation_sessions,
+    interaction_id UUID REFERENCES deriv_llm_interactions,
+    question_id UUID REFERENCES deriv_candidate_questions,
 
     -- Error classification
     error_type VARCHAR NOT NULL,  -- 'parsing', 'model_call', 'validation', etc.
@@ -159,21 +189,23 @@ error_logs (
 )
 
 -- Manual Review Queue (for human reviewers)
-manual_review_queue (
+deriv_manual_review_queue (
     queue_id UUID PRIMARY KEY,
-    question_id UUID REFERENCES candidate_questions_extended,
-    review_id UUID REFERENCES review_results,
+    question_id UUID REFERENCES deriv_candidate_questions,
+    review_id UUID REFERENCES deriv_review_results,
 
     -- Queue management
     priority INT DEFAULT 1,      -- 1=low, 5=high
     assigned_to VARCHAR,         -- Reviewer user ID
-    status VARCHAR DEFAULT 'pending' CHECK (status IN ('pending', 'in_review', 'completed')),
+    status VARCHAR DEFAULT 'pending' CHECK (status IN ('pending', 'assigned', 'in_review', 'completed', 'escalated')),
 
     -- Review tracking
     review_started_at TIMESTAMP,
     review_completed_at TIMESTAMP,
+    estimated_time_minutes INT,
+    actual_time_minutes INT,
     reviewer_notes TEXT,
-    final_decision VARCHAR,      -- 'approve', 'reject', 'revise'
+    final_decision VARCHAR,      -- 'approved', 'rejected', 'needs_revision', 'escalated'
 
     created_at TIMESTAMP DEFAULT NOW()
 )
@@ -299,8 +331,8 @@ class QuestionLineage:
 ```sql
 -- Find all questions from a session
 SELECT q.*, r.overall_score, r.outcome
-FROM candidate_questions_extended q
-JOIN review_results r ON q.question_id = r.question_id
+FROM deriv_candidate_questions q
+JOIN deriv_review_results r ON q.question_id = r.question_id
 WHERE q.session_id = ?
 
 -- Trace a question's complete pipeline
@@ -310,21 +342,21 @@ SELECT
     i.success,
     i.processing_time_ms,
     i.error_message
-FROM llm_interactions i
+FROM deriv_llm_interactions i
 WHERE i.interaction_id IN (
     SELECT unnest(ARRAY[
         q.generation_interaction_id,
         q.marking_interaction_id,
         q.review_interaction_id
     ])
-    FROM candidate_questions_extended q
+    FROM deriv_candidate_questions q
     WHERE q.question_id = ?
 )
 
 -- Find questions needing manual review
 SELECT q.*, r.feedback_summary, r.suggested_improvements
-FROM candidate_questions_extended q
-JOIN review_results r ON q.question_id = r.question_id
+FROM deriv_candidate_questions q
+JOIN deriv_review_results r ON q.question_id = r.question_id
 WHERE q.insertion_status = 'manual_review'
 ORDER BY r.overall_score DESC
 ```
@@ -394,47 +426,61 @@ For every error, we capture:
 
 ### **✅ Completed**
 
-1. **MultiAgentOrchestrator**: Complete pipeline coordination
-2. **InsertionCriteria**: Automated decision making
-3. **LLMInteraction**: Raw data capture framework
-4. **GenerationSession**: Session management with audit trails
-5. **Error Logging**: Comprehensive error tracking
-6. **Quality Control**: ReviewAgent integration
+1. **DatabaseManager**: Complete schema with all 6 `deriv_*` tables
+2. **QualityControlWorkflow**: Complete automated quality improvement loop
+3. **RefinementAgent**: Question refinement with fallback strategies
+4. **MultiAgentOrchestrator**: Complete pipeline coordination with audit trails
+5. **InsertionCriteria**: Automated decision making with configurable thresholds
+6. **LLMInteraction**: Raw data capture framework with performance metrics
+7. **GenerationSession**: Session management with complete audit trails
+8. **Error Logging**: Comprehensive error tracking and resolution workflow
+9. **Review Integration**: Complete ReviewAgent integration with quality scoring
 
-### **🚧 Next Steps**
+### **🚧 Current Systems**
 
-1. **Database Implementation**: Implement actual Neon DB schemas
-2. **Agent Enhancement**: Modify agents to return raw prompts/responses
-3. **Manual Review Interface**: Build UI for human reviewers
-4. **Analytics Dashboard**: Session/error analysis tools
-5. **Cost Tracking**: Monitor API usage and costs
-6. **Performance Optimization**: Batch processing, caching
+#### **Production Ready Systems**
+1. **DatabaseManager**: All 6 tables, complete audit trails, used by ReActOrchestrator
+2. **NeonDBClient**: Single table, simple CRUD, used by GenerationService
+3. **Quality Control**: Complete automated refinement and decision workflow
+4. **Agent Architecture**: Generator, Marker, Reviewer, Refinement agents
+
+#### **Integration Status**
+- **ReActOrchestrator**: Uses DatabaseManager for complete session tracking
+- **GenerationService**: Uses NeonDBClient for basic question storage
+- **Quality Workflow**: Integrated with DatabaseManager for audit trails
+- **Manual Review**: Queue system integrated with quality control decisions
 
 ### **📋 Usage Example**
 
 ```python
-# Initialize orchestrator
-orchestrator = MultiAgentOrchestrator(
-    generator_model=gpt4o_mini,
-    marker_model=gpt4o_mini,
-    reviewer_model=claude_sonnet_4,
-    db_client=neon_db_client,
-    debug=True
+# Complete Quality Control Workflow
+from src.services.quality_control_workflow import QualityControlWorkflow
+
+# Initialize with all agents
+workflow = QualityControlWorkflow(
+    review_agent=review_agent,
+    refinement_agent=refinement_agent,
+    generator_agent=generator_agent,
+    database_manager=database_manager,
+    auto_publish=True
 )
 
-# Generate questions with full quality control
-session = await orchestrator.generate_questions_with_quality_control(
-    config_id="mixed_review_gpt4o_mini",
-    num_questions=10,
-    auto_insert=True  # Auto-approve high-quality questions
+# Process question through complete workflow
+result = await workflow.process_question(
+    question=candidate_question,
+    session_id=session_id,
+    generation_config=config
 )
 
-# Get comprehensive session analytics
-summary = orchestrator.get_session_summary(session)
-print(f"Success rate: {summary['questions']['success_rate']:.1%}")
-print(f"Average quality: {summary['quality_metrics']['average_score']:.2f}")
-print(f"Auto-approved: {summary['insertion_decisions']['auto_approved']}")
-print(f"Manual review needed: {summary['insertion_decisions']['manual_review']}")
+# Result contains:
+# - Final decision (approve/refine/reject/manual_review)
+# - Complete audit trail of all steps
+# - Auto-publication status if enabled
+# - Performance metrics and timing data
+
+print(f"Final decision: {result['final_decision']}")
+print(f"Total iterations: {result['total_iterations']}")
+print(f"Auto-published: {result.get('payload_question_id') is not None}")
 ```
 
-This system provides **complete transparency, traceability, and quality control** for the question generation pipeline, enabling both automated operation and easy debugging/improvement.
+This system provides **complete transparency, traceability, and quality control** for the question generation pipeline, enabling both automated operation and easy debugging/improvement with full database consistency using the `deriv_*` table naming convention.

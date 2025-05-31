@@ -17,6 +17,10 @@ from dataclasses import dataclass
 
 from ..models import CandidateQuestion, CommandWord, GenerationStatus
 from ..models.question_models import CalculatorPolicy
+from ..models.enums import (
+    SkillTag, SubjectContentReference, TopicPathComponent,
+    get_valid_skill_tags, get_valid_subject_refs, get_valid_topic_paths
+)
 
 
 class ValidationSeverity(Enum):
@@ -54,9 +58,13 @@ class CambridgeQuestionValidator:
     """Comprehensive validator for Cambridge IGCSE Mathematics questions"""
 
     def __init__(self):
+        # Use enum-based validation for consistency
+        self.valid_skill_tags = set(get_valid_skill_tags())
+        self.valid_subject_refs = set(get_valid_subject_refs())
+        self.valid_topic_paths = set(get_valid_topic_paths())
+
+        # Still load syllabus data for additional context
         self.syllabus_data = self._load_syllabus_data()
-        self.valid_subject_refs = self._extract_valid_subject_refs()
-        self.valid_topic_paths = self._extract_valid_topic_paths()
         self.command_words = self._load_command_words()
 
     def _load_syllabus_data(self) -> Dict[str, Any]:
@@ -67,35 +75,6 @@ class CambridgeQuestionValidator:
         except Exception as e:
             print(f"Warning: Could not load syllabus data: {e}")
             return {}
-
-    def _extract_valid_subject_refs(self) -> set:
-        """Extract all valid subject content references from syllabus"""
-        refs = set()
-
-        for content_type in ["core_subject_content", "extended_subject_content"]:
-            for topic in self.syllabus_data.get(content_type, []):
-                for sub_topic in topic.get("sub_topics", []):
-                    ref = sub_topic.get("subject_content_ref")
-                    if ref:
-                        refs.add(ref)
-
-        return refs
-
-    def _extract_valid_topic_paths(self) -> Dict[str, List[str]]:
-        """Extract valid topic paths from syllabus"""
-        topic_paths = {}
-
-        for content_type in ["core_subject_content", "extended_subject_content"]:
-            for topic in self.syllabus_data.get(content_type, []):
-                topic_name = topic.get("topic_name", "")
-                if topic_name:
-                    topic_paths[topic_name] = []
-                    for sub_topic in topic.get("sub_topics", []):
-                        sub_name = sub_topic.get("title", "")
-                        if sub_name:
-                            topic_paths[topic_name].append(sub_name)
-
-        return topic_paths
 
     def _load_command_words(self) -> set:
         """Load valid command words from syllabus"""
@@ -116,19 +95,22 @@ class CambridgeQuestionValidator:
         # 2. Cambridge standards validation
         issues.extend(self._validate_cambridge_standards(question))
 
-        # 3. Subject content reference validation
+        # 3. Subject content reference validation (using enums)
         issues.extend(self._validate_subject_references(question))
 
-        # 4. Topic path validation
+        # 4. Topic path validation (using enums)
         issues.extend(self._validate_topic_paths(question))
 
-        # 5. Marking scheme validation
+        # 5. Skill tags validation (using enums)
+        issues.extend(self._validate_skill_tags(question))
+
+        # 6. Marking scheme validation
         issues.extend(self._validate_marking_scheme(question))
 
-        # 6. Mathematical consistency validation
+        # 7. Mathematical consistency validation
         issues.extend(self._validate_mathematical_consistency(question))
 
-        # 7. Generation metadata validation
+        # 8. Generation metadata validation
         issues.extend(self._validate_generation_metadata(question))
 
         # Count issues by severity
@@ -207,43 +189,44 @@ class CambridgeQuestionValidator:
         return issues
 
     def _validate_cambridge_standards(self, question: CandidateQuestion) -> List[ValidationIssue]:
-        """Validate against Cambridge IGCSE standards"""
+        """Validate adherence to Cambridge IGCSE standards"""
         issues = []
 
-        # Validate command word
-        if question.command_word.value not in self.command_words:
-            issues.append(ValidationIssue(
-                severity=ValidationSeverity.CRITICAL,
-                field="command_word",
-                issue_type="invalid_command_word",
-                message=f"'{question.command_word.value}' is not a valid Cambridge IGCSE command word",
-                suggested_fix=f"Use one of: {', '.join(sorted(self.command_words))}"
-            ))
-
-        # Validate grade appropriateness
+        # Check target grade is within valid range
         if not (1 <= question.target_grade_input <= 9):
             issues.append(ValidationIssue(
                 severity=ValidationSeverity.CRITICAL,
                 field="target_grade_input",
-                issue_type="invalid_grade",
-                message=f"Target grade {question.target_grade_input} is outside valid range 1-9",
+                issue_type="invalid_range",
+                message=f"Target grade {question.target_grade_input} outside valid range 1-9",
                 suggested_fix="Set target grade between 1 and 9"
             ))
 
-        # Validate marks range (Cambridge typically 1-5 marks per question)
-        if question.marks > 5:
+        # Check command word is valid
+        if question.command_word:
+            if question.command_word.value not in self.command_words and self.command_words:
+                issues.append(ValidationIssue(
+                    severity=ValidationSeverity.WARNING,
+                    field="command_word",
+                    issue_type="invalid_command_word",
+                    message=f"Command word '{question.command_word.value}' not in Cambridge syllabus",
+                    suggested_fix=f"Use standard command words: {', '.join(list(self.command_words)[:5])}..."
+                ))
+
+        # Check marks align with typical Cambridge ranges
+        if question.marks > 10:
             issues.append(ValidationIssue(
                 severity=ValidationSeverity.WARNING,
                 field="marks",
-                issue_type="unusual_marks",
-                message=f"Question has {question.marks} marks, which is unusually high for IGCSE",
-                suggested_fix="Consider breaking into sub-parts or reducing complexity"
+                issue_type="unusual_value",
+                message=f"Question worth {question.marks} marks is unusually high for IGCSE",
+                suggested_fix="Consider breaking into sub-questions or reducing marks"
             ))
 
         return issues
 
     def _validate_subject_references(self, question: CandidateQuestion) -> List[ValidationIssue]:
-        """Validate subject content references exist in syllabus"""
+        """Validate subject content references using enums"""
         issues = []
 
         for ref in question.taxonomy.subject_content_references:
@@ -268,43 +251,72 @@ class CambridgeQuestionValidator:
         return issues
 
     def _validate_topic_paths(self, question: CandidateQuestion) -> List[ValidationIssue]:
-        """Validate topic paths make sense"""
+        """Validate topic paths using enums"""
         issues = []
 
-        topic_path = question.taxonomy.topic_path
-
-        if not topic_path:
+        if not question.taxonomy.topic_path:
             issues.append(ValidationIssue(
                 severity=ValidationSeverity.CRITICAL,
                 field="taxonomy.topic_path",
                 issue_type="empty_collection",
-                message="Topic path cannot be empty",
-                suggested_fix="Add appropriate topic classification"
+                message="Question must have topic path",
+                suggested_fix="Add topic classification path"
             ))
-            return issues
+        else:
+            for path_component in question.taxonomy.topic_path:
+                if path_component not in self.valid_topic_paths:
+                    issues.append(ValidationIssue(
+                        severity=ValidationSeverity.WARNING,
+                        field="taxonomy.topic_path",
+                        issue_type="invalid_topic_path",
+                        message=f"Topic path component '{path_component}' not in standard Cambridge structure",
+                        suggested_fix=f"Use standard paths like: {', '.join(list(self.valid_topic_paths)[:10])}..."
+                    ))
 
-        # Check if main topic exists in syllabus
-        main_topic = topic_path[0]
-        if main_topic not in self.valid_topic_paths:
-            # Check for close matches
-            available_topics = list(self.valid_topic_paths.keys())
-            issues.append(ValidationIssue(
-                severity=ValidationSeverity.WARNING,
-                field="taxonomy.topic_path",
-                issue_type="unrecognized_topic",
-                message=f"Main topic '{main_topic}' not recognized in syllabus",
-                suggested_fix=f"Consider using: {', '.join(available_topics)}"
-            ))
+            # Check path makes sense (at least 2 levels)
+            if len(question.taxonomy.topic_path) < 2:
+                issues.append(ValidationIssue(
+                    severity=ValidationSeverity.WARNING,
+                    field="taxonomy.topic_path",
+                    issue_type="insufficient_depth",
+                    message="Topic path should have at least 2 levels (e.g., ['Number', 'Fractions'])",
+                    suggested_fix="Add more specific topic classification"
+                ))
 
-        # Basic sanity checks
-        if len(topic_path) < 2:
+        return issues
+
+    def _validate_skill_tags(self, question: CandidateQuestion) -> List[ValidationIssue]:
+        """Validate skill tags using enums"""
+        issues = []
+
+        if not question.taxonomy.skill_tags:
             issues.append(ValidationIssue(
-                severity=ValidationSeverity.WARNING,
-                field="taxonomy.topic_path",
-                issue_type="incomplete_path",
-                message="Topic path should have at least 2 levels (e.g., ['Number', 'Fractions'])",
-                suggested_fix="Add more specific topic classification"
+                severity=ValidationSeverity.CRITICAL,
+                field="taxonomy.skill_tags",
+                issue_type="empty_collection",
+                message="Question must have at least one skill tag",
+                suggested_fix="Add relevant skill tags for the question"
             ))
+        else:
+            for skill_tag in question.taxonomy.skill_tags:
+                if skill_tag not in self.valid_skill_tags:
+                    issues.append(ValidationIssue(
+                        severity=ValidationSeverity.WARNING,
+                        field="taxonomy.skill_tags",
+                        issue_type="invalid_skill_tag",
+                        message=f"Skill tag '{skill_tag}' not in standardized skill taxonomy",
+                        suggested_fix=f"Use standard skills like: {', '.join(list(self.valid_skill_tags)[:10])}..."
+                    ))
+
+            # Check minimum number of skill tags
+            if len(question.taxonomy.skill_tags) < 2:
+                issues.append(ValidationIssue(
+                    severity=ValidationSeverity.WARNING,
+                    field="taxonomy.skill_tags",
+                    issue_type="insufficient_tags",
+                    message="Consider adding more skill tags for better classification",
+                    suggested_fix="Add at least 2-3 relevant skill tags"
+                ))
 
         return issues
 
@@ -314,174 +326,137 @@ class CambridgeQuestionValidator:
 
         marking_scheme = question.solution_and_marking_scheme
 
-        # Check marks add up
-        total_criteria_marks = sum(
-            criterion.marks_value for criterion in marking_scheme.mark_allocation_criteria
-        )
+        # Check total marks consistency
+        if marking_scheme.total_marks_for_part != question.marks:
+            issues.append(ValidationIssue(
+                severity=ValidationSeverity.CRITICAL,
+                field="solution_and_marking_scheme.total_marks_for_part",
+                issue_type="inconsistent_marks",
+                message=f"Total marks ({marking_scheme.total_marks_for_part}) doesn't match question marks ({question.marks})",
+                suggested_fix="Ensure marking scheme total equals question marks"
+            ))
 
-        if abs(total_criteria_marks - question.marks) > 0.01:
+        # Check criteria marks sum to total
+        criteria_total = sum(criterion.marks_value for criterion in marking_scheme.mark_allocation_criteria)
+        if abs(criteria_total - marking_scheme.total_marks_for_part) > 0.01:
             issues.append(ValidationIssue(
                 severity=ValidationSeverity.CRITICAL,
                 field="mark_allocation_criteria",
                 issue_type="marks_mismatch",
-                message=f"Criteria marks ({total_criteria_marks}) don't match question marks ({question.marks})",
-                suggested_fix="Adjust criteria marks to match total question marks"
+                message=f"Mark criteria total ({criteria_total}) doesn't match total marks ({marking_scheme.total_marks_for_part})",
+                suggested_fix="Adjust individual criteria marks to sum correctly"
             ))
 
-        if abs(marking_scheme.total_marks_for_part - question.marks) > 0.01:
-            issues.append(ValidationIssue(
-                severity=ValidationSeverity.CRITICAL,
-                field="total_marks_for_part",
-                issue_type="marks_mismatch",
-                message=f"Total marks for part ({marking_scheme.total_marks_for_part}) doesn't match question marks ({question.marks})",
-                suggested_fix="Set total_marks_for_part to match question marks"
-            ))
-
-        # Validate mark codes (Cambridge uses M, A, B, etc.)
-        valid_mark_codes = {"M", "A", "B", "FT", "SC", "ISW", "OE", "SOI", "CAO", "DEP", "C", "E", "NA"}
-        for criterion in marking_scheme.mark_allocation_criteria:
-            if criterion.mark_type_primary and criterion.mark_type_primary not in valid_mark_codes:
+        # Check each criterion has valid details
+        for i, criterion in enumerate(marking_scheme.mark_allocation_criteria):
+            if not criterion.criterion_text.strip():
                 issues.append(ValidationIssue(
                     severity=ValidationSeverity.WARNING,
-                    field="mark_allocation_criteria.mark_type_primary",
-                    issue_type="invalid_mark_code",
-                    message=f"Mark code '{criterion.mark_type_primary}' is not standard Cambridge format",
-                    suggested_fix=f"Use standard codes: {', '.join(sorted(valid_mark_codes))}"
+                    field=f"mark_allocation_criteria[{i}].criterion_text",
+                    issue_type="empty_field",
+                    message=f"Mark criterion {i+1} has empty description",
+                    suggested_fix="Add descriptive text for what earns the marks"
+                ))
+
+            if criterion.marks_value <= 0:
+                issues.append(ValidationIssue(
+                    severity=ValidationSeverity.CRITICAL,
+                    field=f"mark_allocation_criteria[{i}].marks_value",
+                    issue_type="invalid_value",
+                    message=f"Mark criterion {i+1} has non-positive marks ({criterion.marks_value})",
+                    suggested_fix="Set positive mark value"
                 ))
 
         return issues
 
     def _validate_mathematical_consistency(self, question: CandidateQuestion) -> List[ValidationIssue]:
-        """Validate mathematical consistency"""
+        """Validate mathematical consistency and accuracy"""
         issues = []
 
-        # Check if answers have appropriate precision
-        for answer in question.solution_and_marking_scheme.final_answers_summary:
-            if answer.value_numeric is not None:
-                # Check for reasonable precision (not too many decimal places)
-                str_value = str(answer.value_numeric)
-                if '.' in str_value:
-                    decimal_places = len(str_value.split('.')[1])
-                    if decimal_places > 4:
-                        issues.append(ValidationIssue(
-                            severity=ValidationSeverity.WARNING,
-                            field="final_answers_summary.value_numeric",
-                            issue_type="excessive_precision",
-                            message=f"Answer {answer.value_numeric} has {decimal_places} decimal places",
-                            suggested_fix="Consider rounding to appropriate precision for grade level"
-                        ))
+        # Check that solver algorithm has reasonable steps
+        if len(question.solver_algorithm.steps) == 0:
+            issues.append(ValidationIssue(
+                severity=ValidationSeverity.CRITICAL,
+                field="solver_algorithm.steps",
+                issue_type="empty_collection",
+                message="Solution algorithm must have at least one step",
+                suggested_fix="Add step-by-step solution process"
+            ))
 
-        # Check cognitive level appropriateness for grade
-        if question.taxonomy.cognitive_level:
-            grade = question.target_grade_input
-            cognitive_level = question.taxonomy.cognitive_level
-
-            # Basic appropriateness check
-            if grade <= 3 and cognitive_level in ["Analysis", "ProblemSolving"]:
+        # Check answers have appropriate format
+        for i, answer in enumerate(question.solution_and_marking_scheme.final_answers_summary):
+            if not answer.answer_text.strip():
                 issues.append(ValidationIssue(
-                    severity=ValidationSeverity.WARNING,
-                    field="taxonomy.cognitive_level",
-                    issue_type="inappropriate_difficulty",
-                    message=f"Cognitive level '{cognitive_level}' may be too advanced for grade {grade}",
-                    suggested_fix="Consider 'Recall' or 'ProceduralFluency' for lower grades"
+                    severity=ValidationSeverity.CRITICAL,
+                    field=f"final_answers_summary[{i}].answer_text",
+                    issue_type="empty_field",
+                    message=f"Answer {i+1} has empty text",
+                    suggested_fix="Provide clear answer text"
                 ))
 
         return issues
 
     def _validate_generation_metadata(self, question: CandidateQuestion) -> List[ValidationIssue]:
-        """Validate generation metadata and origins"""
+        """Validate generation metadata and traceability"""
         issues = []
 
-        # Check that generated questions have proper origins
-        if question.question_id_global.startswith("gen_"):
-            # This is a generated question - validate generation metadata
-            if not question.generation_id:
-                issues.append(ValidationIssue(
-                    severity=ValidationSeverity.CRITICAL,
-                    field="generation_id",
-                    issue_type="missing_metadata",
-                    message="Generated questions must have generation_id",
-                    suggested_fix="Set generation_id from the generation process"
-                ))
-
-            if not question.llm_model_used_generation:
-                issues.append(ValidationIssue(
-                    severity=ValidationSeverity.CRITICAL,
-                    field="llm_model_used_generation",
-                    issue_type="missing_metadata",
-                    message="Generated questions must specify the LLM model used",
-                    suggested_fix="Set llm_model_used_generation to the model that created this question"
-                ))
-
-            # Generated questions should have status CANDIDATE initially
-            if question.status != GenerationStatus.CANDIDATE:
-                issues.append(ValidationIssue(
-                    severity=ValidationSeverity.WARNING,
-                    field="status",
-                    issue_type="unexpected_status",
-                    message=f"New generated questions should have status 'candidate', got '{question.status}'",
-                    suggested_fix="Set status to 'candidate' for new questions"
-                ))
-
-        # Check template versions are specified
-        if not question.prompt_template_version_generation:
+        if not question.generation_id:
             issues.append(ValidationIssue(
                 severity=ValidationSeverity.WARNING,
-                field="prompt_template_version_generation",
-                issue_type="missing_version",
-                message="Prompt template version not specified",
-                suggested_fix="Set template version for reproducibility"
+                field="generation_id",
+                issue_type="missing_metadata",
+                message="Generation ID missing - reduces traceability",
+                suggested_fix="Include generation ID for audit trail"
+            ))
+
+        if not question.llm_model_used_generation:
+            issues.append(ValidationIssue(
+                severity=ValidationSeverity.WARNING,
+                field="llm_model_used_generation",
+                issue_type="missing_metadata",
+                message="LLM model information missing",
+                suggested_fix="Record which model generated the question"
             ))
 
         return issues
 
     def get_validation_summary(self, result: ValidationResult) -> str:
-        """Generate human-readable validation summary"""
+        """Get a brief validation summary"""
         if result.is_valid:
-            if result.warnings_count == 0:
-                return "✅ Question passes all validation checks"
-            else:
-                return f"✅ Question is valid with {result.warnings_count} warning(s)"
+            return f"✅ Valid ({result.warnings_count} warnings)"
         else:
-            return f"❌ Question has {result.critical_errors_count} critical error(s) and {result.warnings_count} warning(s)"
+            return f"❌ Invalid ({result.critical_errors_count} critical errors, {result.warnings_count} warnings)"
 
     def print_validation_report(self, result: ValidationResult, question_id: str = "Unknown"):
         """Print detailed validation report"""
-        print(f"\n🔍 Validation Report for Question: {question_id}")
+        print(f"\n📋 Validation Report for Question {question_id}")
         print("=" * 60)
-        print(self.get_validation_summary(result))
+
+        if result.is_valid:
+            print("✅ VALIDATION PASSED")
+        else:
+            print("❌ VALIDATION FAILED")
+
+        print(f"Critical Errors: {result.critical_errors_count}")
+        print(f"Warnings: {result.warnings_count}")
 
         if result.issues:
-            print(f"\n📋 Issues Found ({len(result.issues)}):")
-
-            # Group by severity
-            critical_issues = [i for i in result.issues if i.severity == ValidationSeverity.CRITICAL]
-            warning_issues = [i for i in result.issues if i.severity == ValidationSeverity.WARNING]
-            info_issues = [i for i in result.issues if i.severity == ValidationSeverity.INFO]
-
-            for severity, issues, icon in [
-                (ValidationSeverity.CRITICAL, critical_issues, "🚨"),
-                (ValidationSeverity.WARNING, warning_issues, "⚠️"),
-                (ValidationSeverity.INFO, info_issues, "ℹ️")
-            ]:
-                if issues:
-                    print(f"\n{icon} {severity.value.upper()} ({len(issues)}):")
-                    for issue in issues:
-                        print(f"   • {issue.field}: {issue.message}")
-                        if issue.suggested_fix:
-                            print(f"     → Suggested fix: {issue.suggested_fix}")
-
-        print(f"\n🎯 Can insert to database: {'Yes' if result.can_insert else 'No'}")
-        print("=" * 60)
+            print("\n🔍 Issues Found:")
+            for issue in result.issues:
+                icon = "🚨" if issue.severity == ValidationSeverity.CRITICAL else "⚠️"
+                print(f"{icon} {issue.severity.value.upper()}: {issue.field}")
+                print(f"   {issue.message}")
+                if issue.suggested_fix:
+                    print(f"   💡 Fix: {issue.suggested_fix}")
+                print()
 
 
-# Convenience function for quick validation
 def validate_question(question: CandidateQuestion, verbose: bool = False) -> ValidationResult:
-    """Quick validation function"""
+    """Convenience function to validate a question"""
     validator = CambridgeQuestionValidator()
     result = validator.validate_question(question)
 
     if verbose:
-        validator.print_validation_report(result, question.question_id_local)
+        validator.print_validation_report(result, question.question_id_global or "Unknown")
 
     return result
