@@ -28,7 +28,7 @@ from src.database import NeonDBClient
 from src.agents import QuestionGeneratorAgent
 from src.models import CandidateQuestion, GenerationConfig
 
-from smolagents import OpenAIServerModel, LiteLLMModel, AmazonBedrockServerModel
+from smolagents import OpenAIServerModel, LiteLLMModel, AmazonBedrockServerModel, InferenceClientModel
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -92,11 +92,12 @@ class CandidateQuestionGenerator:
                     api_key=os.getenv("GOOGLE_API_KEY")
                 )
             elif model_name.startswith('deepseek-ai/') or model_name.startswith('Qwen/'):
-                # HuggingFace models
-                return OpenAIServerModel(
+                # HuggingFace models - use InferenceClientModel
+                return InferenceClientModel(
                     model_id=model_name,
-                    api_base="https://api-inference.huggingface.co/models",
-                    api_key=os.getenv("HF_TOKEN")
+                    provider="auto",  # Let HF choose the best available provider
+                    token=os.getenv("HF_TOKEN"),
+                    max_tokens=3000  # Set a reasonable default
                 )
             else:
                 # Fallback to LiteLLM for other models

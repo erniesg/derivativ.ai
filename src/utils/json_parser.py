@@ -3,6 +3,7 @@ Robust JSON Parser Utility for LLM Responses.
 
 This module provides robust JSON extraction capabilities for various formats
 that LLMs might output, including code blocks, mixed text, and malformed JSON.
+Includes special handling for thinking models like Qwen and DeepSeek.
 """
 
 import json
@@ -22,6 +23,56 @@ class JSONExtractionResult:
     raw_json: Optional[str] = None
     extraction_method: Optional[str] = None
     error: Optional[str] = None
+    thinking_tokens_removed: bool = False
+    original_length: int = 0
+    cleaned_length: int = 0
+
+
+def is_thinking_model(model_name: str) -> bool:
+    """Detect if a model is a thinking model that generates reasoning tokens."""
+    thinking_model_patterns = [
+        'qwen', 'deepseek', 'thinking', 'reasoning', 'o1-', 'o3-'
+    ]
+    model_lower = model_name.lower()
+    return any(pattern in model_lower for pattern in thinking_model_patterns)
+
+
+def strip_thinking_tokens(text: str) -> tuple[str, bool]:
+    """
+    Remove thinking tokens from LLM response.
+
+    Returns:
+        (cleaned_text, thinking_tokens_found)
+    """
+    original_text = text
+
+    # Remove various thinking token formats
+    thinking_patterns = [
+        r'<think>.*?</think>',
+        r'<thinking>.*?</thinking>',
+        r'<thought>.*?</thought>',
+        r'<analysis>.*?</analysis>',
+        r'<reasoning>.*?</reasoning>',
+        r'<internal>.*?</internal>'
+    ]
+
+    for pattern in thinking_patterns:
+        text = re.sub(pattern, '', text, flags=re.DOTALL | re.IGNORECASE)
+
+    # Remove common thinking prefixes before JSON
+    prefixes_to_remove = [
+        r'^.*?(?=\{)',  # Remove everything before first {
+    ]
+
+    first_brace = text.find('{')
+    if first_brace > 0:
+        prefix_text = text[:first_brace].strip()
+        # Only remove if prefix looks like thinking/explanation
+        if any(word in prefix_text.lower() for word in ['let', 'okay', 'sure', 'here', 'i need', 'first', 'to solve']):
+            text = text[first_brace:]
+
+    thinking_tokens_found = len(original_text) != len(text)
+    return text.strip(), thinking_tokens_found
 
 
 class RobustJSONParser:
@@ -34,17 +85,19 @@ class RobustJSONParser:
     - Raw JSON mixed with text
     - Multiple JSON objects
     - Malformed JSON with common issues
+    - Thinking models with reasoning tokens
     """
 
     def __init__(self, debug: bool = False):
         self.debug = debug
 
-    def extract_json(self, response: str) -> JSONExtractionResult:
+    def extract_json(self, response: str, model_name: str = None) -> JSONExtractionResult:
         """
         Extract and parse JSON from LLM response using multiple strategies.
 
         Args:
             response: Raw LLM response text
+            model_name: Name of the model (for thinking model detection)
 
         Returns:
             JSONExtractionResult with parsed data or error info
@@ -52,8 +105,26 @@ class RobustJSONParser:
         if not response or not response.strip():
             return JSONExtractionResult(
                 success=False,
-                error="Empty response"
+                error="Empty response",
+                original_length=0,
+                cleaned_length=0
             )
+
+        original_length = len(response)
+
+        # Log raw response for debugging (truncated for readability)
+        if self.debug:
+            preview = response[:500] + "..." if len(response) > 500 else response
+            logger.debug(f"Raw LLM response ({len(response)} chars): {preview}")
+
+        # Handle thinking models
+        cleaned_response = response
+        thinking_tokens_removed = False
+
+        if model_name and is_thinking_model(model_name):
+            cleaned_response, thinking_tokens_removed = strip_thinking_tokens(response)
+            if self.debug and thinking_tokens_removed:
+                logger.debug(f"Stripped thinking tokens: {original_length} -> {len(cleaned_response)} chars")
 
         # Try different extraction strategies in order of preference
         strategies = [
@@ -67,10 +138,15 @@ class RobustJSONParser:
 
         for strategy in strategies:
             try:
-                result = strategy(response)
+                result = strategy(cleaned_response)
                 if result.success:
+                    # Add metadata about thinking token handling
+                    result.thinking_tokens_removed = thinking_tokens_removed
+                    result.original_length = original_length
+                    result.cleaned_length = len(cleaned_response)
+
                     if self.debug:
-                        logger.info(f"JSON extracted using: {result.extraction_method}")
+                        logger.debug(f"JSON extracted using: {result.extraction_method}")
                     return result
             except Exception as e:
                 if self.debug:
@@ -79,7 +155,10 @@ class RobustJSONParser:
 
         return JSONExtractionResult(
             success=False,
-            error="No valid JSON found using any extraction method"
+            error="No valid JSON found using any extraction method",
+            thinking_tokens_removed=thinking_tokens_removed,
+            original_length=original_length,
+            cleaned_length=len(cleaned_response)
         )
 
     def _extract_from_json_code_block(self, response: str) -> JSONExtractionResult:
@@ -319,43 +398,46 @@ class RobustJSONParser:
 robust_json_parser = RobustJSONParser(debug=False)
 
 
-def extract_json_robust(response: str) -> JSONExtractionResult:
+def extract_json_robust(response: str, model_name: str = None) -> JSONExtractionResult:
     """
     Convenience function for robust JSON extraction.
 
     Args:
         response: Raw LLM response text
+        model_name: Name of the model (for thinking model detection)
 
     Returns:
         JSONExtractionResult with parsed data or error info
     """
-    return robust_json_parser.extract_json(response)
+    return robust_json_parser.extract_json(response, model_name)
 
 
-def extract_json_or_none(response: str) -> Optional[Dict[str, Any]]:
+def extract_json_or_none(response: str, model_name: str = None) -> Optional[Dict[str, Any]]:
     """
     Extract JSON and return data or None.
 
     Args:
         response: Raw LLM response text
+        model_name: Name of the model (for thinking model detection)
 
     Returns:
         Parsed JSON data or None if extraction failed
     """
-    result = robust_json_parser.extract_json(response)
+    result = robust_json_parser.extract_json(response, model_name)
     return result.data if result.success else None
 
 
-def extract_json_with_fallback(response: str, fallback: Dict[str, Any]) -> Dict[str, Any]:
+def extract_json_with_fallback(response: str, fallback: Dict[str, Any], model_name: str = None) -> Dict[str, Any]:
     """
     Extract JSON with fallback value.
 
     Args:
         response: Raw LLM response text
         fallback: Default value if extraction fails
+        model_name: Name of the model (for thinking model detection)
 
     Returns:
         Parsed JSON data or fallback value
     """
-    result = robust_json_parser.extract_json(response)
+    result = robust_json_parser.extract_json(response, model_name)
     return result.data if result.success else fallback

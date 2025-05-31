@@ -18,6 +18,7 @@ from ..models import (
     SolverAlgorithm, AnswerSummary, MarkAllocationCriterion, SolverStep
 )
 from ..database import NeonDBClient
+from ..utils.json_parser import extract_json_robust, is_thinking_model
 
 
 class QuestionGeneratorAgent:
@@ -51,6 +52,22 @@ class QuestionGeneratorAgent:
         if self.debug:
             print(*args, **kwargs)
 
+    def _get_model_name(self) -> str:
+        """Get the model name for thinking model detection and logging"""
+        if hasattr(self.model, 'model_id'):
+            return self.model.model_id
+        elif hasattr(self.model, 'model_name'):
+            return self.model.model_name
+        else:
+            return str(self.model)
+
+    def _get_timeout_for_model(self, model_name: str) -> int:
+        """Get appropriate timeout based on model type"""
+        if is_thinking_model(model_name):
+            return 180  # 3 minutes for thinking models
+        else:
+            return 60   # 1 minute for regular models
+
     def _load_marking_principles(self) -> str:
         """Load marking scheme principles from data"""
         try:
@@ -82,13 +99,27 @@ class QuestionGeneratorAgent:
             # Generate using LLM
             response = await self._call_llm(prompt, config)
 
-            # Parse and validate response
-            question_data = self._parse_llm_response(response)
-            if not question_data:
+            # Parse and validate response using centralized parser
+            model_name = self._get_model_name()
+            self._debug_print(f"[DEBUG] =================== JSON PARSING START ===================")
+            self._debug_print(f"[DEBUG] Using centralized JSON parser with model: {model_name}")
+
+            extraction_result = extract_json_robust(response, model_name)
+
+            if not extraction_result.success:
+                self._debug_print(f"[DEBUG] ❌ JSON extraction failed: {extraction_result.error}")
+                if extraction_result.thinking_tokens_removed:
+                    self._debug_print(f"[DEBUG] Thinking tokens were removed: {extraction_result.original_length} -> {extraction_result.cleaned_length} chars")
                 return None
 
+            self._debug_print(f"[DEBUG] ✅ JSON extracted using method: {extraction_result.extraction_method}")
+            if extraction_result.thinking_tokens_removed:
+                self._debug_print(f"[DEBUG] Thinking tokens removed: {extraction_result.original_length} -> {extraction_result.cleaned_length} chars")
+            self._debug_print(f"[DEBUG] Extracted JSON keys: {list(extraction_result.data.keys())}")
+            self._debug_print(f"[DEBUG] =================== JSON PARSING END ===================")
+
             # Create CandidateQuestion object
-            candidate_question = self._create_candidate_question(question_data, config)
+            candidate_question = self._create_candidate_question(extraction_result.data, config)
 
             # Validate question
             validation_errors = self._validate_question(candidate_question)
@@ -336,8 +367,13 @@ Part {part.get('question_number_display', i)}: {part.get('command_word', 'Work o
     async def _call_llm(self, prompt: str, config: GenerationConfig) -> str:
         """Call the LLM with the prepared prompt"""
         try:
+            model_name = self._get_model_name()
+            timeout = self._get_timeout_for_model(model_name)
+
             self._debug_print(f"[DEBUG] =================== LLM CALL START ===================")
-            self._debug_print(f"[DEBUG] Model: {config.llm_model_generation.value}")
+            self._debug_print(f"[DEBUG] Model: {model_name}")
+            self._debug_print(f"[DEBUG] Is thinking model: {is_thinking_model(model_name)}")
+            self._debug_print(f"[DEBUG] Timeout: {timeout}s")
             self._debug_print(f"[DEBUG] Temperature: {config.temperature}")
             self._debug_print(f"[DEBUG] Max tokens: {config.max_tokens}")
             self._debug_print(f"[DEBUG] Prompt length: {len(prompt)} characters")
@@ -354,7 +390,12 @@ Part {part.get('question_number_display', i)}: {part.get('command_word', 'Work o
 
             self._debug_print(f"[DEBUG] Calling model with {len(messages)} messages")
 
-            # Call the model directly with JSON mode
+            # Call the model directly with timeout handling
+            if is_thinking_model(model_name):
+                self._debug_print(f"[DEBUG] Using extended timeout for thinking model")
+
+            # For now, we can't easily add timeout to smolagents models
+            # But we can at least log that we're aware it's a thinking model
             response = self.model(messages)
 
             # Extract content if response is a ChatMessage object
@@ -363,145 +404,25 @@ Part {part.get('question_number_display', i)}: {part.get('command_word', 'Work o
             self._debug_print(f"[DEBUG] =================== LLM RESPONSE ===================")
             self._debug_print(f"[DEBUG] Response type: {type(content)}")
             self._debug_print(f"[DEBUG] Response length: {len(str(content))} characters")
-            self._debug_print(f"[DEBUG] Full response:")
-            self._debug_print(str(content))
+
+            # Log raw response with truncation for readability
+            content_str = str(content)
+            if len(content_str) > 1000:
+                preview = content_str[:500] + "\n... [TRUNCATED] ...\n" + content_str[-500:]
+                self._debug_print(f"[DEBUG] Response preview (first/last 500 chars):")
+                self._debug_print(preview)
+            else:
+                self._debug_print(f"[DEBUG] Full response:")
+                self._debug_print(content_str)
+
             self._debug_print(f"[DEBUG] =================== END RESPONSE ===================")
 
-            return content
+            return content_str
         except Exception as e:
             print(f"[ERROR] LLM call failed: {e}")
             import traceback
             traceback.print_exc()
             raise
-
-    def _parse_llm_response(self, response: str) -> Optional[Dict[str, Any]]:
-        """Parse the LLM response to extract JSON question data using robust parser"""
-        try:
-            self._debug_print(f"[DEBUG] =================== JSON PARSING START ===================")
-            self._debug_print(f"[DEBUG] Original response length: {len(response)} characters")
-
-            # Step 1: Remove <think>...</think> reasoning tokens
-            content = self._strip_thinking_tokens(response)
-            self._debug_print(f"[DEBUG] After stripping thinking tokens: {len(content)} characters")
-
-            if len(content) != len(response):
-                self._debug_print(f"[DEBUG] Removed {len(response) - len(content)} characters of thinking tokens")
-
-            # Step 2: Use robust JSON parser
-            try:
-                from ..utils.json_parser import extract_json_robust
-
-                self._debug_print(f"[DEBUG] Using robust JSON parser...")
-                result = extract_json_robust(content)
-
-                if result.success:
-                    self._debug_print(f"[DEBUG] ✅ Successfully extracted JSON using method: {result.extraction_method}")
-                    self._debug_print(f"[DEBUG] Extracted JSON keys: {list(result.data.keys())}")
-                    return result.data
-                else:
-                    self._debug_print(f"[DEBUG] ❌ Robust parser failed: {result.error}")
-                    # Fallback to original method
-                    return self._parse_llm_response_fallback(content)
-
-            except Exception as e:
-                self._debug_print(f"[DEBUG] ⚠️ Robust parser exception: {e}")
-                # Fallback to original method
-                return self._parse_llm_response_fallback(content)
-
-        except Exception as e:
-            print(f"[ERROR] Exception in _parse_llm_response: {e}")
-            import traceback
-            traceback.print_exc()
-            return None
-
-    def _parse_llm_response_fallback(self, content: str) -> Optional[Dict[str, Any]]:
-        """Fallback JSON parsing using original method"""
-        try:
-            self._debug_print(f"[DEBUG] Using fallback JSON parsing...")
-
-            # Try to extract JSON from code blocks first
-            self._debug_print(f"[DEBUG] Attempting to extract JSON from code blocks...")
-            json_from_code_block = self._extract_json_from_code_block(content)
-            if json_from_code_block:
-                self._debug_print(f"[DEBUG] ✅ Successfully extracted JSON from code block!")
-                self._debug_print(f"[DEBUG] Extracted JSON keys: {list(json_from_code_block.keys())}")
-                return json_from_code_block
-
-            self._debug_print(f"[DEBUG] No JSON found in code blocks, trying raw JSON extraction...")
-
-            # Try to find raw JSON in the response
-            json_from_raw = self._extract_raw_json(content)
-            if json_from_raw:
-                self._debug_print(f"[DEBUG] ✅ Successfully extracted raw JSON!")
-                self._debug_print(f"[DEBUG] Extracted JSON keys: {list(json_from_raw.keys())}")
-                return json_from_raw
-
-            self._debug_print(f"[DEBUG] ❌ No valid JSON found in LLM response")
-            self._debug_print(f"[DEBUG] Content preview (first 500 chars): {content[:500]}")
-            self._debug_print(f"[DEBUG] =================== JSON PARSING END ===================")
-            return None
-
-        except Exception as e:
-            print(f"[ERROR] Exception in _parse_llm_response_fallback: {e}")
-            return None
-
-    def _strip_thinking_tokens(self, text: str) -> str:
-        """Remove <think>...</think> blocks from the response"""
-        import re
-        # Remove <think>...</think> blocks (case insensitive, multiline)
-        pattern = r'<think>.*?</think>'
-        cleaned = re.sub(pattern, '', text, flags=re.DOTALL | re.IGNORECASE)
-        return cleaned.strip()
-
-    def _extract_json_from_code_block(self, text: str) -> Optional[Dict[str, Any]]:
-        """Extract JSON from ```json ... ``` code blocks"""
-        import re
-        import json
-
-        # Look for ```json ... ``` blocks
-        json_pattern = r'```json\s*(.*?)\s*```'
-        matches = re.findall(json_pattern, text, re.DOTALL)
-
-        for match in matches:
-            try:
-                return json.loads(match.strip())
-            except json.JSONDecodeError:
-                continue
-
-        # Also try generic ``` blocks
-        generic_pattern = r'```\s*(.*?)\s*```'
-        matches = re.findall(generic_pattern, text, re.DOTALL)
-
-        for match in matches:
-            try:
-                # Skip if it looks like code (contains keywords)
-                if any(keyword in match.lower() for keyword in ['def ', 'import ', 'class ', 'function']):
-                    continue
-                return json.loads(match.strip())
-            except json.JSONDecodeError:
-                continue
-
-        return None
-
-    def _extract_raw_json(self, text: str) -> Optional[Dict[str, Any]]:
-        """Extract raw JSON object from text"""
-        import json
-
-        # Try to find JSON object boundaries
-        start_idx = text.find('{')
-        end_idx = text.rfind('}') + 1
-
-        if start_idx == -1 or end_idx == 0:
-            return None
-
-        json_str = text[start_idx:end_idx]
-
-        try:
-            return json.loads(json_str)
-        except json.JSONDecodeError as e:
-            self._debug_print(f"[DEBUG] Error parsing raw JSON: {e}")
-            self._debug_print(f"[DEBUG] JSON string attempted: {json_str[:200]}...")
-            return None
 
     def _create_candidate_question(self, question_data: Dict[str, Any], config: GenerationConfig) -> CandidateQuestion:
         """Create a CandidateQuestion object from parsed data"""
