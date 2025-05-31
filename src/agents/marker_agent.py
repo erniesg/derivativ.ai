@@ -8,6 +8,9 @@ to ensure consistency with official marking conventions.
 
 import json
 import os
+import random
+import uuid
+import time
 from typing import Dict, List, Optional, Any
 from ..models import (
     SolutionAndMarkingScheme, MarkAllocationCriterion, AnswerSummary,
@@ -38,6 +41,13 @@ class MarkerAgent:
         # Load marking scheme principles and data
         self.marking_data = self._load_marking_data()
         self.syllabus_data = self._load_syllabus_data()
+
+    def _generate_unique_criterion_id(self) -> str:
+        """Generate a unique criterion ID using timestamp and random elements"""
+        timestamp = int(time.time() * 1000)  # Milliseconds
+        random_part = random.randint(100, 999)
+        unique_id = f"crit_{timestamp}_{random_part}"
+        return unique_id
 
     def _load_marking_data(self) -> Dict[str, Any]:
         """Load Cambridge marking principles from markscheme.json"""
@@ -231,11 +241,19 @@ class MarkerAgent:
                     unit=answer_data.get("unit")
                 ))
 
-            # Create mark allocation criteria
+            # Create mark allocation criteria with unique IDs
             criteria = []
-            for criterion_data in marking_data.get("mark_allocation_criteria", []):
+            for i, criterion_data in enumerate(marking_data.get("mark_allocation_criteria", [])):
+                # Generate unique criterion_id if not provided or if it's a generic one
+                provided_id = criterion_data.get("criterion_id", "")
+                if not provided_id or provided_id in ["crit_1", "crit_2", "crit_3", "fallback_1"]:
+                    unique_id = self._generate_unique_criterion_id()
+                else:
+                    # Ensure provided ID is still unique by adding timestamp
+                    unique_id = f"{provided_id}_{int(time.time() * 1000)}_{i}"
+
                 criteria.append(MarkAllocationCriterion(
-                    criterion_id=criterion_data.get("criterion_id", "crit_1"),
+                    criterion_id=unique_id,
                     criterion_text=criterion_data.get("criterion_text", ""),
                     mark_code_display=criterion_data.get("mark_code_display", "B1"),
                     marks_value=float(criterion_data.get("marks_value", 1.0)),
@@ -297,6 +315,8 @@ class MarkerAgent:
 
     def _create_fallback_marking_scheme(self, config: GenerationConfig) -> SolutionAndMarkingScheme:
         """Create a basic fallback marking scheme if parsing fails"""
+        unique_id = self._generate_unique_criterion_id()
+
         return SolutionAndMarkingScheme(
             final_answers_summary=[
                 AnswerSummary(
@@ -307,7 +327,7 @@ class MarkerAgent:
             ],
             mark_allocation_criteria=[
                 MarkAllocationCriterion(
-                    criterion_id="fallback_1",
+                    criterion_id=unique_id,
                     criterion_text="Correct method and answer",
                     mark_code_display=f"B{config.desired_marks}",
                     marks_value=float(config.desired_marks),

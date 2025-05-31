@@ -96,21 +96,16 @@ class ComprehensiveQuestionGenerator:
         """Setup diverse model configurations for testing"""
         configs = []
 
-        # GPT models (reliable)
+        # OpenAI models (reliable and cost-effective)
         configs.extend([
-            {'name': 'gpt-4o-mini', 'type': 'openai', 'thinking': False, 'weight': 30},
-            {'name': 'gpt-4o', 'type': 'openai', 'thinking': False, 'weight': 20},
+            {'name': 'gpt-4o-mini', 'type': 'openai', 'thinking': False, 'weight': 40},
+            {'name': 'gpt-4o', 'type': 'openai', 'thinking': False, 'weight': 30},
         ])
 
-        # Claude models (high quality)
-        configs.extend([
-            {'name': 'us.anthropic.claude-sonnet-4-20250514-v1:0', 'type': 'bedrock', 'thinking': False, 'weight': 25},
-        ])
-
-        # Thinking models (if enabled)
+        # HuggingFace thinking models (if enabled)
         if self.thinking_models_enabled:
             configs.extend([
-                {'name': 'Qwen/Qwen3-235B-A22B', 'type': 'hf', 'thinking': True, 'weight': 15},
+                {'name': 'Qwen/Qwen3-235B-A22B', 'type': 'hf', 'thinking': True, 'weight': 20},
                 {'name': 'deepseek-ai/DeepSeek-R1-0528', 'type': 'hf', 'thinking': True, 'weight': 10},
             ])
 
@@ -137,7 +132,7 @@ class ComprehensiveQuestionGenerator:
                     model_id=model_name,
                     provider="auto",
                     token=os.getenv("HF_TOKEN"),
-                    max_tokens=4000
+                    max_tokens=8000
                 )
             else:
                 raise ValueError(f"Unknown model type: {model_type}")

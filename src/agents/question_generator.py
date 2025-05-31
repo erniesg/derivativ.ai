@@ -365,28 +365,37 @@ Part {part.get('question_number_display', i)}: {part.get('command_word', 'Work o
         return context
 
     async def _call_llm(self, prompt: str, config: GenerationConfig) -> str:
-        """Call the LLM with the prepared prompt"""
+        """Call the LLM model with the generation prompt"""
         try:
             model_name = self._get_model_name()
-            timeout = self._get_timeout_for_model(model_name)
 
             self._debug_print(f"[DEBUG] =================== LLM CALL START ===================")
             self._debug_print(f"[DEBUG] Model: {model_name}")
-            self._debug_print(f"[DEBUG] Is thinking model: {is_thinking_model(model_name)}")
-            self._debug_print(f"[DEBUG] Timeout: {timeout}s")
-            self._debug_print(f"[DEBUG] Temperature: {config.temperature}")
-            self._debug_print(f"[DEBUG] Max tokens: {config.max_tokens}")
+            self._debug_print(f"[DEBUG] Model type: {type(self.model).__name__}")
             self._debug_print(f"[DEBUG] Prompt length: {len(prompt)} characters")
 
-            # Show first and last 300 chars of prompt
-            self._debug_print(f"[DEBUG] Prompt start: {prompt[:300]}...")
-            self._debug_print(f"[DEBUG] Prompt end: ...{prompt[-300:]}")
-
-            # Prepare messages in the format expected by smolagents
-            messages = [
-                {"role": "system", "content": "You are a helpful assistant designed to output JSON. You must respond with valid JSON only, no additional text or formatting."},
-                {"role": "user", "content": prompt}
-            ]
+            # Handle different message formats based on model type
+            # Some smolagents models expect content as list, others as string
+            if hasattr(self.model, 'model_id') and 'claude' in str(self.model.model_id).lower():
+                # Claude models through Bedrock need content as list format
+                messages = [
+                    {
+                        "role": "system",
+                        "content": [{"type": "text", "text": "You are a helpful assistant designed to output JSON. You must respond with valid JSON only, no additional text or formatting."}]
+                    },
+                    {
+                        "role": "user",
+                        "content": [{"type": "text", "text": prompt}]
+                    }
+                ]
+                self._debug_print(f"[DEBUG] Using LIST content format for Claude model")
+            else:
+                # OpenAI and other models use string content format
+                messages = [
+                    {"role": "system", "content": "You are a helpful assistant designed to output JSON. You must respond with valid JSON only, no additional text or formatting."},
+                    {"role": "user", "content": prompt}
+                ]
+                self._debug_print(f"[DEBUG] Using STRING content format for non-Claude model")
 
             self._debug_print(f"[DEBUG] Calling model with {len(messages)} messages")
 

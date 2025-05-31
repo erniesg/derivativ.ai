@@ -49,8 +49,17 @@ async def demo_react_workflow():
     # Optional: Initialize database manager for full integration
     db_manager = None
     try:
-        db_manager = DatabaseManager()
-        print("✅ Database manager initialized")
+        # Get database connection string from environment or config
+        db_connection_string = os.getenv("DATABASE_URL") or os.getenv("NEON_DATABASE_URL")
+
+        if db_connection_string:
+            db_manager = DatabaseManager(db_connection_string)
+            print("✅ Database manager initialized with connection string")
+        else:
+            print("⚠️ DATABASE_URL not found in environment")
+            print("   Set DATABASE_URL or NEON_DATABASE_URL to enable database integration")
+            db_manager = None
+
     except Exception as e:
         print(f"⚠️ Database manager not available: {e}")
         print("   (Demo will continue without database integration)")
@@ -83,6 +92,7 @@ async def demo_react_workflow():
     print(f"   Reviewer Agent: {orchestrator.reviewer_agent.name}")
     print(f"   Marking Scheme Agent: {orchestrator.marking_scheme_agent.name}")
     print(f"   Refinement Agent: {orchestrator.refinement_agent.name}")
+    print(f"   Database Agent: {orchestrator.database_agent.name}")
 
     # Show integration status
     print(f"\n🔗 Real Agent Integration:")
@@ -92,6 +102,7 @@ async def demo_react_workflow():
         print(f"   ReviewAgent: ✅ Live")
         print(f"   MarkerAgent: ✅ Live")
         print(f"   RefinementAgent: ✅ Live")
+        print(f"   DatabaseOperationsAgent: ✅ Live")
     else:
         print(f"   Real Agents: ❌ Not integrated (no database)")
 
@@ -114,6 +125,27 @@ async def demo_react_workflow():
 
     except Exception as e:
         print(f"❌ Demo 1 failed: {e}")
+
+    # Demo 1.5: Test database operations if available
+    if db_manager:
+        print("\n" + "="*50)
+        print("🎯 DEMO 1.5: Database Operations Testing")
+        print("="*50)
+
+        try:
+            # Test database stats tool
+            stats_task = """
+Get database statistics and show current question counts by status.
+Use the database_operations_specialist to retrieve this information.
+"""
+
+            print("📊 Testing database statistics...")
+            stats_result = orchestrator.manager_agent.run(stats_task)
+            print("✅ Database stats retrieved!")
+            print(f"Result preview: {str(stats_result)[:200]}...")
+
+        except Exception as e:
+            print(f"❌ Database operations test failed: {e}")
 
     # Demo 2: Full question generation with ReAct
     print("\n" + "="*50)

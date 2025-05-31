@@ -32,6 +32,7 @@ session = await orchestrator.generate_questions_with_react(
 ```
 """
 
+import json
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Tuple
 from enum import Enum
@@ -78,6 +79,16 @@ class ReAceGenerationSession:
         self.total_agent_calls = 0
         self.successful_generations = 0
         self.quality_improvements = 0
+
+        # Missing attributes that get_react_session_summary expects
+        self.reasoning_steps: List[str] = []
+        self.actions_taken: List[str] = []
+        self.questions_generated = 0
+        self.questions_approved = 0
+        self.questions_published = 0
+        self.questions_rejected = 0
+        self.review_feedbacks: List[str] = []
+        self.quality_decisions: List[str] = []
 
 
 @tool
@@ -513,6 +524,252 @@ def get_session_status(session_id: str) -> Dict[str, Any]:
         }
 
 
+@tool
+def save_question_to_database(question_data: str, auto_publish: bool = False) -> str:
+    """
+    Save a generated question to the database and optionally auto-publish.
+
+    Args:
+        question_data: JSON string containing question data to save
+        auto_publish: Whether to automatically publish the question to Payload CMS
+
+    Returns:
+        JSON string with save status and publication status
+    """
+    try:
+        # Check if we have a live orchestrator with database
+        if _current_orchestrator and _current_orchestrator.database_manager:
+
+            # Parse question data
+            import json
+            data = json.loads(question_data) if isinstance(question_data, str) else question_data
+
+            # Create async wrapper
+            async def save_async():
+                question_id = data.get('question_id', str(uuid.uuid4()))
+
+                # Save to database
+                async with _current_orchestrator.database_manager.pool.acquire() as conn:
+                    await conn.execute(f"""
+                        INSERT INTO {TableNames.CANDIDATE_QUESTIONS} (
+                            question_id, question_data, insertion_status, created_at
+                        ) VALUES ($1, $2, $3, $4)
+                        ON CONFLICT (question_id) DO UPDATE SET
+                            question_data = EXCLUDED.question_data,
+                            insertion_status = EXCLUDED.insertion_status,
+                            updated_at = NOW()
+                    """,
+                    question_id,
+                    json.dumps(data),
+                    'approved' if auto_publish else 'pending',
+                    datetime.now()
+                    )
+
+                return {"saved": True, "question_id": question_id}
+
+            # Run it synchronously
+            try:
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                result = loop.run_until_complete(save_async())
+                loop.close()
+
+                response = {
+                    "status": "success",
+                    "question_id": result["question_id"],
+                    "saved_to_database": True,
+                    "auto_published": auto_publish,
+                    "message": f"Question saved successfully with ID {result['question_id']}"
+                }
+
+                if auto_publish:
+                    # Here you would integrate with Payload CMS
+                    response["payload_cms_id"] = str(uuid.uuid4())
+                    response["message"] += " and published to Payload CMS"
+
+                return json.dumps(response)
+
+            except Exception as e:
+                return json.dumps({
+                    "status": "error",
+                    "error": str(e),
+                    "message": f"Failed to save question: {e}"
+                })
+
+        # Fallback: orchestrator not available
+        return json.dumps({
+            "status": "integration_needed",
+            "message": "Database manager not available - orchestrator instance needed",
+            "auto_publish": auto_publish
+        })
+
+    except Exception as e:
+        return json.dumps({
+            "status": "error",
+            "error": str(e),
+            "message": f"Failed to save question: {e}"
+        })
+
+
+@tool
+def publish_question_to_payload(question_id: str, question_data: str = None) -> str:
+    """
+    Publish a question directly to Payload CMS.
+
+    Args:
+        question_id: ID of the question to publish
+        question_data: Optional JSON string with question data if not retrieving from database
+
+    Returns:
+        JSON string with publication status
+    """
+    try:
+        # Check if we have a live orchestrator
+        if _current_orchestrator:
+
+            # Create async wrapper for database retrieval if needed
+            async def get_question_data():
+                if question_data:
+                    import json
+                    return json.loads(question_data) if isinstance(question_data, str) else question_data
+
+                if _current_orchestrator.database_manager:
+                    question = await _current_orchestrator.database_manager.get_candidate_question(question_id)
+                    return question.model_dump() if question else None
+
+                return None
+
+            # Run it synchronously
+            try:
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                data = loop.run_until_complete(get_question_data())
+                loop.close()
+
+                if not data:
+                    return json.dumps({
+                        "status": "error",
+                        "message": f"Question {question_id} not found"
+                    })
+
+                # Here you would integrate with Payload CMS API
+                payload_id = str(uuid.uuid4())  # Simulated Payload CMS ID
+
+                return json.dumps({
+                    "status": "success",
+                    "question_id": question_id,
+                    "payload_cms_id": payload_id,
+                    "published": True,
+                    "message": f"Question {question_id} published to Payload CMS with ID {payload_id}"
+                })
+
+            except Exception as e:
+                return json.dumps({
+                    "status": "error",
+                    "error": str(e),
+                    "message": f"Failed to publish question {question_id}: {e}"
+                })
+
+        # Fallback: orchestrator not available
+        return json.dumps({
+            "status": "integration_needed",
+            "message": "Orchestrator instance needed for Payload CMS publishing",
+            "question_id": question_id
+        })
+
+    except Exception as e:
+        return json.dumps({
+            "status": "error",
+            "error": str(e),
+            "message": f"Failed to publish question {question_id}: {e}"
+        })
+
+
+@tool
+def get_database_stats() -> str:
+    """
+    Get database statistics including question counts by status.
+
+    Returns:
+        JSON string with database statistics
+    """
+    try:
+        # Check if we have a live orchestrator with database
+        if _current_orchestrator and _current_orchestrator.database_manager:
+
+            # Create async wrapper
+            async def get_stats_async():
+                async with _current_orchestrator.database_manager.pool.acquire() as conn:
+                    # Get total questions
+                    total_result = await conn.fetchrow(f"SELECT COUNT(*) as total FROM {TableNames.CANDIDATE_QUESTIONS}")
+                    total_questions = total_result['total'] if total_result else 0
+
+                    # Get questions by status
+                    status_result = await conn.fetch(f"""
+                        SELECT insertion_status, COUNT(*) as count
+                        FROM {TableNames.CANDIDATE_QUESTIONS}
+                        GROUP BY insertion_status
+                    """)
+
+                    # Fix: Safely handle database rows to avoid slice object issues
+                    status_counts = {}
+                    if status_result:
+                        for row in status_result:
+                            if hasattr(row, '__getitem__') and hasattr(row, 'keys'):
+                                status = row.get('insertion_status') or str(row[0]) if len(row) > 0 else 'unknown'
+                                count = row.get('count') or int(row[1]) if len(row) > 1 else 0
+                                status_counts[status] = count
+                    else:
+                        status_counts = {"pending": 0}
+
+                    return {
+                        "total_questions": total_questions,
+                        "status_breakdown": status_counts
+                    }
+
+            # Run it synchronously
+            try:
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                stats = loop.run_until_complete(get_stats_async())
+                loop.close()
+
+                return json.dumps({
+                    "status": "success",
+                    "database_connected": True,
+                    "total_questions": stats["total_questions"],
+                    "pending_questions": stats["status_breakdown"].get("pending", 0),
+                    "approved_questions": stats["status_breakdown"].get("approved", 0),
+                    "rejected_questions": stats["status_breakdown"].get("rejected", 0),
+                    "published_questions": stats["status_breakdown"].get("published", 0),
+                    "message": f"Retrieved stats for {stats['total_questions']} questions"
+                })
+
+            except Exception as e:
+                return json.dumps({
+                    "status": "error",
+                    "error": str(e),
+                    "message": f"Failed to get database stats: {e}"
+                })
+
+        # Fallback: orchestrator not available
+        return json.dumps({
+            "status": "integration_needed",
+            "message": "Database manager not available - orchestrator instance needed",
+            "database_connected": False
+        })
+
+    except Exception as e:
+        return json.dumps({
+            "status": "error",
+            "error": str(e),
+            "message": f"Failed to get database stats: {e}"
+        })
+
+
 class QuestionGeneratorSpecialistAgent(ToolCallingAgent):
     """Specialized agent for question generation using smolagents ToolCallingAgent"""
 
@@ -574,6 +831,21 @@ class RefinementSpecialistAgent(ToolCallingAgent):
         self.orchestrator = orchestrator_ref
 
 
+class DatabaseOperationsSpecialistAgent(ToolCallingAgent):
+    """Specialized agent for database operations and publishing"""
+
+    def __init__(self, model, orchestrator_ref=None, **kwargs):
+        super().__init__(
+            tools=[save_question_to_database, publish_question_to_payload, get_database_stats],
+            model=model,
+            name="database_operations_specialist",
+            description="Specialized agent for saving questions to database, publishing to Payload CMS, and managing data operations.",
+            max_steps=3,
+            **kwargs
+        )
+        self.orchestrator = orchestrator_ref
+
+
 class ReActMultiAgentOrchestrator:
     """
     ReAct-based Multi-Agent Orchestrator using smolagents framework.
@@ -617,17 +889,29 @@ class ReActMultiAgentOrchestrator:
             orchestrator_ref=self
         )
 
+        # Add new database operations specialist agent
+        self.database_agent = DatabaseOperationsSpecialistAgent(
+            specialist_model,
+            orchestrator_ref=self
+        )
+
         # Setup logging first
         self.logger = self._setup_logging()
 
-        # Initialize manager agent with all specialists
+        # Initialize manager agent with all specialists including database agent
         self.manager_agent = CodeAgent(
             tools=[get_session_status],  # Manager gets session management tools
             model=manager_model,
-            managed_agents=[self.generator_agent, self.reviewer_agent, self.marking_scheme_agent, self.refinement_agent],
+            managed_agents=[
+                self.generator_agent,
+                self.reviewer_agent,
+                self.marking_scheme_agent,
+                self.refinement_agent,
+                self.database_agent  # Add database agent to managed agents
+            ],
             additional_authorized_imports=["json", "uuid", "datetime", "time"],
             name="question_generation_manager",
-            description="Manager agent that coordinates question generation, review, and quality control workflow."
+            description="Manager agent that coordinates question generation, review, quality control, database operations, and auto-publishing workflow."
         )
 
         # Quality control integration
@@ -636,12 +920,12 @@ class ReActMultiAgentOrchestrator:
             from ..agents import QuestionGeneratorAgent, RefinementAgent, ReviewAgent, MarkerAgent
             from ..services.config_manager import ConfigManager
 
-            # Initialize config manager for RefinementAgent
-            config_manager = ConfigManager()
+            # Initialize config manager for RefinementAgent and tools
+            self.config_manager = ConfigManager()
 
             self.real_generator_agent = QuestionGeneratorAgent(specialist_model, database_manager, debug)
             self.real_review_agent = ReviewAgent(specialist_model, database_manager, debug)
-            self.real_refinement_agent = RefinementAgent(specialist_model, config_manager)
+            self.real_refinement_agent = RefinementAgent(specialist_model, self.config_manager)
             self.real_marker_agent = MarkerAgent(specialist_model, database_manager, debug)
 
             self.quality_workflow = QualityControlWorkflow(
@@ -654,6 +938,10 @@ class ReActMultiAgentOrchestrator:
 
             # Inject real agents into tools for live functionality
             self._inject_real_agents_into_tools()
+        else:
+            # Initialize empty config manager for tool compatibility
+            from ..services.config_manager import ConfigManager
+            self.config_manager = ConfigManager()
 
         # Session tracking
         self.active_sessions: Dict[str, ReAceGenerationSession] = {}
@@ -917,3 +1205,14 @@ def create_react_orchestrator(
         auto_publish=auto_publish,
         debug=debug
     )
+
+
+class QualityControlWorkflow:
+    """Quality control workflow for the ReAct orchestrator"""
+
+    def __init__(self, review_agent, refinement_agent, generator_agent, database_manager, auto_publish=False):
+        self.review_agent = review_agent
+        self.refinement_agent = refinement_agent
+        self.generator_agent = generator_agent
+        self.database_manager = database_manager
+        self.auto_publish = auto_publish

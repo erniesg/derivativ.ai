@@ -202,23 +202,9 @@ class ReviewAgent:
     async def _call_model(self, prompt: str) -> str:
         """Call the LLM model with the review prompt"""
         try:
-            # Handle different model types
-            if hasattr(self.model, 'model_id') and 'claude' in str(self.model.model_id).lower():
-                # Claude models need content as list format for Bedrock
-                messages = [
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": prompt
-                            }
-                        ]
-                    }
-                ]
-            else:
-                # OpenAI and other models use string content format
-                messages = [{"role": "user", "content": prompt}]
+            # Use consistent message format for all models
+            # This prevents the "Error: wrong content" assertion from smolagents
+            messages = [{"role": "user", "content": prompt}]
 
             response = self.model(messages)
 
