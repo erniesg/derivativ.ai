@@ -4,10 +4,13 @@ Defines data structures for candidate questions, generation parameters, and data
 """
 
 from typing import List, Optional, Dict, Any, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from uuid import UUID, uuid4
 from enum import Enum
+
+# Import validation enums
+from .enums import get_valid_skill_tags, get_valid_subject_refs
 
 
 class GenerationStatus(str, Enum):
@@ -128,6 +131,28 @@ class QuestionTaxonomy(BaseModel):
     skill_tags: List[str] = Field(min_length=1)
     cognitive_level: Optional[Literal["Recall", "ProceduralFluency", "ConceptualUnderstanding", "Application", "ProblemSolving", "Analysis"]] = None
     difficulty_estimate_0_to_1: Optional[float] = Field(None, ge=0.0, le=1.0)
+
+    @field_validator('subject_content_references')
+    @classmethod
+    def validate_subject_refs(cls, v):
+        """Validate subject content references against Cambridge syllabus"""
+        valid_refs = set(get_valid_subject_refs())
+        invalid_refs = [ref for ref in v if ref not in valid_refs]
+        if invalid_refs:
+            raise ValueError(f"Invalid subject content references: {invalid_refs}. Valid options: {list(valid_refs)[:10]}...")
+        return v
+
+    @field_validator('skill_tags')
+    @classmethod
+    def validate_skill_tags(cls, v):
+        """Validate skill tags against standardized taxonomy"""
+        valid_tags = set(get_valid_skill_tags())
+        invalid_tags = [tag for tag in v if tag not in valid_tags]
+        if invalid_tags:
+            # Use warning instead of error for skill tags to allow flexibility
+            print(f"⚠️ Warning: Non-standard skill tags detected: {invalid_tags}")
+            print(f"   Valid skill tags include: {list(valid_tags)[:10]}...")
+        return v
 
 
 class CandidateQuestion(BaseModel):

@@ -22,6 +22,8 @@ except ImportError:
     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
     from models.question_models import CandidateQuestion, GenerationStatus
 
+from ..validation.question_validator import validate_question, ValidationSeverity
+
 
 class NeonDBClient:
     """Client for interacting with Neon PostgreSQL database with Payload CMS collections"""
@@ -114,19 +116,37 @@ class NeonDBClient:
                 await conn.execute(create_table_sql)
 
     async def save_candidate_question(self, question: CandidateQuestion, session_id: str = None) -> bool:
-        """Save a candidate question to the deriv_candidate_questions table"""
+        """Save a candidate question to the deriv_candidate_questions table with validation"""
         if not self.pool:
             print("⚠️ No database pool available - skipping save")
             return False
+
+        # Validate question before saving
+        validation_result = validate_question(question)
+
+        # Log validation results
+        if validation_result.critical_errors_count > 0:
+            print(f"❌ Question validation failed: {validation_result.critical_errors_count} critical errors")
+            for issue in validation_result.issues:
+                if issue.severity == ValidationSeverity.CRITICAL:
+                    print(f"   • {issue.field}: {issue.message}")
+            print("⚠️ Question not saved due to validation failures")
+            return False
+
+        if validation_result.warnings_count > 0:
+            print(f"⚠️ Question has {validation_result.warnings_count} warnings but will be saved")
+            for issue in validation_result.issues:
+                if issue.severity == ValidationSeverity.WARNING:
+                    print(f"   • {issue.field}: {issue.message}")
 
         insert_sql = """
         INSERT INTO deriv_candidate_questions (
             question_id, session_id, question_data,
             subject_content_refs, topic_path, command_word,
             target_grade, marks, calculator_policy,
-            insertion_status, validation_passed, validation_warnings
+            insertion_status, validation_passed, validation_warnings, validation_errors
         ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
         )
         """
 
@@ -144,6 +164,14 @@ class NeonDBClient:
             else:
                 calculator_policy = 'not_allowed'
 
+            # Prepare validation data for storage
+            validation_errors_json = json.dumps([{
+                "field": issue.field,
+                "issue_type": issue.issue_type,
+                "message": issue.message,
+                "severity": issue.severity.value
+            } for issue in validation_result.issues])
+
             async with self.pool.acquire() as conn:
                 await conn.execute(
                     insert_sql,
@@ -157,12 +185,19 @@ class NeonDBClient:
                     question.marks,  # marks
                     calculator_policy,  # calculator_policy
                     'pending',  # insertion_status
-                    True,  # validation_passed (assume true for now)
-                    0  # validation_warnings
+                    validation_result.is_valid,  # validation_passed
+                    validation_result.warnings_count,  # validation_warnings
+                    validation_errors_json  # validation_errors as JSON
                 )
+
+            if validation_result.is_valid:
+                print(f"✅ Question {question.question_id_local} saved successfully (validation passed)")
+            else:
+                print(f"⚠️ Question {question.question_id_local} saved with validation warnings")
+
             return True
         except Exception as e:
-            print(f"Error saving candidate question: {e}")
+            print(f"❌ Error saving candidate question: {e}")
             return False
 
     async def get_past_paper_question(self, question_id: str) -> Optional[Dict[str, Any]]:

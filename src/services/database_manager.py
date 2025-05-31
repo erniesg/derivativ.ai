@@ -144,19 +144,46 @@ class DatabaseManager:
         mark_interaction_id: str = None,
         review_interaction_id: str = None
     ):
-        """Save candidate question with lineage tracking"""
+        """Save candidate question with lineage tracking and validation"""
+
+        # Validate question before saving
+        validation_result = validate_question(question)
+
+        # Log validation results
+        if validation_result.critical_errors_count > 0:
+            print(f"❌ Question validation failed for {question.question_id_local}: {validation_result.critical_errors_count} critical errors")
+            for issue in validation_result.issues:
+                if issue.severity == ValidationSeverity.CRITICAL:
+                    print(f"   • {issue.field}: {issue.message}")
+            print("⚠️ Question not saved due to validation failures")
+            return False
+
+        if validation_result.warnings_count > 0:
+            print(f"⚠️ Question {question.question_id_local} has {validation_result.warnings_count} warnings but will be saved")
+            for issue in validation_result.issues:
+                if issue.severity == ValidationSeverity.WARNING:
+                    print(f"   • {issue.field}: {issue.message}")
 
         # Extract metadata for indexing
         subject_content_refs = question.taxonomy.subject_content_references if question.taxonomy else []
         topic_path = question.taxonomy.topic_path if question.taxonomy else []
+
+        # Prepare validation data for storage
+        validation_errors_json = json.dumps([{
+            "field": issue.field,
+            "issue_type": issue.issue_type,
+            "message": issue.message,
+            "severity": issue.severity.value
+        } for issue in validation_result.issues])
 
         await conn.execute(f"""
             INSERT INTO {TableNames.CANDIDATE_QUESTIONS} (
                 question_id, session_id, generation_interaction_id,
                 marking_interaction_id, review_interaction_id,
                 question_data, subject_content_refs, topic_path,
-                command_word, target_grade, marks, calculator_policy
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                command_word, target_grade, marks, calculator_policy,
+                validation_passed, validation_warnings, validation_errors
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
         """,
             str(question.question_id_global),
             session_id,
@@ -169,8 +196,18 @@ class DatabaseManager:
             question.command_word.value,
             question.target_grade_input,
             question.marks,
-            question.calculator_policy.value if question.calculator_policy else 'not_allowed'
+            question.calculator_policy.value if question.calculator_policy else 'not_allowed',
+            validation_result.is_valid,
+            validation_result.warnings_count,
+            validation_errors_json
         )
+
+        if validation_result.is_valid:
+            print(f"✅ Question {question.question_id_local} saved successfully (validation passed)")
+        else:
+            print(f"⚠️ Question {question.question_id_local} saved with validation warnings")
+
+        return True
 
     async def save_review_result(self, conn, feedback: ReviewFeedback, question_id: str):
         """Save review result"""
