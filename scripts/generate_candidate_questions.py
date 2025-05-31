@@ -39,7 +39,18 @@ class CandidateQuestionGenerator:
 
     def __init__(self):
         self.config_manager = ConfigManager()
-        self.db_client = NeonDBClient()
+
+        # Load environment and get real database URL
+        load_dotenv()
+        database_url = os.getenv("NEON_DATABASE_URL")
+
+        if not database_url:
+            print("❌ Error: NEON_DATABASE_URL not found in environment variables")
+            print("Please set up your .env file with database credentials")
+            print("Using dummy database for local testing...")
+            self.db_client = NeonDBClient()  # Will use dummy URL
+        else:
+            self.db_client = NeonDBClient(database_url)  # Use real database
 
     async def setup(self):
         """Initialize database connection"""
