@@ -18,6 +18,7 @@ from ..models import (
 )
 from ..database import NeonDBClient
 from ..agents import QuestionGeneratorAgent
+from ..services.config_manager import DEFAULT_PROMPT_TEMPLATE_VERSION_GENERATION
 
 
 class QuestionGenerationService:
@@ -210,6 +211,9 @@ class QuestionGenerationService:
             base_config = request.generation_config.model_copy()
             base_config.target_grade = target_grade
             base_config.generation_id = uuid4()
+            # Ensure prompt version is set
+            if not base_config.prompt_template_version_generation:
+                base_config.prompt_template_version_generation = DEFAULT_PROMPT_TEMPLATE_VERSION_GENERATION
             return base_config
 
         # Default subject content references based on grade level
@@ -225,7 +229,8 @@ class QuestionGenerationService:
             subject_content_references=content_refs,
             llm_model_generation=LLMModel(self.config["models"]["generator"]["default"]),
             temperature=self.config["generation_parameters"]["temperature"],
-            max_tokens=self.config["generation_parameters"]["max_tokens"]
+            max_tokens=self.config["generation_parameters"]["max_tokens"],
+            prompt_template_version_generation=DEFAULT_PROMPT_TEMPLATE_VERSION_GENERATION
         )
 
     def _get_default_content_refs(self, target_grade: int) -> List[str]:
@@ -272,7 +277,8 @@ class QuestionGenerationService:
             calculator_policy=CalculatorPolicy.NOT_ALLOWED,
             desired_marks=2,
             subject_content_references=subject_content_references,
-            command_word_override=command_word
+            command_word_override=command_word,
+            prompt_template_version_generation=DEFAULT_PROMPT_TEMPLATE_VERSION_GENERATION
         )
 
         request = GenerationRequest(

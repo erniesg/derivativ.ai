@@ -39,31 +39,17 @@ class QuestionGeneratorAgent:
             max_steps=1  # Single-step generation for MVP
         )
 
-        # Load prompt template
-        self.prompt_template = self._load_prompt_template()
-
         # Load marking principles and other static data
         self.marking_principles = self._load_marking_principles()
+
+        # Add prompt loader for dynamic prompt versioning
+        from ..services.prompt_loader import PromptLoader
+        self.prompt_loader = PromptLoader()
 
     def _debug_print(self, *args, **kwargs):
         """Print debug messages only if debug mode is enabled"""
         if self.debug:
             print(*args, **kwargs)
-
-    def _load_prompt_template(self) -> str:
-        """Load the generation prompt template"""
-        try:
-            # Try v1.1 first, fallback to v1.0
-            try:
-                with open("prompts/question_generation_v1.1.txt", "r") as f:
-                    self._debug_print("[DEBUG] Using prompt template v1.1")
-                    return f.read()
-            except FileNotFoundError:
-                with open("prompts/question_generation_v1.0.txt", "r") as f:
-                    self._debug_print("[DEBUG] Using prompt template v1.0")
-                    return f.read()
-        except FileNotFoundError:
-            raise FileNotFoundError("Question generation prompt template not found")
 
     def _load_marking_principles(self) -> str:
         """Load marking scheme principles from data"""
