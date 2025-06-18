@@ -11,17 +11,155 @@
 
 ---
 
-## 📋 DETAILED TODO LIST WITH TDD APPROACH
+## 📋 DETAILED TODO LIST WITH TDD APPROACH (4 Parallel Tracks)
 
 **Core Innovation**: Multi-agent AI coordination where specialized agents (Generator, Marker, Reviewer, Refiner) work together with visible reasoning to create high-quality educational content.
 
-### **DAY 1: FOUNDATION & CORE SYSTEMS** (8 hours)
+### **TRACK 1: INFRASTRUCTURE & CONFIGURATION** (Foundation - must complete first)
 
-#### **TODO 1.1: Initialize Derivativ Project Structure** 
+#### **TODO 1.1: Centralized Configuration Management**
 **Status**: PENDING
 **Priority**: CRITICAL
-**Estimated Time**: 1 hour
-**Test First**: Verify clean import structure
+**Estimated Time**: 2 hours
+**Test First**: `test_config_loading_and_validation()`
+
+#### **TODO 1.2: Data Management Layer**
+**Status**: PENDING  
+**Priority**: CRITICAL
+**Estimated Time**: 2 hours
+**Test First**: `test_data_persistence_abstraction()`
+
+#### **TODO 1.3: LLM Service Layer**
+**Status**: PENDING
+**Priority**: CRITICAL
+**Estimated Time**: 3 hours
+**Test First**: `test_llm_service_provider_routing()`
+
+#### **TODO 1.4: Quality Control Thresholds**
+**Status**: PENDING
+**Priority**: HIGH
+**Estimated Time**: 1.5 hours
+**Test First**: `test_configurable_quality_thresholds()`
+
+#### **TODO 1.5: Logging & Monitoring**
+**Status**: PENDING
+**Priority**: MEDIUM
+**Estimated Time**: 2 hours
+**Test First**: `test_agent_reasoning_tracking()`
+
+#### **TODO 1.6: Prompt Management System**
+**Status**: PENDING
+**Priority**: CRITICAL
+**Estimated Time**: 3 hours
+**Test First**: `test_template_loading_and_caching()`
+
+### **TRACK 2: PAST PAPERS INGESTION** (Data foundation)
+
+#### **TODO 2.1: PDF Text Extraction Pipeline**
+**Status**: PENDING
+**Priority**: HIGH
+**Estimated Time**: 4 hours
+**Test First**: `test_pdf_text_extraction_accuracy()`
+
+#### **TODO 2.2: Question Structure Parser**
+**Status**: PENDING
+**Priority**: HIGH
+**Estimated Time**: 3 hours
+**Test First**: `test_question_boundary_detection()`
+
+#### **TODO 2.3: Marking Scheme Extractor**
+**Status**: PENDING
+**Priority**: HIGH
+**Estimated Time**: 3 hours
+**Test First**: `test_marking_criteria_extraction()`
+
+#### **TODO 2.4: Diagram Detection & Asset Extraction**
+**Status**: PENDING
+**Priority**: MEDIUM
+**Estimated Time**: 4 hours
+**Test First**: `test_diagram_detection_accuracy()`
+
+#### **TODO 2.5: Cambridge Compliance Validator**
+**Status**: PENDING
+**Priority**: CRITICAL
+**Estimated Time**: 2 hours
+**Test First**: `test_strict_enum_validation()`
+
+#### **TODO 2.6: Data Processing Pipeline**
+**Status**: PENDING
+**Priority**: HIGH
+**Estimated Time**: 2 hours
+**Test First**: `test_end_to_end_ingestion_pipeline()`
+
+### **TRACK 3: MULTI-AGENT GENERATION** (Core value proposition)
+
+#### **TODO 3.1: Base Agent Framework**
+**Status**: PENDING
+**Priority**: CRITICAL
+**Estimated Time**: 4 hours
+**Test First**: `test_smolagents_integration()`
+
+#### **TODO 3.2: Question Generator Agent**
+**Status**: PENDING
+**Priority**: CRITICAL
+**Estimated Time**: 4 hours
+**Test First**: `test_question_generation_cambridge_compliance()`
+
+#### **TODO 3.3: Marker Agent**
+**Status**: PENDING
+**Priority**: HIGH
+**Estimated Time**: 3 hours
+**Test First**: `test_marking_scheme_generation()`
+
+#### **TODO 3.4: Review Agent**
+**Status**: PENDING
+**Priority**: CRITICAL
+**Estimated Time**: 4 hours
+**Test First**: `test_multi_dimensional_quality_assessment()`
+
+#### **TODO 3.5: Quality Control Workflow**
+**Status**: PENDING
+**Priority**: HIGH
+**Estimated Time**: 2 hours
+**Test First**: `test_threshold_based_decisions()`
+
+#### **TODO 3.6: Modal Deployment & Orchestration**
+**Status**: PENDING
+**Priority**: HIGH
+**Estimated Time**: 3 hours
+**Test First**: `test_modal_agent_coordination()`
+
+### **TRACK 4: MANIM DIAGRAM GENERATION** (Visual enhancement)
+
+#### **TODO 4.1: Diagram Template Library**
+**Status**: PENDING
+**Priority**: MEDIUM
+**Estimated Time**: 5 hours
+**Test First**: `test_manim_template_rendering()`
+
+#### **TODO 4.2: Diagram Code Generator Agent**
+**Status**: PENDING
+**Priority**: MEDIUM
+**Estimated Time**: 4 hours
+**Test First**: `test_manim_code_generation()`
+
+#### **TODO 4.3: Diagram Renderer & Validator**
+**Status**: PENDING
+**Priority**: MEDIUM
+**Estimated Time**: 3 hours
+**Test First**: `test_diagram_rendering_validation()`
+
+#### **TODO 4.4: Diagram Review Integration**
+**Status**: PENDING
+**Priority**: MEDIUM
+**Estimated Time**: 2 hours
+**Test First**: `test_diagram_quality_assessment()`
+
+#### **TODO 4.5: Visual Asset Pipeline**
+**Status**: PENDING
+**Priority**: LOW
+**Estimated Time**: 2 hours
+**Test First**: `test_visual_asset_integration()`
 
 **Derivativ Project Structure** (Production Stack):
 ```

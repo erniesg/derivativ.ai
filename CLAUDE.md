@@ -80,7 +80,7 @@ Modal Agent Updates → Cloudflare Workers → AI SDK → Streaming React Compon
 - **Cloudflare R2**: Object storage for static assets and media files
 
 #### AI Agent Infrastructure
-- **smolagents**: Facebook's production-ready multi-agent framework
+- **smolagents**: Hugging Face's multi-agent framework
 - **Modal**: Serverless compute platform for AI agent execution
 - **LLM Providers**: OpenAI, Anthropic, Google Gemini, OpenRouter (selectable per agent/step)
 - **Model Routing**: Dynamic provider selection based on task complexity and cost
@@ -129,54 +129,46 @@ Modal Agent Updates → Cloudflare Workers → AI SDK → Streaming React Compon
 
 ---
 
-## 📋 DERIVATIV IMPLEMENTATION ROADMAP (5 Days)
+## 📋 DERIVATIV IMPLEMENTATION ROADMAP (4 Parallel Tracks)
 
-### **Day 1: Foundation & Core Systems** (8 hours)
+### **Track 1: Infrastructure & Configuration** (Foundation for all other tracks)
 
-#### Project Setup & Infrastructure
-- [ ] **Initialize Derivativ project structure**: Modal + Neon DB + Cloudflare integration
-- [ ] **Setup smolagents framework**: Agent coordination and communication patterns
-- [ ] **Configure Neon DB connection**: Database schema for questions, sessions, audit trails
-- [ ] **Implement Pydantic models**: Question, GenerationRequest, AgentResult with validation
+#### Core Infrastructure
+- [ ] **Centralized Configuration Management**: Auto-acceptance thresholds, quality criteria, LLM settings
+- [ ] **Data Management Layer**: Abstract persistence (local JSON default, DB hook later)
+- [ ] **LLM Service Layer**: Unified interface for OpenAI/Anthropic/Google with routing and fallback
+- [ ] **Quality Control Thresholds**: Configurable decision thresholds (approve/refine/regenerate/reject)
+- [ ] **Logging & Monitoring**: Agent reasoning tracking and performance monitoring
+- [ ] **Environment & Deployment Config**: Development vs production settings, API keys management
 
-#### Modal Agent Deployment & Testing
-- [ ] **Create Modal agent functions**: QuestionGenerator, Marker, Review, Refiner agents
-- [ ] **Write comprehensive test suite**: Agent coordination and smolagents integration tests
-- [ ] **LLM provider integration**: OpenAI, Anthropic, Gemini with OpenRouter routing
-- [ ] **Database persistence layer**: Neon DB operations with connection pooling
+### **Track 2: Past Papers Ingestion** (Data foundation for generation)
 
-### **Day 2: smolagents Multi-Agent Coordination** (8 hours)
+#### Past Paper Processing Pipeline
+- [ ] **PDF Text Extraction Pipeline**: Extract clean text from past paper PDFs
+- [ ] **Question Structure Parser**: Parse individual questions with proper boundaries  
+- [ ] **Marking Scheme Extractor**: Extract marking criteria and Cambridge mark types
+- [ ] **Diagram Detection & Asset Extraction**: Identify and extract visual elements/metadata
+- [ ] **Cambridge Compliance Validator**: Validate against strict syllabus enums and structure
+- [ ] **Data Processing Pipeline**: Orchestrate extraction and save via data management layer
 
-#### Agent Implementation with smolagents
-- [ ] **QuestionGeneratorAgent**: Modal function using smolagents for math question creation
-- [ ] **MarkerAgent**: Marking scheme generation with Cambridge IGCSE compliance
-- [ ] **ReviewAgent**: Quality assessment using smolagents decision-making framework
-- [ ] **RefinementAgent**: Question improvement based on review feedback loops
+### **Track 3: Multi-Agent Generation** (Core value proposition)
 
-#### Modal + smolagents Integration
-- [ ] **Orchestrator deployment**: Main Modal function coordinating all agents via smolagents
-- [ ] **Quality control workflow**: Automatic decision-making with smolagents reasoning
-- [ ] **Agent communication**: Inter-agent messaging and state sharing through smolagents
-- [ ] **Real-time logging**: Agent reasoning steps tracked and streamed to frontend
+#### smolagents Multi-Agent Coordination
+- [ ] **Base Agent Framework**: smolagents integration and agent communication patterns
+- [ ] **Question Generator Agent**: Generate Cambridge-compliant questions using LLM service
+- [ ] **Marker Agent**: Create detailed marking schemes following Cambridge standards
+- [ ] **Review Agent**: Multi-dimensional quality assessment with configurable thresholds
+- [ ] **Quality Control Workflow**: Threshold-based decisions using centralized config
+- [ ] **Modal Deployment & Orchestration**: Deploy agents to Modal and coordinate workflows
 
-### **Day 3: Cloudflare Workers + Next.js Frontend** (8 hours)
+### **Track 4: Manim Diagram Generation** (Visual enhancement)
 
-#### Cloudflare Workers API Gateway
-- [ ] **Edge API endpoints**: Routes to Modal agent functions with global distribution
-- [ ] **WebSocket handling**: Real-time agent updates streamed from Modal to frontend
-- [ ] **Caching strategy**: R2 object storage for static content and frequently requested data
-- [ ] **Request routing**: Intelligent load balancing and geographic optimization
-
-#### Next.js + AI SDK Frontend
-- [ ] **Streaming components**: Real-time agent reasoning display using AI SDK
-- [ ] **Question generation interface**: Professional form integrated with Cloudflare Workers
-- [ ] **Live progress indicators**: Agent activity streamed via AI SDK streaming components
-- [ ] **Payload CMS integration**: Content management through Cloudflare-hosted Payload
-
-### **Day 4: Polish & Cambridge Integration** (8 hours)
-
-#### Cambridge IGCSE Compliance
-- [ ] **Curriculum validation**: Implement Cambridge subject content reference validation
+#### Mathematical Diagram Generation
+- [ ] **Diagram Template Library**: Create Manim templates for Cambridge question diagram types
+- [ ] **Diagram Code Generator Agent**: LLM generates Manim code using LLM service layer
+- [ ] **Diagram Renderer & Validator**: Execute Manim scripts and validate output quality
+- [ ] **Diagram Review Integration**: Pass generated diagrams back to Review Agent for validation
+- [ ] **Visual Asset Pipeline**: Integrate diagram generation with question workflow
 - [ ] **Command word integration**: Proper usage of Cambridge assessment terminology
 - [ ] **Grade-appropriate difficulty**: Automatic difficulty validation for target grades
 - [ ] **Quality benchmarking**: Mathematical correctness and curriculum alignment scoring
