@@ -1,0 +1,68 @@
+# Derivativ AI Configuration
+# Non-sensitive configuration settings
+
+# Quality Control Thresholds
+quality_control:
+  auto_approve_threshold: 0.85
+  manual_review_threshold: 0.70
+  refine_threshold: 0.50
+  regenerate_threshold: 0.30
+  reject_threshold: 0.20
+
+# Performance Settings
+performance:
+  llm_timeout_seconds: 30
+  llm_requests_per_minute: 60
+  max_refinement_attempts: 2
+  generation_timeout_seconds: 30
+  max_concurrent_generations: 5
+
+# Agent Configuration
+agents:
+  question_generator:
+    temperature: 0.7
+    max_tokens: 2000
+    model_preference: ["gpt-4o", "claude-3-5-sonnet-20241022"]
+  
+  marker:
+    temperature: 0.3
+    max_tokens: 1500
+    model_preference: ["gpt-4o", "claude-3-5-sonnet-20241022"]
+  
+  reviewer:
+    temperature: 0.5
+    max_tokens: 1000
+    model_preference: ["claude-3-5-sonnet-20241022", "gpt-4o"]
+
+# Cambridge IGCSE Standards
+cambridge:
+  mark_types: ["M", "A", "B", "FT", "SC"]
+  grade_levels: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  tiers: ["Foundation", "Higher", "Core", "Extended"]
+  
+# Demo Settings
+demo:
+  enabled: false
+  cache_responses: true
+  preload_scenarios: true
+  show_agent_reasoning: true
+
+# Logging
+logging:
+  level: "INFO"
+  enable_debug: false
+  log_agent_reasoning: true
+  log_llm_requests: false
+
+# Modal Deployment
+modal:
+  environment: "development"
+  cpu_request: 1.0
+  memory_request: "2Gi"
+  timeout_seconds: 300
+  
+# Templates
+templates:
+  auto_create_defaults: true
+  cache_templates: true
+  template_version: "v1"
