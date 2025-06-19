@@ -1,0 +1,31 @@
+{
+  "installation": {
+    "version": "21.2.1"
+  },
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "nxCloudId": "6854a118d607892ef7d103ec",
+  "npmScope": "derivativ.ai",
+  "defaultBase": "origin/main", 
+  "cli": {
+    "defaultCollection": "@nxlv/python"
+  },
+  "defaultProject": "your-python-app",
+  "generators": {
+    "@nxlv/python": {
+      "application": {
+        "linter": "flake8"
+      },
+      "library": {
+        "linter": "flake8"
+      }
+    }
+  },
+  "targetDefaults": {
+    "test": {
+      "cache": true
+    },
+    "lint": {
+      "cache": true
+    }
+  }
+}
