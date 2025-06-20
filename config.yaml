@@ -23,12 +23,12 @@ agents:
     temperature: 0.7
     max_tokens: 2000
     model_preference: ["gpt-4o", "claude-3-5-sonnet-20241022"]
-  
+
   marker:
     temperature: 0.3
     max_tokens: 1500
     model_preference: ["gpt-4o", "claude-3-5-sonnet-20241022"]
-  
+
   reviewer:
     temperature: 0.5
     max_tokens: 1000
@@ -39,7 +39,7 @@ cambridge:
   mark_types: ["M", "A", "B", "FT", "SC"]
   grade_levels: [1, 2, 3, 4, 5, 6, 7, 8, 9]
   tiers: ["Foundation", "Higher", "Core", "Extended"]
-  
+
 # Demo Settings
 demo:
   enabled: false
@@ -60,7 +60,7 @@ modal:
   cpu_request: 1.0
   memory_request: "2Gi"
   timeout_seconds: 300
-  
+
 # Templates
 templates:
   auto_create_defaults: true

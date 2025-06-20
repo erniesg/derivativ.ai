@@ -5,11 +5,7 @@ Provides specialized AI agents for Cambridge IGCSE Mathematics question generati
 marking, review, and quality control with modern async patterns.
 """
 
-from .base_agent import BaseAgent, AgentObservation
+from .base_agent import AgentObservation, BaseAgent
 from .question_generator import QuestionGeneratorAgent
 
-__all__ = [
-    "BaseAgent",
-    "AgentObservation", 
-    "QuestionGeneratorAgent"
-]
+__all__ = ["BaseAgent", "AgentObservation", "QuestionGeneratorAgent"]

@@ -1,0 +1,68 @@
+# Pre-commit hooks configuration
+# Ensures code quality and test passing before commits
+
+repos:
+  # Ruff for fast Python linting and formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.6
+    hooks:
+      # Ruff linter
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        types_or: [python, pyi, jupyter]
+      # Ruff formatter (replaces black)
+      - id: ruff-format
+        types_or: [python, pyi, jupyter]
+
+  # Built-in pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=1000']
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  # Unit tests must pass before commit
+  - repo: local
+    hooks:
+      - id: unit-tests
+        name: Run unit tests
+        entry: pytest
+        args: [tests/unit/, -v, --tb=short]
+        language: system
+        types: [python]
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+  # Type checking with mypy (optional - can be commented out for faster commits)
+  # - repo: https://github.com/pre-commit/mirrors-mypy
+  #   rev: v1.7.0
+  #   hooks:
+  #     - id: mypy
+  #       args: [--ignore-missing-imports, --strict-optional]
+  #       additional_dependencies: [pydantic, fastapi, pytest]
+  #       exclude: ^(tests/|docs/)
+
+# Global settings
+default_stages: [pre-commit]
+fail_fast: true
+
+# CI configuration
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false

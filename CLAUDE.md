@@ -7,7 +7,7 @@
 
 **Hackathon Goal (5 days)**: Build an impressive, fully-functional system that demonstrates advanced AI agent workflows and real educational value for teachers and students.
 
-**Target Users**: 
+**Target Users**:
 - **Teachers**: Generate high-quality assessment materials efficiently
 - **Students**: Personalized learning with adaptive difficulty progression
 - **Future Vision**: Interactive video generation with student context and cultural adaptation
@@ -145,7 +145,7 @@ Modal Agent Updates → Cloudflare Workers → AI SDK → Streaming React Compon
 
 #### Past Paper Processing Pipeline
 - [ ] **PDF Text Extraction Pipeline**: Extract clean text from past paper PDFs
-- [ ] **Question Structure Parser**: Parse individual questions with proper boundaries  
+- [ ] **Question Structure Parser**: Parse individual questions with proper boundaries
 - [ ] **Marking Scheme Extractor**: Extract marking criteria and Cambridge mark types
 - [ ] **Diagram Detection & Asset Extraction**: Identify and extract visual elements/metadata
 - [ ] **Cambridge Compliance Validator**: Validate against strict syllabus enums and structure
@@ -259,7 +259,7 @@ test_llm_provider_fallback_switching()        # Network resilience
 
 #### Pre-Demo Validation
 - [ ] **LLM connectivity**: OpenAI and Anthropic APIs accessible with valid keys
-- [ ] **Database functionality**: PostgreSQL connection stable and responsive  
+- [ ] **Database functionality**: PostgreSQL connection stable and responsive
 - [ ] **Frontend responsiveness**: React app loads quickly with all components
 - [ ] **WebSocket stability**: Real-time updates working consistently
 
@@ -284,14 +284,14 @@ class BaseAgent(ABC):
         self.name = name
         self.config = config or {}
         self.reasoning_steps = []
-        
+
     def process(self, input_data: Dict) -> AgentResult:
         try:
             self._observe(f"Processing request: {input_data}")
             self._think("Analyzing requirements and planning approach")
-            
+
             output = self._execute(input_data)
-            
+
             return AgentResult(
                 success=True,
                 agent_name=self.name,
@@ -301,7 +301,7 @@ class BaseAgent(ABC):
             )
         except Exception as e:
             return self._handle_error(e)
-    
+
     @abstractmethod
     def _execute(self, input_data: Dict) -> Dict:
         """Implement agent-specific logic"""
@@ -313,7 +313,7 @@ class BaseAgent(ABC):
 # Multi-layer fallback strategy
 async def generate_with_fallback(self, request: GenerationRequest):
     providers = ["openai", "anthropic", "cached_examples"]
-    
+
     for provider in providers:
         try:
             result = await self._try_provider(provider, request)
@@ -322,7 +322,7 @@ async def generate_with_fallback(self, request: GenerationRequest):
         except Exception as e:
             self._log_error(f"{provider} failed: {e}")
             continue
-    
+
     return self._emergency_response()
 ```
 
@@ -341,7 +341,7 @@ def _observe(self, observation: str, data: Any = None):
 
 def _think(self, reasoning: str):
     self.reasoning_steps.append({
-        "type": "thought", 
+        "type": "thought",
         "content": reasoning,
         "timestamp": time.time()
     })
@@ -361,15 +361,15 @@ def _act(self, action: str, result: Any = None):
 class QualityControlWorkflow:
     thresholds = {
         "auto_approve": 0.85,    # High quality → immediate approval
-        "manual_review": 0.70,   # Good quality → human review queue  
+        "manual_review": 0.70,   # Good quality → human review queue
         "refine": 0.50,          # Medium quality → improvement cycle
         "regenerate": 0.30,      # Low quality → try different approach
         "reject": 0.20           # Very poor → abandon attempt
     }
-    
+
     def assess(self, question_with_score) -> QualityDecision:
         score = question_with_score.quality_score
-        
+
         if score >= self.thresholds["auto_approve"]:
             return QualityDecision(
                 action="approve",
@@ -390,15 +390,15 @@ async def save_generation_session(session: GenerationSession) -> UUID:
             # Save main session record
             db_session = GenerationSessionDB(**session.dict())
             db.add(db_session)
-            
+
             # Save all questions in batch
             for question in session.questions:
                 db_question = QuestionDB(**question.dict())
                 db.add(db_question)
-            
+
             await db.commit()
             return db_session.id
-            
+
         except Exception as e:
             await db.rollback()
             raise DatabaseError(f"Failed to save session: {e}")
@@ -410,19 +410,19 @@ async def save_generation_session(session: GenerationSession) -> UUID:
 class Settings(BaseSettings):
     # Database
     database_url: str = Field(..., env="DATABASE_URL")
-    
+
     # LLM APIs
     openai_api_key: str = Field(..., env="OPENAI_API_KEY")
     anthropic_api_key: str = Field(..., env="ANTHROPIC_API_KEY")
-    
+
     # Performance
     generation_timeout: int = 30
     max_concurrent_generations: int = 5
-    
+
     # Demo settings
     enable_demo_mode: bool = Field(False, env="DEMO_MODE")
     cache_demo_responses: bool = Field(True, env="CACHE_RESPONSES")
-    
+
     class Config:
         env_file = ".env"
         case_sensitive = False
@@ -446,7 +446,7 @@ class Settings(BaseSettings):
 
 #### Live Technical Demonstration (3 minutes)
 - **Multi-Agent Workflow**: Show live generation with agent reasoning visible
-- **Quality Control in Action**: Demonstrate automatic refinement when quality is insufficient  
+- **Quality Control in Action**: Demonstrate automatic refinement when quality is insufficient
 - **Real Curriculum Compliance**: Generate questions using actual Cambridge IGCSE content references
 - **Performance at Scale**: Show sub-30-second generation and concurrent handling
 
@@ -534,7 +534,7 @@ test: add comprehensive smolagents workflow test coverage
 
 ### Hackathon Success Indicators
 1. **Multi-Agent Demo Impact**: Judges clearly see and understand agent coordination
-2. **Technical Architecture Recognition**: Production-ready code quality evident  
+2. **Technical Architecture Recognition**: Production-ready code quality evident
 3. **Educational Value Demonstration**: Real Cambridge IGCSE compliance validation
 4. **Performance Under Pressure**: Sub-30-second generation consistently during live demo
 5. **Real-World Applicability**: Teachers can immediately use for assessment creation
@@ -583,7 +583,7 @@ The key differentiator is sophisticated agent collaboration with transparent rea
 
 ### Success Criteria
 - **Technical**: Multi-agent coordination working with visible reasoning
-- **Performance**: Sub-30-second generation consistently during live demo  
+- **Performance**: Sub-30-second generation consistently during live demo
 - **Educational**: Cambridge curriculum compliance and mathematical accuracy
 - **Demo Impact**: Judges understand the production-ready sophistication
 

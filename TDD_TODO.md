@@ -24,7 +24,7 @@
 **Test First**: `test_config_loading_and_validation()`
 
 #### **TODO 1.2: Data Management Layer**
-**Status**: PENDING  
+**Status**: PENDING
 **Priority**: CRITICAL
 **Estimated Time**: 2 hours
 **Test First**: `test_data_persistence_abstraction()`
@@ -167,7 +167,7 @@ derivativ/
 ├── pyproject.toml              # Python packaging with Modal deps
 ├── modal.toml                  # Modal configuration
 ├── wrangler.toml              # Cloudflare Workers config
-├── requirements/               # Split requirements  
+├── requirements/               # Split requirements
 │   ├── base.txt               # Modal, smolagents, Neon DB
 │   ├── ai.txt                 # OpenAI, Anthropic, Gemini, OpenRouter
 │   └── dev.txt                # pytest, Modal testing tools
@@ -195,7 +195,7 @@ derivativ/
 ```
 
 #### **TODO 1.2: Write Comprehensive Test Suite FIRST**
-**Status**: PENDING  
+**Status**: PENDING
 **Priority**: CRITICAL
 **Estimated Time**: 2 hours
 **Philosophy**: All tests written before any implementation
@@ -205,7 +205,7 @@ derivativ/
 # 1. CORE WORKFLOW TESTS (Demo-Critical)
 test_generate_question_end_to_end()           # Main demo flow
 test_multi_agent_coordination_visible()       # Show agent reasoning
-test_quality_control_improvement_cycle()      # Automatic refinement  
+test_quality_control_improvement_cycle()      # Automatic refinement
 test_real_time_progress_tracking()            # Live demo updates
 
 # 2. AGENT COORDINATION TESTS (Judge Appeal)
@@ -255,7 +255,7 @@ test_question_variety_generation()            # No duplicates
 
 #### **TODO 1.3: Setup Production Technology Stack**
 **Status**: PENDING
-**Priority**: CRITICAL  
+**Priority**: CRITICAL
 **Estimated Time**: 2 hours
 **Test First**: Test all infrastructure connections work
 
@@ -266,7 +266,7 @@ modal>=0.63.0                 # Serverless compute for AI agents
 smolagents                    # Facebook's multi-agent framework
 neon-postgresql               # Serverless PostgreSQL database
 
-# AI/ML Stack  
+# AI/ML Stack
 openai>=1.3.0                 # Primary LLM provider
 anthropic>=0.7.0              # Claude models
 google-generativeai>=0.3.0    # Gemini models
@@ -280,7 +280,7 @@ wrangler                      # Cloudflare Workers CLI
 
 # Frontend Stack
 next>=14.0.0                 # React framework with AI SDK
-@ai-sdk/react                # Streaming React components  
+@ai-sdk/react                # Streaming React components
 @ai-sdk/core                 # AI SDK core functionality
 payload                     # Headless CMS
 
@@ -317,7 +317,7 @@ def test_smolagents_import():
     assert hasattr(smolagents, 'Agent')
 ```
 
-#### **TODO 1.4: Implement Pydantic Data Models** 
+#### **TODO 1.4: Implement Pydantic Data Models**
 **Status**: PENDING
 **Priority**: CRITICAL
 **Estimated Time**: 2 hours
@@ -339,7 +339,7 @@ class Grade(int, Enum):
 
 class CommandWord(str, Enum):
     CALCULATE = "Calculate"
-    FIND = "Find" 
+    FIND = "Find"
     SOLVE = "Solve"
     DETERMINE = "Determine"
     SHOW = "Show"
@@ -481,7 +481,7 @@ class Question(BaseModel):
     command_word: CommandWord
     subject_content_references: List[str]
     target_grade: Grade
-    
+
     @validator('subject_content_references')
     def validate_content_refs(cls, v):
         # Validate against Cambridge syllabus
@@ -493,7 +493,7 @@ class Question(BaseModel):
 ```
 
 #### **TODO 2.2: Database Schema with Migrations**
-**Priority**: HIGH  
+**Priority**: HIGH
 **Estimated Time**: 2 hours
 **Tech Stack**: SQLAlchemy 2.0, Alembic, PostgreSQL
 
@@ -504,7 +504,7 @@ def test_database_question_persistence():
     question = QuestionDB(content="Test", marks=1, grade=3)
     session.add(question)
     session.commit()
-    
+
     retrieved = session.query(QuestionDB).first()
     assert retrieved.content == "Test"
     assert retrieved.marks == 1
@@ -514,7 +514,7 @@ def test_database_audit_trail():
     question = create_question()
     session.add(question)
     session.commit()
-    
+
     audit_logs = session.query(AuditLog).all()
     assert len(audit_logs) == 1
     assert audit_logs[0].operation == "CREATE"
@@ -531,17 +531,17 @@ Base = declarative_base()
 
 class QuestionDB(Base):
     __tablename__ = "questions"
-    
+
     id = Column(Integer, primary_key=True)
     content = Column(Text, nullable=False)
     marks = Column(Integer, nullable=False)
     grade = Column(Integer, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
     metadata = Column(JSON)
-    
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
-    
+
     id = Column(Integer, primary_key=True)
     table_name = Column(String(50), nullable=False)
     operation = Column(String(10), nullable=False)  # CREATE, UPDATE, DELETE
@@ -565,10 +565,10 @@ def test_llm_provider_switching():
     """Test can switch between LLM providers seamlessly"""
     llm = LLMInterface(provider="openai", model="gpt-4o")
     response1 = llm.generate("Test prompt")
-    
+
     llm.switch_provider("anthropic", "claude-3-5-sonnet")
     response2 = llm.generate("Test prompt")
-    
+
     assert response1.content is not None
     assert response2.content is not None
     assert response1.provider == "openai"
@@ -577,14 +577,14 @@ def test_llm_provider_switching():
 def test_llm_error_handling():
     """Test LLM handles API errors gracefully"""
     llm = LLMInterface(provider="openai", model="invalid-model")
-    
+
     with pytest.raises(LLMError):
         llm.generate("Test prompt")
 
 def test_llm_timeout_handling():
     """Test LLM handles timeouts properly"""
     llm = LLMInterface(provider="openai", timeout=1)
-    
+
     with pytest.raises(TimeoutError):
         llm.generate("Very long prompt" * 1000)
 ```
@@ -605,7 +605,7 @@ class LLMResponse:
     model: str
     tokens_used: int
     cost_estimate: float
-    
+
 class LLMProvider(ABC):
     @abstractmethod
     def generate(self, prompt: str, **kwargs) -> LLMResponse:
@@ -615,7 +615,7 @@ class OpenAIProvider(LLMProvider):
     def __init__(self, api_key: str, model: str = "gpt-4o"):
         self.client = openai.OpenAI(api_key=api_key)
         self.model = model
-        
+
     def generate(self, prompt: str, **kwargs) -> LLMResponse:
         response = self.client.chat.completions.create(
             model=self.model,
@@ -638,7 +638,7 @@ class LLMInterface:
             "google": GoogleProvider
         }
         self.current_provider = self._create_provider(provider, model, **config)
-        
+
     def generate(self, prompt: str, **kwargs) -> LLMResponse:
         try:
             return self.current_provider.generate(prompt, **kwargs)
@@ -655,9 +655,9 @@ class LLMInterface:
 def test_agent_base_functionality():
     """Test base agent can be instantiated and process requests"""
     agent = BaseAgent(llm_interface=mock_llm, name="test_agent")
-    
+
     result = agent.process({"input": "test"})
-    
+
     assert result.success is True
     assert result.output is not None
     assert result.agent_name == "test_agent"
@@ -665,18 +665,18 @@ def test_agent_base_functionality():
 def test_agent_error_handling():
     """Test agent handles processing errors"""
     agent = BaseAgent(llm_interface=failing_llm, name="test_agent")
-    
+
     result = agent.process({"input": "test"})
-    
+
     assert result.success is False
     assert result.error is not None
 
 def test_agent_reasoning_tracking():
     """Test agent tracks its reasoning process"""
     agent = BaseAgent(llm_interface=mock_llm, name="test_agent")
-    
+
     result = agent.process({"input": "test"})
-    
+
     assert len(result.reasoning_steps) > 0
     assert result.reasoning_steps[0].step_type in ["observation", "thought", "action"]
 ```
@@ -715,14 +715,14 @@ class BaseAgent(ABC):
         self.name = name
         self.config = config or {}
         self.reasoning_steps = []
-        
+
     def process(self, input_data: Dict[str, Any]) -> AgentResult:
         try:
             self._observe("Received input", input_data)
             self._think("Planning approach")
-            
+
             output = self._execute(input_data)
-            
+
             return AgentResult(
                 success=True,
                 output=output,
@@ -740,24 +740,24 @@ class BaseAgent(ABC):
                 reasoning_steps=self.reasoning_steps.copy(),
                 metadata={}
             )
-    
+
     @abstractmethod
     def _execute(self, input_data: Dict[str, Any]) -> Dict[str, Any]:
         """Implement specific agent logic"""
         pass
-        
+
     def _observe(self, observation: str, data: Any = None):
         """Record an observation"""
         self.reasoning_steps.append(
             ReasoningStep(StepType.OBSERVATION, observation, time.time())
         )
-        
+
     def _think(self, thought: str):
         """Record a thought/reasoning step"""
         self.reasoning_steps.append(
             ReasoningStep(StepType.THOUGHT, thought, time.time())
         )
-        
+
     def _act(self, action: str):
         """Record an action taken"""
         self.reasoning_steps.append(
@@ -774,16 +774,16 @@ class BaseAgent(ABC):
 def test_question_generator_agent():
     """Test QuestionGenerator creates valid questions"""
     agent = QuestionGeneratorAgent(llm_interface=mock_llm)
-    
+
     input_data = {
         "topic": "arithmetic",
         "grade": 3,
         "marks": 2,
         "calculator_allowed": False
     }
-    
+
     result = agent.process(input_data)
-    
+
     assert result.success is True
     assert "question_text" in result.output
     assert "command_word" in result.output
@@ -792,15 +792,15 @@ def test_question_generator_agent():
 def test_marker_agent():
     """Test MarkerAgent creates marking schemes"""
     agent = MarkerAgent(llm_interface=mock_llm)
-    
+
     input_data = {
         "question_text": "Calculate 2 + 3",
         "marks": 1,
         "subject_refs": ["C1.6"]
     }
-    
+
     result = agent.process(input_data)
-    
+
     assert result.success is True
     assert "marking_scheme" in result.output
     assert "total_marks" in result.output
@@ -808,14 +808,14 @@ def test_marker_agent():
 def test_review_agent():
     """Test ReviewAgent assesses question quality"""
     agent = ReviewAgent(llm_interface=mock_llm)
-    
+
     input_data = {
         "question": mock_question,
         "marking_scheme": mock_marking_scheme
     }
-    
+
     result = agent.process(input_data)
-    
+
     assert result.success is True
     assert "quality_score" in result.output
     assert 0 <= result.output["quality_score"] <= 1
@@ -845,15 +845,15 @@ def test_orchestrator_coordination():
         marker=mock_marker,
         reviewer=mock_reviewer
     )
-    
+
     request = GenerationRequest(
         topic="algebra",
         grade=5,
         count=1
     )
-    
+
     result = orchestrator.generate_questions(request)
-    
+
     assert result.success is True
     assert len(result.questions) == 1
     assert result.questions[0].has_marking_scheme
@@ -864,12 +864,12 @@ def test_quality_control_workflow():
     qc = QualityControlWorkflow(
         thresholds={"auto_approve": 0.85, "manual_review": 0.6, "reject": 0.3}
     )
-    
+
     # High quality question should auto-approve
     high_quality = mock_question_with_score(0.9)
     decision = qc.assess(high_quality)
     assert decision.action == "approve"
-    
+
     # Low quality should reject
     low_quality = mock_question_with_score(0.2)
     decision = qc.assess(low_quality)
@@ -902,10 +902,10 @@ class QualityDecision:
 class QualityControlWorkflow:
     def __init__(self, thresholds: Dict[str, float]):
         self.thresholds = thresholds
-        
+
     def assess(self, question_with_score) -> QualityDecision:
         score = question_with_score.quality_score
-        
+
         if score >= self.thresholds["auto_approve"]:
             return QualityDecision(
                 action=QualityAction.APPROVE,
@@ -946,9 +946,9 @@ def test_api_generate_questions():
         "count": 2,
         "calculator_allowed": False
     }
-    
+
     response = client.post("/questions/generate", json=request_data)
-    
+
     assert response.status_code == 200
     data = response.json()
     assert len(data["questions"]) == 2
@@ -957,9 +957,9 @@ def test_api_generate_questions():
 def test_api_error_handling():
     """Test API handles invalid requests"""
     invalid_request = {"grade": 15}  # Invalid grade
-    
+
     response = client.post("/questions/generate", json=invalid_request)
-    
+
     assert response.status_code == 422
     assert "validation error" in response.json()["detail"]
 ```
@@ -977,7 +977,7 @@ import QuestionGenerator from '../QuestionGenerator';
 
 test('renders question generation form', () => {
   render(<QuestionGenerator />);
-  
+
   expect(screen.getByLabelText(/topic/i)).toBeInTheDocument();
   expect(screen.getByLabelText(/grade/i)).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /generate/i })).toBeInTheDocument();
@@ -986,11 +986,11 @@ test('renders question generation form', () => {
 test('submits form with correct data', async () => {
   const mockOnGenerate = jest.fn();
   render(<QuestionGenerator onGenerate={mockOnGenerate} />);
-  
+
   fireEvent.change(screen.getByLabelText(/topic/i), { target: { value: 'algebra' } });
   fireEvent.change(screen.getByLabelText(/grade/i), { target: { value: '5' } });
   fireEvent.click(screen.getByRole('button', { name: /generate/i }));
-  
+
   expect(mockOnGenerate).toHaveBeenCalledWith({
     topic: 'algebra',
     grade: 5,
@@ -1033,9 +1033,9 @@ def test_environment_configuration():
 def test_demo_generation_speed():
     """Test demo generates questions quickly enough for live presentation"""
     start_time = time.time()
-    
+
     result = demo_system.generate_sample_questions()
-    
+
     duration = time.time() - start_time
     assert duration < 30  # Must complete in under 30 seconds
     assert len(result.questions) >= 3
@@ -1044,7 +1044,7 @@ def test_demo_error_resilience():
     """Test demo handles API failures gracefully"""
     with mock_api_failure():
         result = demo_system.generate_with_fallback()
-        
+
     assert result.success is True  # Should fallback to cached examples
     assert result.error_message is not None  # Should inform user
 ```
@@ -1120,7 +1120,7 @@ ruff>=0.1.0  # Fast Python linter
 ### **Why These Choices?**
 
 1. **FastAPI**: Automatic OpenAPI docs, native async support, excellent performance
-2. **SQLAlchemy 2.0**: Modern async support, better type hints, improved performance  
+2. **SQLAlchemy 2.0**: Modern async support, better type hints, improved performance
 3. **Pydantic v2**: Faster validation, better error messages, excellent TypeScript integration
 4. **React 18**: Concurrent features, excellent ecosystem, TypeScript support
 5. **LiteLLM**: Unified interface across providers, cost tracking, fallback handling
@@ -1207,7 +1207,7 @@ async def validate_with_consensus(question: Question) -> float:
 # Continuous quality monitoring
 def test_generated_questions_quality():
     recent_questions = get_recent_generations(hours=24)
-    
+
     for question in recent_questions:
         assert question.quality_score >= 0.4
         assert question.has_valid_marking_scheme
@@ -1224,7 +1224,7 @@ def test_generated_questions_quality():
 - [ ] **Reliability**: >99% uptime, graceful error handling
 - [ ] **Security**: No exposed secrets, input validation on all endpoints
 
-### **Quality Metrics**  
+### **Quality Metrics**
 - [ ] **Mathematical Accuracy**: >98% correct solutions
 - [ ] **Curriculum Compliance**: 100% valid Cambridge references
 - [ ] **Difficulty Appropriateness**: ±1 grade level accuracy
@@ -1249,7 +1249,7 @@ def test_generated_questions_quality():
 ### **Minimum Viable Product (MVP)**
 - [ ] Generate mathematically correct IGCSE questions
 - [ ] Multi-agent quality control pipeline working
-- [ ] Web interface for live demonstration  
+- [ ] Web interface for live demonstration
 - [ ] Database persistence with audit trails
 - [ ] Basic error handling and recovery
 

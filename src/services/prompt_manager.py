@@ -5,43 +5,51 @@ Provides template management with versioning, caching, async operations,
 and dynamic prompt composition for different agent types.
 """
 
-import os
 import asyncio
-from typing import Dict, Any, Optional, List, Union
-from pathlib import Path
-from pydantic import BaseModel, Field
-from datetime import datetime
-import jinja2
 import logging
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Optional, Union
+
+import jinja2
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
 
 class PromptTemplate(BaseModel):
     """Individual prompt template with metadata"""
+
     name: str = Field(..., description="Template name")
     version: str = Field(..., description="Template version")
     content: str = Field(..., description="Template content with placeholders")
     description: Optional[str] = Field(None, description="Template description")
-    required_variables: List[str] = Field(default_factory=list, description="Required template variables")
-    optional_variables: List[str] = Field(default_factory=list, description="Optional template variables")
+    required_variables: list[str] = Field(
+        default_factory=list, description="Required template variables"
+    )
+    optional_variables: list[str] = Field(
+        default_factory=list, description="Optional template variables"
+    )
     created_at: datetime = Field(default_factory=datetime.now, description="Creation timestamp")
     updated_at: datetime = Field(default_factory=datetime.now, description="Last update timestamp")
-    tags: List[str] = Field(default_factory=list, description="Template tags for categorization")
+    tags: list[str] = Field(default_factory=list, description="Template tags for categorization")
 
 
 class PromptConfig(BaseModel):
     """Configuration for prompt formatting"""
+
     template_name: str = Field(..., description="Name of template to use")
     version: str = Field(default="latest", description="Template version")
-    variables: Dict[str, Any] = Field(default_factory=dict, description="Template variables")
-    model_specific_adjustments: Optional[Dict[str, Any]] = Field(None, description="Model-specific prompt adjustments")
+    variables: dict[str, Any] = Field(default_factory=dict, description="Template variables")
+    model_specific_adjustments: Optional[dict[str, Any]] = Field(
+        None, description="Model-specific prompt adjustments"
+    )
 
 
 class PromptManager:
     """
     Enhanced prompt management system with async support.
-    
+
     Features:
     - Template versioning and caching
     - Jinja2 template engine integration
@@ -50,16 +58,16 @@ class PromptManager:
     - Template validation and variable checking
     - Hot reloading in development
     """
-    
+
     def __init__(
         self,
         templates_dir: Union[str, Path] = "prompts",
         enable_cache: bool = True,
-        auto_reload: bool = False
+        auto_reload: bool = False,
     ):
         """
         Initialize prompt manager.
-        
+
         Args:
             templates_dir: Directory containing prompt templates
             enable_cache: Whether to cache loaded templates
@@ -68,42 +76,38 @@ class PromptManager:
         self.templates_dir = Path(templates_dir)
         self.enable_cache = enable_cache
         self.auto_reload = auto_reload
-        
+
         # Initialize Jinja2 environment
         self.jinja_env = jinja2.Environment(
             loader=jinja2.FileSystemLoader(str(self.templates_dir)),
             undefined=jinja2.StrictUndefined,  # Fail on undefined variables
             trim_blocks=True,
-            lstrip_blocks=True
+            lstrip_blocks=True,
         )
-        
+
         # Template cache
-        self._template_cache: Dict[str, PromptTemplate] = {}
-        self._file_timestamps: Dict[str, float] = {}
-        
+        self._template_cache: dict[str, PromptTemplate] = {}
+        self._file_timestamps: dict[str, float] = {}
+
         # Built-in templates for core functionality
         self._builtin_templates = {
             "question_generation": self._get_question_generation_template(),
             "marking_scheme": self._get_marking_scheme_template(),
             "quality_review": self._get_quality_review_template(),
-            "question_refinement": self._get_question_refinement_template()
+            "question_refinement": self._get_question_refinement_template(),
         }
-    
-    async def render_prompt(
-        self,
-        config: PromptConfig,
-        model_name: Optional[str] = None
-    ) -> str:
+
+    async def render_prompt(self, config: PromptConfig, model_name: Optional[str] = None) -> str:
         """
         Render a prompt template with provided variables.
-        
+
         Args:
             config: Prompt configuration with template and variables
             model_name: Target model name for model-specific adjustments
-            
+
         Returns:
             Rendered prompt string
-            
+
         Raises:
             TemplateNotFound: If template doesn't exist
             TemplateError: If template rendering fails
@@ -111,80 +115,95 @@ class PromptManager:
         try:
             # Load template
             template = await self.get_template(config.template_name, config.version)
-            
+
             # Prepare variables with model-specific adjustments
             variables = config.variables.copy()
             if config.model_specific_adjustments and model_name:
                 adjustments = config.model_specific_adjustments.get(model_name, {})
                 variables.update(adjustments)
-            
+
             # Add default variables
-            variables.update({
-                "timestamp": datetime.now().isoformat(),
-                "model_name": model_name or "unknown"
-            })
-            
+            variables.update(
+                {"timestamp": datetime.now().isoformat(), "model_name": model_name or "unknown"}
+            )
+
+            # Add sensible defaults for common optional variables
+            template_defaults = {
+                "command_word": "Calculate",
+                "subject_content_references": [],
+                "grade_level": 7,
+                "target_grade": variables.get("grade_level", 7),  # Alias for target_grade
+                "calculator_policy": variables.get("calculator_policy", "not_allowed"),
+                "tier": "Core",
+                "topic": variables.get("topic", "mathematics"),
+            }
+
+            # Only add defaults for variables not already provided
+            for key, default_value in template_defaults.items():
+                if key not in variables:
+                    variables[key] = default_value
+
             # Validate required variables
             await self._validate_variables(template, variables)
-            
+
             # Render template
             jinja_template = self.jinja_env.from_string(template.content)
             rendered = jinja_template.render(**variables)
-            
+
             return rendered.strip()
-            
+
         except Exception as e:
             logger.error(f"Failed to render prompt {config.template_name}: {e}")
             raise PromptError(f"Prompt rendering failed: {e}")
-    
+
     async def get_template(self, name: str, version: str = "latest") -> PromptTemplate:
         """
         Get a prompt template by name and version.
-        
+
         Args:
             name: Template name
             version: Template version ("latest" for most recent)
-            
+
         Returns:
             PromptTemplate object
         """
         cache_key = f"{name}_{version}"
-        
+
         # Check cache first
         if self.enable_cache and cache_key in self._template_cache:
             template = self._template_cache[cache_key]
-            
+
             # Check if we need to reload (auto_reload mode)
             if self.auto_reload:
                 file_path = self._get_template_file_path(name, version)
                 if file_path and await self._should_reload_template(file_path):
                     template = await self._load_template_from_file(name, version)
                     self._template_cache[cache_key] = template
-            
+
             return template
-        
+
         # Try to load from built-in templates first
         if name in self._builtin_templates and version == "latest":
             template = self._builtin_templates[name]
             if self.enable_cache:
                 self._template_cache[cache_key] = template
             return template
-        
+
         # Load from file
         template = await self._load_template_from_file(name, version)
         if self.enable_cache:
             self._template_cache[cache_key] = template
-        
+
         return template
-    
-    async def list_templates(self) -> List[PromptTemplate]:
+
+    async def list_templates(self) -> list[PromptTemplate]:
         """List all available templates"""
         templates = []
-        
+
         # Add built-in templates
         for name, template in self._builtin_templates.items():
             templates.append(template)
-        
+
         # Add file-based templates
         if self.templates_dir.exists():
             for file_path in self.templates_dir.glob("*.txt"):
@@ -196,21 +215,21 @@ class PromptManager:
                     else:
                         name = name_version
                         version = "v1.0"
-                    
+
                     template = await self._load_template_from_file(name, version)
                     templates.append(template)
                 except Exception as e:
                     logger.warning(f"Failed to load template from {file_path}: {e}")
-        
+
         return templates
-    
+
     async def save_template(self, template: PromptTemplate) -> Path:
         """Save a template to file"""
         self.templates_dir.mkdir(parents=True, exist_ok=True)
-        
+
         filename = f"{template.name}_{template.version}.txt"
         file_path = self.templates_dir / filename
-        
+
         # Create template file with metadata header
         content = f"""# Template: {template.name}
 # Version: {template.version}
@@ -223,33 +242,33 @@ class PromptManager:
 ---
 {template.content}
 """
-        
-        async with asyncio.to_thread(open, file_path, 'w', encoding='utf-8') as f:
+
+        async with asyncio.to_thread(open, file_path, "w", encoding="utf-8") as f:
             await asyncio.to_thread(f.write, content)
-        
+
         # Update cache
         cache_key = f"{template.name}_{template.version}"
         if self.enable_cache:
             self._template_cache[cache_key] = template
-        
+
         return file_path
-    
+
     def clear_cache(self):
         """Clear template cache"""
         self._template_cache.clear()
         self._file_timestamps.clear()
-    
+
     async def _load_template_from_file(self, name: str, version: str) -> PromptTemplate:
         """Load template from file system"""
         file_path = self._get_template_file_path(name, version)
-        
+
         if not file_path or not file_path.exists():
             raise TemplateNotFound(f"Template {name} version {version} not found")
-        
+
         try:
-            async with asyncio.to_thread(open, file_path, 'r', encoding='utf-8') as f:
+            async with asyncio.to_thread(open, file_path, "r", encoding="utf-8") as f:
                 content = await asyncio.to_thread(f.read)
-            
+
             # Parse metadata and content
             if content.startswith("#"):
                 parts = content.split("---", 1)
@@ -262,11 +281,11 @@ class PromptManager:
             else:
                 metadata = {}
                 template_content = content
-            
+
             # Update file timestamp for auto-reload
             if self.auto_reload:
                 self._file_timestamps[str(file_path)] = file_path.stat().st_mtime
-            
+
             return PromptTemplate(
                 name=name,
                 version=version,
@@ -274,23 +293,23 @@ class PromptManager:
                 description=metadata.get("description"),
                 required_variables=metadata.get("required_variables", []),
                 optional_variables=metadata.get("optional_variables", []),
-                tags=metadata.get("tags", [])
+                tags=metadata.get("tags", []),
             )
-            
+
         except Exception as e:
             raise TemplateError(f"Failed to load template {name}: {e}")
-    
+
     def _get_template_file_path(self, name: str, version: str) -> Optional[Path]:
         """Get file path for template"""
         if not self.templates_dir.exists():
             return None
-        
+
         # Try exact version match first
         filename = f"{name}_{version}.txt"
         file_path = self.templates_dir / filename
         if file_path.exists():
             return file_path
-        
+
         # If looking for "latest", find highest version
         if version == "latest":
             pattern = f"{name}_v*.txt"
@@ -299,48 +318,48 @@ class PromptManager:
                 # Sort by version number (simple string sort should work for v1.0, v1.1, etc.)
                 matches.sort(key=lambda p: p.stem)
                 return matches[-1]
-        
+
         return None
-    
+
     async def _should_reload_template(self, file_path: Path) -> bool:
         """Check if template file has been modified"""
         if not file_path.exists():
             return False
-        
+
         current_mtime = file_path.stat().st_mtime
         cached_mtime = self._file_timestamps.get(str(file_path), 0)
-        
+
         return current_mtime > cached_mtime
-    
-    def _parse_metadata(self, metadata_section: str) -> Dict[str, Any]:
+
+    def _parse_metadata(self, metadata_section: str) -> dict[str, Any]:
         """Parse template metadata from header comments"""
         metadata = {}
-        
-        for line in metadata_section.split('\n'):
+
+        for line in metadata_section.split("\n"):
             line = line.strip()
-            if line.startswith('# ') and ':' in line:
-                key, value = line[2:].split(':', 1)
-                key = key.strip().lower().replace(' ', '_')
+            if line.startswith("# ") and ":" in line:
+                key, value = line[2:].split(":", 1)
+                key = key.strip().lower().replace(" ", "_")
                 value = value.strip()
-                
+
                 # Parse lists
-                if key in ['required_variables', 'optional_variables', 'tags']:
-                    metadata[key] = [v.strip() for v in value.split(',') if v.strip()]
+                if key in ["required_variables", "optional_variables", "tags"]:
+                    metadata[key] = [v.strip() for v in value.split(",") if v.strip()]
                 else:
                     metadata[key] = value
-        
+
         return metadata
-    
-    async def _validate_variables(self, template: PromptTemplate, variables: Dict[str, Any]):
+
+    async def _validate_variables(self, template: PromptTemplate, variables: dict[str, Any]):
         """Validate that all required variables are provided"""
         missing_variables = []
         for var in template.required_variables:
             if var not in variables:
                 missing_variables.append(var)
-        
+
         if missing_variables:
             raise TemplateError(f"Missing required variables: {', '.join(missing_variables)}")
-    
+
     # Built-in template definitions
     def _get_question_generation_template(self) -> PromptTemplate:
         """Get built-in question generation template"""
@@ -386,7 +405,7 @@ Return a JSON object with the following structure:
 }
 
 Generate a mathematically accurate, age-appropriate question that tests the specified topic effectively."""
-        
+
         return PromptTemplate(
             name="question_generation",
             version="latest",
@@ -394,9 +413,9 @@ Generate a mathematically accurate, age-appropriate question that tests the spec
             description="Generate Cambridge IGCSE Mathematics questions",
             required_variables=["topic", "target_grade", "marks", "calculator_policy"],
             optional_variables=["command_word", "subject_content_references"],
-            tags=["generation", "cambridge", "igcse", "mathematics"]
+            tags=["generation", "cambridge", "igcse", "mathematics"],
         )
-    
+
     def _get_marking_scheme_template(self) -> PromptTemplate:
         """Get built-in marking scheme template"""
         content = """You are an expert Cambridge IGCSE Mathematics examiner. Create a detailed marking scheme for the following question:
@@ -429,7 +448,7 @@ Return a JSON object with this structure:
 }
 
 Create a comprehensive marking scheme that ensures consistent, fair assessment."""
-        
+
         return PromptTemplate(
             name="marking_scheme",
             version="latest",
@@ -437,9 +456,9 @@ Create a comprehensive marking scheme that ensures consistent, fair assessment."
             description="Generate Cambridge IGCSE marking schemes",
             required_variables=["question_text", "total_marks", "target_grade"],
             optional_variables=[],
-            tags=["marking", "assessment", "cambridge", "igcse"]
+            tags=["marking", "assessment", "cambridge", "igcse"],
         )
-    
+
     def _get_quality_review_template(self) -> PromptTemplate:
         """Get built-in quality review template"""
         content = """You are a Cambridge IGCSE Mathematics education expert. Review the following question and marking scheme for quality and compliance:
@@ -449,7 +468,7 @@ Create a comprehensive marking scheme that ensures consistent, fair assessment."
 
 **Review Criteria:**
 1. Mathematical accuracy (0-1 score)
-2. Cambridge syllabus compliance (0-1 score)  
+2. Cambridge syllabus compliance (0-1 score)
 3. Grade-level appropriateness (0-1 score)
 4. Question clarity and wording (0-1 score)
 5. Marking scheme accuracy (0-1 score)
@@ -474,7 +493,7 @@ Return a JSON object with this structure:
 }
 
 Provide thorough, constructive feedback focused on educational quality and Cambridge standards."""
-        
+
         return PromptTemplate(
             name="quality_review",
             version="latest",
@@ -482,9 +501,9 @@ Provide thorough, constructive feedback focused on educational quality and Cambr
             description="Review question quality and compliance",
             required_variables=["question_data"],
             optional_variables=[],
-            tags=["review", "quality", "assessment", "cambridge"]
+            tags=["review", "quality", "assessment", "cambridge"],
         )
-    
+
     def _get_question_refinement_template(self) -> PromptTemplate:
         """Get built-in question refinement template"""
         content = """You are an expert Cambridge IGCSE Mathematics educator. Improve the following question based on the provided feedback:
@@ -525,7 +544,7 @@ Return a JSON object with this structure:
 }
 
 Focus on creating a better question that addresses the feedback while maintaining educational value."""
-        
+
         return PromptTemplate(
             name="question_refinement",
             version="latest",
@@ -533,21 +552,24 @@ Focus on creating a better question that addresses the feedback while maintainin
             description="Refine questions based on review feedback",
             required_variables=["original_question", "review_feedback"],
             optional_variables=[],
-            tags=["refinement", "improvement", "quality", "cambridge"]
+            tags=["refinement", "improvement", "quality", "cambridge"],
         )
 
 
 # Custom exceptions
 class PromptError(Exception):
     """Base exception for prompt-related errors"""
+
     pass
 
 
 class TemplateNotFound(PromptError):
     """Raised when a template cannot be found"""
+
     pass
 
 
 class TemplateError(PromptError):
     """Raised when template processing fails"""
+
     pass
