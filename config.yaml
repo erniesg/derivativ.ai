@@ -3,11 +3,25 @@
 
 # Quality Control Thresholds
 quality_control:
-  auto_approve_threshold: 0.85
-  manual_review_threshold: 0.70
-  refine_threshold: 0.50
-  regenerate_threshold: 0.30
-  reject_threshold: 0.20
+  # Quality score thresholds for automated decisions
+  thresholds:
+    auto_approve: 0.85     # High quality → immediate approval
+    manual_review: 0.70    # Good quality → human review queue
+    refine: 0.60           # Medium quality → improvement cycle
+    regenerate: 0.40       # Low quality → try different approach
+    reject: 0.20           # Very poor → abandon attempt
+
+  # Workflow limits to prevent infinite loops
+  limits:
+    max_refinement_iterations: 3
+    max_regeneration_attempts: 2
+    total_workflow_timeout_minutes: 10
+
+  # Auto-publish settings
+  auto_publish:
+    enabled: false
+    destination: "payload_cms"
+    on_approval_only: true
 
 # Performance Settings
 performance:
@@ -33,6 +47,13 @@ agents:
     temperature: 0.5
     max_tokens: 1000
     model_preference: ["claude-3-5-sonnet-20241022", "gpt-4o"]
+
+  refinement:
+    temperature: 0.7
+    max_tokens: 2500
+    model_preference: ["gpt-4o", "claude-3-5-sonnet-20241022"]
+    fallback_enabled: true
+    preserve_original_metadata: true
 
 # Cambridge IGCSE Standards
 cambridge:
