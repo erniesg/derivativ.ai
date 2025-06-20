@@ -1,6 +1,40 @@
 # Derivativ AI Configuration
 # Non-sensitive configuration settings
 
+# LLM Provider Configuration
+llm_providers:
+  openai:
+    default_model: "gpt-4o-mini"
+    api_key_env: "OPENAI_API_KEY"
+    base_url: "https://api.openai.com/v1"
+    timeout_seconds: 30
+    max_retries: 3
+
+  anthropic:
+    default_model: "claude-3-5-haiku-20241022"
+    api_key_env: "ANTHROPIC_API_KEY"
+    base_url: "https://api.anthropic.com"
+    timeout_seconds: 30
+    max_retries: 3
+
+  google:
+    default_model: "gemini-2.0-flash-exp"
+    api_key_env: "GOOGLE_API_KEY"
+    timeout_seconds: 30
+    max_retries: 3
+
+  default_provider: "openai"
+  enable_fallback: true
+  cost_tracking: true
+
+# LLM Defaults (streaming enabled by default)
+llm_defaults:
+  temperature: 0.7
+  max_tokens: 1000
+  top_p: 0.9
+  stream: true              # Enable streaming responses by default
+  timeout_seconds: 30
+
 # Quality Control Thresholds
 quality_control:
   # Quality score thresholds for automated decisions

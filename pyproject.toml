@@ -65,6 +65,7 @@ ignore = [
     "PLR0912", # Too many branches
     "PLR2004", # Magic value used in comparison
     "N818",   # Exception name should be named with an Error suffix
+    "N999",   # Invalid module name (project name has dot)
     "C901",   # Function is too complex
     "SIM110", # Use return all() instead of for loop
     "PLW2901", # for loop variable overwritten by assignment target

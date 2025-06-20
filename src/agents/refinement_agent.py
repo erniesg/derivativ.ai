@@ -333,10 +333,7 @@ Provide improved question in JSON format:
             return False
 
         # Check that marks is a valid integer if present
-        if "marks" in response and not isinstance(response["marks"], int):
-            return False
-
-        return True
+        return not ("marks" in response and not isinstance(response["marks"], int))
 
     def _apply_refinement_improvements(
         self, original_question: dict[str, Any], improvements: dict[str, Any]

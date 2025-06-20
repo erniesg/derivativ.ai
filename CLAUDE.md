@@ -199,40 +199,82 @@ Modal Agent Updates → Cloudflare Workers → AI SDK → Streaming React Compon
 
 ### Test-First Development Philosophy
 
-#### 1. **Core Workflow Tests** (Write First - Day 1)
-```python
-# Critical demo functionality
-test_generate_question_end_to_end()           # Main demo flow
-test_multi_agent_coordination_visible()       # Agent reasoning display
-test_quality_control_improvement_cycle()      # Automatic refinement
-test_real_time_progress_tracking()            # Live updates
+**IMPORTANT**: Derivativ uses a 4-tier testing structure located in `tests/` directory:
 
-# API integration tests
-test_api_question_generation_endpoint()       # REST API functionality
-test_api_real_time_websocket_updates()        # Live progress updates
-test_api_concurrent_request_handling()        # Scale simulation
+#### Test Directory Structure
+```
+tests/
+├── unit/           # Isolated component tests (mock external dependencies)
+├── integration/    # Service integration tests (config, databases, APIs)
+├── e2e/           # End-to-end workflow tests (complete user journeys)
+└── performance/   # Load, latency, and scalability tests
+
+scripts/            # Utility scripts for development (NOT tests)
+├── quick_api_test.py              # Manual API connectivity verification
+└── setup_api_keys.py              # Environment setup utilities
 ```
 
-#### 2. **Agent Coordination Tests** (Day 2)
-```python
-# Individual agent functionality
-test_question_generator_agent()               # Valid question creation
-test_marker_agent_scheme_generation()         # Proper mark allocation
-test_review_agent_quality_scoring()           # Consistent assessment
-test_refinement_agent_improvements()          # Meaningful enhancements
+**Test vs Script Distinction**:
+- **Tests** (`tests/`) = Automated test suite with assertions, run via pytest
+- **Scripts** (`scripts/`) = Manual utilities, demos, setup tools for development
+- **Naming Rules**:
+  - Tests: `test_*.py` with pytest assertions → `tests/` directory
+  - Scripts: `demo_*.py`, `verify_*.py`, `setup_*.py` → `scripts/` directory
+  - **Never** use `test_` prefix in `scripts/` - it's misleading
 
-# Multi-agent workflows
-test_orchestrator_agent_coordination()        # End-to-end workflow
-test_quality_control_workflow_decisions()     # Automatic decisions
+#### 1. **Unit Tests** (`tests/unit/`) - Write First
+```python
+# LLM service components
+test_openai_service_unit.py                   # OpenAI service with mocks
+test_anthropic_service_unit.py                # Anthropic service with mocks
+test_gemini_service_unit.py                   # Gemini service with mocks
+test_openai_streaming_unit.py                 # Streaming functionality
+test_llm_models.py                             # Pydantic model validation
+
+# Agent components
+test_question_generator_unit.py               # Question generation logic
+test_marker_agent_unit.py                     # Marking scheme creation
+test_review_agent_unit.py                     # Quality assessment
+test_refinement_agent_unit.py                 # Improvement logic
 ```
 
-#### 3. **Performance & Reliability Tests** (Day 4-5)
+#### 2. **Integration Tests** (`tests/integration/`) - Day 2
 ```python
-# Demo requirements
-test_generation_completes_under_30_seconds()  # Speed requirement
-test_concurrent_generation_stability()        # Multiple users
-test_demo_scenario_preloading()               # Fast startup
-test_llm_provider_fallback_switching()        # Network resilience
+# Service integration with real configs
+test_config_llm_integration.py                # Config loading and LLM setup
+test_agent_integration.py                     # Agent coordination patterns
+test_prompt_manager_integration.py            # Template + LLM integration
+
+# Live API integration
+test_live_api_connectivity.py                 # All provider API connectivity
+test_openai_streaming_integration.py          # OpenAI streaming with live API
+
+# Database integration
+test_neon_db_integration.py                   # Database operations
+test_audit_trails_integration.py              # Agent data persistence
+```
+
+#### 3. **End-to-End Tests** (`tests/e2e/`) - Day 3-4
+```python
+# Complete workflows
+test_agent_workflow.py                        # Multi-agent question generation
+test_review_agent_e2e.py                      # Quality control cycles
+test_demo_scenarios_e2e.py                    # Live demo preparation
+
+# API endpoints
+test_api_question_generation_endpoint.py      # REST API functionality
+test_api_real_time_websocket_updates.py       # Live progress updates
+test_api_concurrent_request_handling.py       # Scale simulation
+```
+
+#### 4. **Performance Tests** (`tests/performance/`) - Day 4-5
+```python
+# Speed requirements
+test_generation_completes_under_30_seconds.py # Speed requirement
+test_concurrent_generation_stability.py       # Multiple users
+test_llm_provider_fallback_switching.py       # Network resilience
+test_agent_performance.py                     # Agent latency benchmarks
+test_review_agent_performance.py              # Quality assessment speed
 ```
 
 ### TDD Success Metrics
@@ -414,6 +456,7 @@ class Settings(BaseSettings):
     # LLM APIs
     openai_api_key: str = Field(..., env="OPENAI_API_KEY")
     anthropic_api_key: str = Field(..., env="ANTHROPIC_API_KEY")
+    google_api_key: str = Field(..., env="GOOGLE_API_KEY")
 
     # Performance
     generation_timeout: int = 30
@@ -427,6 +470,47 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = False
 ```
+
+#### Configuration Management & Templating Approach
+```python
+# Configuration hierarchy: config.yaml → .env → runtime overrides
+class AppConfig(BaseModel):
+    def create_llm_request_for_agent(self, agent_name: str, prompt: str, **overrides) -> LLMRequest:
+        """Agent-specific LLM configuration with runtime overrides."""
+        # 1. Start with global defaults from config.yaml
+        # 2. Apply agent-specific overrides
+        # 3. Apply runtime overrides
+        # 4. Return fully configured LLMRequest
+
+# Jinja2 Template Integration Pattern
+class PromptManager:
+    def render_template(self, template_name: str, **variables) -> str:
+        """Render Jinja2 template with agent context."""
+        template = self.jinja_env.get_template(f"{template_name}.j2")
+        return template.render(**variables)
+
+    def create_agent_request(self, agent_name: str, template: str, **template_vars) -> LLMRequest:
+        """Combine template rendering with agent-specific LLM config."""
+        prompt = self.render_template(template, **template_vars)
+        return self.config.create_llm_request_for_agent(agent_name, prompt)
+
+# Runtime Override Pattern
+async def agent_generate(self, template: str, **overrides):
+    """Agent generation with template + config + runtime flexibility."""
+    base_request = self.prompt_manager.create_agent_request(
+        agent_name=self.name,
+        template=template,
+        **self.template_variables
+    )
+    # Apply runtime overrides (e.g., temperature, model, stream=False for batch)
+    return await self.llm_service.generate(base_request, **overrides)
+```
+
+**Key Design Principles**:
+- **Separation**: Templates separate from LLM configuration
+- **Hierarchy**: config.yaml defaults → agent overrides → runtime overrides
+- **Flexibility**: Any parameter can be overridden at runtime
+- **Type Safety**: Pydantic models validate all configurations
 
 ---
 
