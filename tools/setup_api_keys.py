@@ -27,6 +27,7 @@ def create_env_file():  # noqa: PLR0915
     print("- Anthropic: https://console.anthropic.com/")
     print("- Google: https://makersuite.google.com/app/apikey")
     print("- Hugging Face: https://huggingface.co/settings/tokens (for smolagents)")
+    print("- Supabase: https://supabase.com/dashboard/project/_/settings/api")
     print("\nPress Enter to skip any key you don't have yet or keep existing.\n")
 
     # Check existing keys
@@ -64,6 +65,17 @@ def create_env_file():  # noqa: PLR0915
     )
     new_hf = input(prompt_hf).strip()
     keys["HF_TOKEN"] = new_hf if new_hf else current_hf
+
+    print("\n🗄️ For database persistence:")
+    current_supabase_url = existing_keys.get("SUPABASE_URL", "")
+    prompt_supabase_url = f"Supabase URL (current: {'***' + current_supabase_url[-10:] if current_supabase_url else 'not set'}): "
+    new_supabase_url = input(prompt_supabase_url).strip()
+    keys["SUPABASE_URL"] = new_supabase_url if new_supabase_url else current_supabase_url
+
+    current_supabase_key = existing_keys.get("SUPABASE_ANON_KEY", "")
+    prompt_supabase_key = f"Supabase Anon Key (current: {'***' + current_supabase_key[-4:] if current_supabase_key else 'not set'}): "
+    new_supabase_key = input(prompt_supabase_key).strip()
+    keys["SUPABASE_ANON_KEY"] = new_supabase_key if new_supabase_key else current_supabase_key
 
     # Optional overrides
     print("\n⚙️  Optional configuration (press Enter for defaults):")
@@ -128,10 +140,12 @@ def create_env_file():  # noqa: PLR0915
     # Count valid keys
     valid_llm_keys = sum(1 for k, v in keys.items() if v and k.endswith("_API_KEY"))
     has_hf_token = bool(keys.get("HF_TOKEN"))
+    has_supabase = bool(keys.get("SUPABASE_URL") and keys.get("SUPABASE_ANON_KEY"))
 
     print("\n🎯 Setup Summary:")
     print(f"   LLM API keys: {valid_llm_keys}")
     print(f"   HF token: {'✅' if has_hf_token else '❌'}")
+    print(f"   Supabase: {'✅' if has_supabase else '❌'}")
 
     if valid_llm_keys > 0 or has_hf_token:
         print("\n🚀 Ready to test! Try:")
@@ -140,6 +154,9 @@ def create_env_file():  # noqa: PLR0915
         if has_hf_token:
             print("   python examples/smolagents_interactive_demo.py  # Interactive smolagents")
         print("   python examples/smolagents_tools_demo.py  # Tools demo")
+        if has_supabase:
+            print("   python -m pytest tests/integration/  # Run integration tests with Supabase")
+            print("   uvicorn src.api.main:app --reload  # Start FastAPI server with database")
     else:
         print("\n⚠️  No API keys added. You can:")
         print("   1. Edit .env file manually")

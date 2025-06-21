@@ -7,12 +7,25 @@ import logging
 from datetime import datetime
 from typing import Any, Optional
 
-from supabase import Client
-
 from src.models.enums import CommandWord, QuestionOrigin, Tier
 from src.models.question_models import GenerationSession, GenerationStatus, Question
+from supabase import Client, create_client
 
 logger = logging.getLogger(__name__)
+
+
+def get_supabase_client(url: str, key: str) -> Client:
+    """
+    Create and configure Supabase client.
+
+    Args:
+        url: Supabase project URL
+        key: Supabase API key
+
+    Returns:
+        Configured Supabase client
+    """
+    return create_client(url, key)
 
 
 class QuestionRepository:

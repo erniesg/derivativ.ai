@@ -13,7 +13,7 @@ modal>=0.55.0
 
 # Database
 supabase>=2.0.0
-realtime>=0.0.5
+realtime-py>=0.3.0
 
 # API
 fastapi>=0.104.0
