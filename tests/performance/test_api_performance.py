@@ -312,15 +312,26 @@ class TestAPIPerformance:
 
     @pytest.mark.performance
     def test_error_response_performance(self, client):
-        """Test error responses are fast."""
-        start_time = time.time()
+        """Test error responses are fast - REAL FastAPI validation performance."""
+        # Override dependencies to prevent 503 errors, but still test real validation
+        from unittest.mock import Mock
 
-        # Send invalid request
-        response = client.post("/api/questions/generate", json={"invalid": "data"})
-        error_time = time.time() - start_time
+        mock_service = Mock()
+        mock_repo = Mock()
+        app.dependency_overrides[get_question_generation_service] = lambda: mock_service
+        app.dependency_overrides[get_question_repository] = lambda: mock_repo
 
-        assert response.status_code == 422
-        assert error_time < 0.1  # Error responses should be very fast
+        try:
+            start_time = time.time()
+            # Send invalid request to test REAL FastAPI validation speed
+            response = client.post("/api/questions/generate", json={"invalid": "data"})
+            error_time = time.time() - start_time
+
+            # Should get validation error (422), not service error (503)
+            assert response.status_code == 422
+            assert error_time < 0.1  # Error responses should be very fast
+        finally:
+            app.dependency_overrides.clear()
 
     @pytest.mark.performance
     @pytest.mark.slow
