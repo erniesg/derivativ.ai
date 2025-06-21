@@ -11,7 +11,6 @@ from typing import Any
 from src.agents.base_agent import BaseAgent
 from src.models.document_models import (
     ContentSection,
-    DocumentType,
     ExportFormat,
     GeneratedDocument,
 )
@@ -223,19 +222,11 @@ class DocumentFormatterAgent(BaseAgent):
 
         if format_type == ExportFormat.HTML:
             return self._format_to_html(document, personalization)
-        elif format_type == ExportFormat.LATEX:
-            return self._format_to_latex(document, personalization)
         elif format_type == ExportFormat.MARKDOWN:
             return self._format_to_markdown(document, personalization)
-        elif format_type == ExportFormat.PDF:
-            # PDF generation would require additional tools (weasyprint, reportlab, etc.)
-            return await self._format_to_pdf(document, personalization)
-        elif format_type == ExportFormat.DOCX:
-            # DOCX generation would require python-docx
-            return await self._format_to_docx(document, personalization)
-        elif format_type == ExportFormat.SLIDES_PPTX:
-            # PowerPoint generation for slides
-            return await self._format_to_slides(document, personalization)
+        elif format_type in [ExportFormat.PDF, ExportFormat.DOCX, ExportFormat.LATEX, ExportFormat.SLIDES_PPTX]:
+            # Use pandoc for these formats
+            return await self._format_with_pandoc(document, format_type, personalization, options)
         else:
             raise ValueError(f"Format {format_type} not yet implemented")
 
@@ -408,39 +399,6 @@ class DocumentFormatterAgent(BaseAgent):
 
         return content
 
-    def _format_to_latex(
-        self, document: GeneratedDocument, personalization: dict[str, Any] = None
-    ) -> str:
-        """Format document as LaTeX."""
-        templates = self.formatting_templates["latex"]
-
-        latex = templates["document_header"].format(title=document.title)
-
-        for section in document.sections:
-            section_content = self._format_section_latex(section, templates)
-            latex += templates["section_template"].format(
-                title=section.title, content=section_content
-            )
-
-        latex += templates["document_footer"]
-        return latex
-
-    def _format_section_latex(self, section: ContentSection, templates: dict[str, str]) -> str:
-        """Format section as LaTeX."""
-        content = ""
-
-        if section.content_type == "practice_questions":
-            questions = section.content_data.get("questions", [])
-            for question in questions:
-                content += templates["question_template"].format(
-                    question_text=question.get("question_text", "").replace("$", "\\$"),
-                    marks=question.get("marks", 0),
-                )
-        else:
-            text_content = section.content_data.get("text", "")
-            content += text_content.replace("$", "\\$").replace("&", "\\&")
-
-        return content
 
     def _format_to_markdown(
         self, document: GeneratedDocument, personalization: dict[str, Any] = None
@@ -501,59 +459,187 @@ class DocumentFormatterAgent(BaseAgent):
 
         return content
 
-    async def _format_to_pdf(
+    def _format_to_markdown_for_slides(
         self, document: GeneratedDocument, personalization: dict[str, Any] = None
     ) -> str:
-        """Format document as PDF (placeholder for future implementation)."""
-        # This would require integration with libraries like:
-        # - weasyprint (HTML to PDF)
-        # - reportlab (programmatic PDF generation)
-        # - LaTeX compiler (pdflatex)
+        """Format document as Markdown optimized for slide generation."""
+        personalization = personalization or {}
 
-        self._think("PDF generation requires additional dependencies")
+        markdown = f"# {document.title}\n\n"
+        markdown += f"*{document.document_type.value.title()} - {document.detail_level.value.title()} Level*\n\n"
 
-        # For now, return HTML that can be converted to PDF
-        html_content = self._format_to_html(document)
+        # Add metadata slide
+        markdown += "---\n\n"
+        markdown += "## Document Information\n\n"
+        markdown += f"- **Document Type:** {document.document_type.value}\n"
+        markdown += f"- **Detail Level:** {document.detail_level.value}\n"
+        markdown += f"- **Total Questions:** {document.total_questions}\n"
+        markdown += f"- **Estimated Duration:** {document.estimated_duration} minutes\n\n"
 
-        # In a full implementation, this would:
-        # 1. Use weasyprint to convert HTML to PDF
-        # 2. Return the PDF file path or binary data
+        if document.applied_customizations:
+            markdown += "- **Personalized:** Yes ✨\n\n"
 
-        return f"PDF generation placeholder - HTML content ready for conversion:\n{html_content}"
+        # Process sections into slides
+        for section in document.sections:
+            markdown += "---\n\n"  # New slide
+            markdown += f"## {section.title}\n\n"
 
-    async def _format_to_docx(
-        self, document: GeneratedDocument, personalization: dict[str, Any] = None
+            if section.content_type == "practice_questions":
+                questions = section.content_data.get("questions", [])
+
+                # For slides, limit questions per slide
+                max_questions_per_slide = 2 if personalization.get("learning_style") == "visual" else 3
+
+                for i, question in enumerate(questions):
+                    if i > 0 and i % max_questions_per_slide == 0:
+                        markdown += "---\n\n"  # New slide for more questions
+                        markdown += f"## {section.title} (continued)\n\n"
+
+                    question_num = i + 1
+                    markdown += f"**Question {question_num}** ({question.get('marks', 0)} marks)\n\n"
+                    markdown += f"{question.get('question_text', '')}\n\n"
+
+                    # Add visual hints for visual learners in slides
+                    if personalization.get("learning_style") == "visual":
+                        markdown += "> 💡 *Consider drawing a diagram to visualize this problem*\n\n"
+
+            elif section.content_type == "learning_objectives":
+                objectives_text = section.content_data.get("objectives_text", "")
+                # Convert bullet points to proper slide format
+                if "•" in objectives_text:
+                    objectives_text = objectives_text.replace("•", "-")
+                markdown += f"{objectives_text}\n\n"
+
+            elif section.content_type == "worked_examples":
+                examples = section.content_data.get("examples", [])
+                for i, example in enumerate(examples):
+                    if i > 0:
+                        markdown += "---\n\n"  # New slide for each example
+                        markdown += f"## Example {i + 1}\n\n"
+                    else:
+                        markdown += f"### Example {i + 1}\n\n"
+
+                    markdown += f"**Question:** {example.get('question_text', '')}\n\n"
+
+                    for step in example.get("solution_steps", []):
+                        markdown += f"- {step.get('description_text', '')}\n"
+                    markdown += "\n"
+
+            else:
+                # Generic content
+                content_text = section.content_data.get("text", "")
+                markdown += f"{content_text}\n\n"
+
+        # Final slide
+        markdown += "---\n\n"
+        markdown += "## Thank You\n\n"
+        markdown += "*Generated by Derivativ AI*\n\n"
+        markdown += f"Questions? Review the {document.total_questions} problems in this {document.document_type.value}.\n\n"
+
+        return markdown
+
+    async def _format_with_pandoc(
+        self,
+        document: GeneratedDocument,
+        format_type: ExportFormat,
+        personalization: dict[str, Any] = None,
+        options: dict[str, Any] = None,
     ) -> str:
-        """Format document as DOCX (placeholder for future implementation)."""
-        # This would require python-docx library
+        """Use pandoc to convert document to various formats."""
+        import subprocess
+        import tempfile
+        from pathlib import Path
 
-        self._think("DOCX generation requires python-docx integration")
+        self._think(f"Converting document to {format_type.value} using pandoc")
 
-        # In a full implementation, this would:
-        # 1. Use python-docx to create Word document
-        # 2. Add sections, questions, formatting
-        # 3. Return the file path or binary data
+        personalization = personalization or {}
+        options = options or {}
 
-        return f"DOCX generation placeholder for document: {document.title}"
+        try:
+            # Generate markdown content (enhanced for slides if needed)
+            if format_type == ExportFormat.SLIDES_PPTX:
+                markdown_content = self._format_to_markdown_for_slides(document, personalization)
+            else:
+                markdown_content = self._format_to_markdown(document, personalization)
 
-    async def _format_to_slides(
-        self, document: GeneratedDocument, personalization: dict[str, Any] = None
-    ) -> str:
-        """Format document as PowerPoint slides (placeholder for future implementation)."""
-        # This would require python-pptx library
+            # Create temporary input file
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as f:
+                f.write(markdown_content)
+                input_file = f.name
 
-        self._think("PowerPoint generation requires python-pptx integration")
+            # Determine output file extension
+            extensions = {
+                ExportFormat.PDF: '.pdf',
+                ExportFormat.DOCX: '.docx',
+                ExportFormat.SLIDES_PPTX: '.pptx',
+                ExportFormat.LATEX: '.tex',
+            }
 
-        if document.document_type != DocumentType.SLIDES:
-            logger.warning("Converting non-slide document to presentation format")
+            output_file = input_file.replace('.md', extensions[format_type])
 
-        # In a full implementation, this would:
-        # 1. Use python-pptx to create presentation
-        # 2. Create slides for each section
-        # 3. Add appropriate layouts and formatting
-        # 4. Return the file path or binary data
+            # Build pandoc command
+            cmd = ['pandoc', input_file, '-o', output_file]
 
-        return f"PowerPoint generation placeholder for: {document.title}"
+            # Add format-specific options
+            if format_type == ExportFormat.PDF:
+                cmd.extend([
+                    '--pdf-engine=pdflatex',
+                    '--variable', 'geometry:margin=2.5cm',
+                    '--variable', 'fontsize=12pt',
+                ])
+                # Add math support
+                cmd.extend(['--mathjax'])
+
+            elif format_type == ExportFormat.DOCX:
+                # Add reference doc for styling if available
+                cmd.extend(['--reference-doc=/dev/null'])  # Use default styling for now
+
+            elif format_type == ExportFormat.SLIDES_PPTX:
+                cmd.extend([
+                    '-t', 'pptx',
+                    '--slide-level=2',  # Level 2 headers create new slides
+                ])
+
+            elif format_type == ExportFormat.LATEX:
+                cmd.extend([
+                    '-t', 'latex',
+                    '--standalone',
+                ])
+
+            # Add metadata
+            cmd.extend([
+                '--metadata', f'title={document.title}',
+                '--metadata', 'author=Derivativ AI',
+                '--metadata', f'date={document.generated_at[:10]}',  # Just the date part
+            ])
+
+            # Add custom styling from personalization
+            if personalization.get('font_size') == 'large' and format_type == ExportFormat.PDF:
+                cmd.extend(['--variable', 'fontsize=14pt'])
+
+            self._act("Executing pandoc conversion", {"command": " ".join(cmd)})
+
+            # Execute pandoc
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+            # Clean up input file
+            Path(input_file).unlink()
+
+            # Return the output file path
+            self._act("Document converted successfully", {"output_file": output_file})
+            return output_file
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Pandoc conversion failed: {e.stderr}")
+            # Clean up files
+            if 'input_file' in locals():
+                Path(input_file).unlink(missing_ok=True)
+            if 'output_file' in locals():
+                Path(output_file).unlink(missing_ok=True)
+            raise ValueError(f"Document conversion failed: {e.stderr}")
+        except Exception as e:
+            logger.error(f"Document formatting error: {e}")
+            raise ValueError(f"Document formatting failed: {e}")
 
     def _extract_personalization(
         self, document: GeneratedDocument, export_options: dict[str, Any]
