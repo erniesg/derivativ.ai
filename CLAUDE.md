@@ -33,16 +33,18 @@
 - **Live Testing Guide**: Complete documentation for testing the full system with real APIs and database
 
 ### 🔄 IN PROGRESS
-- **Performance Optimization**: Sub-30 second question generation targets and concurrent request handling
-- **Frontend Integration**: Connect React frontend with WebSocket streaming for real-time agent display
+- **Document Generation System**: Expanding from individual questions to worksheets, notes, and mini-textbooks with variable detail levels
+- **Frontend Integration**: Connecting existing React UI (TeacherDashboard) with FastAPI backend for document generation
+- **Template System**: Creating Jinja2 templates for different document types and detail levels (1-10 scale)
 
 ### 📋 NEXT PRIORITIES
-1. **Live Demo Preparation**: Final performance testing and demo rehearsal
-2. **Frontend Integration**: Real-time agent reasoning display in web interface
-3. **Production Deployment**: Final environment optimization and monitoring setup
-4. **Documentation Polish**: Complete setup and deployment guides for production use
+1. **Document Generation Backend**: New API endpoints and services for worksheet/notes/textbook generation
+2. **Template Management**: Detail-level templates and format transformation agents
+3. **Frontend API Integration**: Connect existing TeacherDashboard UI to new document generation endpoints
+4. **Export Functionality**: PDF/DOCX generation for generated documents
+5. **Live Demo Preparation**: Full document generation workflow demonstration
 
-**Demo Readiness**: Full-stack system operational with 177/177 tests passing. FastAPI + Supabase backend complete with dependency injection, real-time streaming, and comprehensive testing. Ready for live demonstration.
+**Demo Readiness**: Backend complete (177/177 tests passing) + Frontend UI ready (TeacherDashboard with material generation interface). Need document generation services to connect existing UI to backend for full demo capability.
 
 ---
 
@@ -75,22 +77,22 @@ FastAPI → Supabase Client → PostgreSQL Storage → Real-time Updates
 - Comprehensive database schema with enum tables and RLS policies
 ```
 
-#### 3. **Cloudflare Edge Computing** (`cloudflare-workers/api-gateway.js`)
+#### 3. **Document Generation Pipeline** (`src/services/document_generation_service.py`)
 ```
-Frontend → Cloudflare Workers → Modal Agent Functions → Neon DB
-- Edge API gateway for global low-latency access
-- Intelligent request routing based on geography and load
-- Caching layer with R2 for frequently requested content
-- Real-time streaming via WebSockets at the edge
+UI Request → FastAPI → Question Generation → Document Formatter → Template Renderer → Export
+- Material types: Worksheets, Notes, Mini-textbooks with 1-10 detail levels
+- Template system using Jinja2 for flexible content formatting
+- Format transformation agents convert questions to document structures
+- PDF/DOCX export capabilities for teacher and student use
 ```
 
-#### 4. **AI SDK Streaming Components** (`frontend/components/AgentReasoning.tsx`)
+#### 4. **Frontend Integration** (`/Users/erniesg/code/erniesg/derivativ/src/pages/TeacherDashboard.tsx`)
 ```
-Modal Agent Updates → Cloudflare Workers → AI SDK → Streaming React Components
-- Real-time agent reasoning display using AI SDK
-- Streaming components update as agents make decisions
-- Live progress indicators for multi-agent workflows
-- Demo-friendly transparent decision-making
+React TeacherDashboard → FastAPI Document API → Generated Materials → Download
+- Existing UI with material type selection, topic selection, detail level slider
+- Complete teacher dashboard with stats, recent materials, and generation interface
+- Ready for backend integration (currently logs to console)
+- Material types: worksheet, notes, assessment with customizable parameters
 ```
 
 ### State Management & Persistence
