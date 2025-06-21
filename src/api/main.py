@@ -9,6 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from src.api.dependencies import get_system_health, initialize_global_services
 from src.api.endpoints import questions, sessions, websocket
 from src.core.config import get_settings
 
@@ -20,9 +21,27 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     # Startup
     logger.info("Starting Derivativ API...")
+
+    # Initialize services and dependencies
+    services_initialized = initialize_global_services()
+    if services_initialized:
+        logger.info("Services initialized successfully")
+    else:
+        logger.warning("Some services failed to initialize - API may have limited functionality")
+
     yield
+
     # Shutdown
     logger.info("Shutting down Derivativ API...")
+
+    # Cleanup realtime connections
+    try:
+        from src.realtime.supabase_realtime import cleanup_realtime_client
+
+        await cleanup_realtime_client()
+        logger.info("Realtime connections cleaned up")
+    except Exception as e:
+        logger.warning(f"Error cleaning up realtime connections: {e}")
 
 
 # Create FastAPI app
@@ -45,8 +64,8 @@ app.add_middleware(
 
 @app.get("/health")
 async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy", "service": "derivativ-api"}
+    """Health check endpoint with system status."""
+    return get_system_health()
 
 
 # Include routers

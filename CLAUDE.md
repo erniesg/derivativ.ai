@@ -23,19 +23,23 @@
 - **LLM Services**: Multi-provider support (OpenAI, Anthropic, Google) with async streaming and fallback strategies
 - **Agent Orchestration**: Async/sync compatibility layer with proper event loop handling for production deployment
 - **Live Integration**: All LLM providers tested with real API calls (6/7 tests passing)
-- **Test Coverage**: Comprehensive test suite with unit tests, integration tests, and live API validation
-- **Setup & Configuration**: Interactive setup wizard with API key detection and smolagents configuration
+- **Database Layer**: Supabase PostgreSQL with hybrid storage (flattened + JSONB) for optimal performance
+- **Real-time Streaming**: WebSocket endpoints with Supabase Realtime for live agent updates
+- **FastAPI Backend**: Complete REST API with question generation, retrieval, and session management
+- **Test Coverage**: Comprehensive test suite (177 unit tests, integration tests, TDD approach)
+- **Setup & Configuration**: Interactive setup wizard with API key detection and Supabase integration
 - **Demo Systems**: Both interactive (with HF_TOKEN) and tools-only demo modes ready for presentation
 
 ### 🔄 IN PROGRESS
-- **Frontend Analysis**: Currently analyzing existing Vite/React frontend for agent reasoning display integration
-- **Demo UI Planning**: Preparing web interface for real-time agent workflow visualization
+- **E2E Testing**: End-to-end tests for complete FastAPI + Supabase + agent workflows
+- **Performance Testing**: Load testing and benchmarking for sub-30 second generation
+- **Dependency Injection**: Connecting repository implementations with API endpoints
 
 ### 📋 NEXT PRIORITIES
-1. **Web Interface**: FastAPI + HTML streaming interface for live demos
-2. **Real-time Streaming**: WebSocket/SSE for agent reasoning display
-3. **Performance Optimization**: Sub-30 second question generation
-4. **Database Layer**: SQLite persistence for question storage and retrieval
+1. **Production Deployment**: Environment configuration and dependency injection
+2. **Performance Optimization**: Caching and concurrent request handling
+3. **Frontend Integration**: Connect React frontend with WebSocket streaming
+4. **Live Demo Setup**: End-to-end testing with real API keys and database
 
 **Demo Readiness**: Core multi-agent workflows functional and tested with real APIs. Ready for technical demonstration.
 
@@ -61,13 +65,13 @@ Request → Modal Function → smolagents → [QuestionAgent, MarkerAgent, Revie
 - Automatic agent selection based on task requirements
 ```
 
-#### 2. **Modal + Neon DB Integration** (`src/derivativ/database/neon_client.py`)
+#### 2. **Supabase Database Integration** (`src/database/supabase_repository.py`)
 ```
-Modal Function → Neon DB Connection → Agent Data Persistence → Audit Trails
-- Serverless PostgreSQL with automatic scaling
-- Full audit trails for all agent interactions
-- Connection pooling optimized for Modal's execution model
-- Real-time data synchronization across agent instances
+FastAPI → Supabase Client → PostgreSQL Storage → Real-time Updates
+- Hybrid storage: Flattened fields for fast querying + JSONB for data fidelity
+- Repository pattern with QuestionRepository and GenerationSessionRepository
+- Real-time streaming via Supabase Realtime WebSocket connections
+- Comprehensive database schema with enum tables and RLS policies
 ```
 
 #### 3. **Cloudflare Edge Computing** (`cloudflare-workers/api-gateway.js`)
@@ -89,11 +93,11 @@ Modal Agent Updates → Cloudflare Workers → AI SDK → Streaming React Compon
 ```
 
 ### State Management & Persistence
-- **Neon DB**: Serverless PostgreSQL for agent data, audit trails, and question storage
-- **Cloudflare D1**: SQLite edge database for CMS content and caching
-- **Modal State**: Distributed agent state management across compute instances
-- **smolagents Logging**: Built-in reasoning and decision tracking
-- **Cloudflare R2**: Object storage for static assets and large content files
+- **Supabase PostgreSQL**: Primary database for questions, sessions, and agent data with real-time sync
+- **Hybrid Storage**: Flattened fields for fast querying + JSONB for complete model preservation
+- **Repository Pattern**: Clean separation between business logic and data persistence
+- **smolagents Logging**: Built-in reasoning and decision tracking with database audit trails
+- **Real-time Updates**: Live WebSocket streaming for agent progress and database changes
 
 ---
 

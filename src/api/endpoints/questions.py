@@ -5,9 +5,13 @@ Question generation and management endpoints.
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 
+from src.api.dependencies import (
+    get_question_generation_service,
+    get_question_repository,
+)
 from src.database.supabase_repository import QuestionRepository
 from src.models.enums import CommandWord, Tier
 from src.models.question_models import GenerationRequest
@@ -17,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Dependencies (will be injected via dependency injection in production)
+# Backwards compatibility - these will be set by initialize_global_services()
 question_repository: Optional[QuestionRepository] = None
 question_generation_service: Optional[QuestionGenerationService] = None
 
@@ -39,19 +43,31 @@ class GenerationResponse(BaseModel):
 
 
 @router.post("/questions/generate", status_code=201, response_model=GenerationResponse)
-async def generate_questions(request: GenerationRequest):
+async def generate_questions(
+    request: GenerationRequest,
+    service: QuestionGenerationService = Depends(get_question_generation_service),
+):
     """
     Generate new questions using AI agents.
 
     Args:
         request: Question generation parameters
+        service: Question generation service (injected)
 
     Returns:
         Generation session with questions and agent results
     """
     try:
+        # Use injected service, fallback to global for backwards compatibility
+        generation_service = service or question_generation_service
+        if not generation_service:
+            raise HTTPException(
+                status_code=503,
+                detail="Question generation service not available. Please check configuration.",
+            )
+
         # Generate questions using the service
-        session = await question_generation_service.generate_questions(request)
+        session = await generation_service.generate_questions(request)
 
         return GenerationResponse(
             session_id=str(session.session_id),
@@ -60,24 +76,38 @@ async def generate_questions(request: GenerationRequest):
             agent_results=[ar.model_dump() for ar in session.agent_results],
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Question generation failed: {e}")
         raise HTTPException(status_code=500, detail=f"Generation failed: {e!s}")
 
 
 @router.get("/questions/{question_id}", response_model=dict)
-async def get_question(question_id: str):
+async def get_question(
+    question_id: str,
+    repository: QuestionRepository = Depends(get_question_repository),
+):
     """
     Get a specific question by ID.
 
     Args:
         question_id: Global question identifier
+        repository: Question repository (injected)
 
     Returns:
         Question data
     """
     try:
-        question = question_repository.get_question(question_id)
+        # Use injected repository, fallback to global for backwards compatibility
+        repo = repository or question_repository
+        if not repo:
+            raise HTTPException(
+                status_code=503,
+                detail="Question repository not available. Please check database configuration.",
+            )
+
+        question = repo.get_question(question_id)
 
         if not question:
             raise HTTPException(status_code=404, detail="Question not found")
