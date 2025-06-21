@@ -333,111 +333,14 @@ class TestAPIPerformance:
         finally:
             app.dependency_overrides.clear()
 
-    @pytest.mark.performance
-    @pytest.mark.slow
-    def test_generation_timeout_handling(self, client, mock_slow_generation_service):
-        """Test handling of slow generation (should complete or timeout gracefully)."""
-        # Mock dependencies
-        mock_repo = Mock()
-        mock_repo.save_question.return_value = "test-id"
-        app.dependency_overrides[get_question_generation_service] = (
-            lambda: mock_slow_generation_service
-        )
-        app.dependency_overrides[get_question_repository] = lambda: mock_repo
-
-        try:
-            request_data = {
-                "topic": "calculus",
-                "tier": "Extended",
-                "marks": 8,
-                "command_word": "Derive",
-            }
-
-            # This should either complete quickly (if mocked) or handle timeout
-            start_time = time.time()
-
-            try:
-                response = client.post("/api/questions/generate", json=request_data, timeout=32.0)
-                generation_time = time.time() - start_time
-
-                # If it completes, it should be either very fast (mocked) or reasonable time
-                if response.status_code == 201:
-                    assert generation_time < 35.0
-                else:
-                    # Should handle timeout/error gracefully
-                    assert response.status_code in [408, 500, 503]
-
-            except Exception as e:
-                # Timeout exceptions should be handled gracefully
-                generation_time = time.time() - start_time
-                assert generation_time >= 30.0  # Should have tried for reasonable time
-        finally:
-            app.dependency_overrides.clear()
+    # NOTE: Removed test_generation_timeout_handling
+    # This test was testing mock timeout behavior, not real timeout handling.
+    # Real timeout handling should be tested in integration tests.
 
 
-class TestDatabasePerformance:
-    """Performance tests for database operations."""
-
-    @pytest.mark.performance
-    @pytest.mark.integration
-    def test_question_save_performance(self):
-        """Test question saving performance with mocked database."""
-        from unittest.mock import Mock
-
-        from src.database.supabase_repository import QuestionRepository
-        from tests.conftest import create_test_question
-
-        # Mock Supabase client with fast response
-        mock_client = Mock()
-        mock_response = Mock()
-        mock_response.data = [{"id": "test-id"}]
-        mock_client.table.return_value.insert.return_value.execute.return_value = mock_response
-
-        repository = QuestionRepository(mock_client)
-
-        # Create test question using helper
-        question = create_test_question()
-
-        start_time = time.time()
-        result = repository.save_question(question)
-        save_time = time.time() - start_time
-
-        assert result == "test-id"
-        assert save_time < 0.1  # Should be fast with mocked client
-
-    @pytest.mark.performance
-    @pytest.mark.integration
-    def test_question_retrieval_performance(self):
-        """Test question retrieval performance."""
-        from unittest.mock import Mock
-
-        from src.database.supabase_repository import QuestionRepository
-        from tests.conftest import create_test_question
-
-        # Create a test question to get the proper structure
-        test_question = create_test_question()
-
-        # Mock Supabase client
-        mock_client = Mock()
-        mock_response = Mock()
-        mock_response.data = [
-            {
-                "question_id_global": "test-id",
-                "content_json": test_question.model_dump(),
-            }
-        ]
-        mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = (
-            mock_response
-        )
-
-        repository = QuestionRepository(mock_client)
-
-        start_time = time.time()
-        result = repository.get_question("test-id")
-        retrieval_time = time.time() - start_time
-
-        assert result is not None
-        assert retrieval_time < 0.1  # Should be fast
+# NOTE: Removed TestDatabasePerformance class
+# These tests were just testing mock performance, not real database performance.
+# Real database performance should be tested with integration tests against actual Supabase.
 
 
 # Mark all tests in this module as performance tests
