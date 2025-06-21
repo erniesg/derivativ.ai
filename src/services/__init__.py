@@ -6,7 +6,18 @@ and other core business services with proper dependency injection.
 """
 
 from .json_parser import JSONExtractionResult, JSONParser
+from .llm_factory import LLMFactory, LLMRouter, create_llm_factory, create_llm_router
 from .llm_service import LLMService, MockLLMService
 from .prompt_manager import PromptManager
 
-__all__ = ["JSONExtractionResult", "JSONParser", "LLMService", "MockLLMService", "PromptManager"]
+__all__ = [
+    "JSONExtractionResult",
+    "JSONParser", 
+    "LLMService", 
+    "MockLLMService", 
+    "LLMFactory",
+    "LLMRouter",
+    "create_llm_factory",
+    "create_llm_router",
+    "PromptManager"
+]
