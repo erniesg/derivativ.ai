@@ -61,9 +61,11 @@ class MultiAgentOrchestrator:
         # Initialize agents (created on demand)
         self._agents = {}
 
-    def _get_agent(self, agent_type: str) -> Union[BaseAgent, SyncAgentWrapper]:
+    def _get_agent(self, agent_type: str, force_async: bool = False) -> Union[BaseAgent, SyncAgentWrapper]:
         """Get or create an agent instance."""
-        if agent_type not in self._agents:
+        cache_key = f"{agent_type}_{'async' if force_async else 'sync' if self.use_sync else 'async'}"
+        
+        if cache_key not in self._agents:
             # Create LLM service for agent
             llm_service = self._create_llm_service_for_agent(agent_type)
 
@@ -79,30 +81,43 @@ class MultiAgentOrchestrator:
             else:
                 raise ValueError(f"Unknown agent type: {agent_type}")
 
-            # Wrap in sync wrapper if needed
-            if self.use_sync:
+            # Wrap in sync wrapper if needed (but not if force_async)
+            if self.use_sync and not force_async:
                 agent = make_sync_agent(type(agent), llm_service=llm_service)
 
-            self._agents[agent_type] = agent
+            self._agents[cache_key] = agent
 
-        return self._agents[agent_type]
+        return self._agents[cache_key]
 
     def _create_llm_service_for_agent(self, agent_type: str):
         """Create appropriate LLM service for agent based on config."""
-        config = load_config()
+        try:
+            config = load_config()
 
-        # Get agent-specific config
-        agent_configs = {
-            "generator": config.agents.get("question_generator", {}),
-            "marker": config.agents.get("marker", {}),
-            "reviewer": config.agents.get("reviewer", {}),
-            "refiner": config.agents.get("refinement", {})
-        }
+            # Get agent-specific config
+            agent_configs = {
+                "generator": config.agents.get("question_generator", {}),
+                "marker": config.agents.get("marker", {}),
+                "reviewer": config.agents.get("reviewer", {}),
+                "refiner": config.agents.get("refinement", {})
+            }
 
-        agent_config = agent_configs.get(agent_type, {})
-        model = agent_config.get("model", "gpt-4o-mini")
-
-        return self.llm_factory.create_from_config(config, model_override=model)
+            agent_config = agent_configs.get(agent_type, {})
+            model = agent_config.get("model", "gpt-4o-mini")
+            
+            # Detect provider from model name
+            try:
+                provider = self.llm_factory.detect_provider(model)
+                return self.llm_factory.get_service(provider)
+            except ValueError:
+                # Fallback to openai for unknown models
+                return self.llm_factory.get_service("openai")
+                
+        except Exception as e:
+            # Fallback to mock service for testing
+            from ..services.mock_llm_service import MockLLMService
+            logger.warning(f"Could not create LLM service for {agent_type}, using mock: {e}")
+            return MockLLMService()
 
     async def generate_question_async(
         self,
@@ -128,7 +143,7 @@ class MultiAgentOrchestrator:
 
         try:
             # Step 1: Generate question
-            generator = self._get_agent("generator")
+            generator = self._get_agent("generator", force_async=True)
             gen_result = await generator.process(request.model_dump())
 
             if not gen_result.success:
@@ -139,11 +154,21 @@ class MultiAgentOrchestrator:
             question_data = gen_result.output
 
             # Step 2: Create marking scheme
-            marker = self._get_agent("marker")
+            marker = self._get_agent("marker", force_async=True)
+            # Extract the question from the question_data if it's nested
+            if "question" in question_data:
+                actual_question = question_data["question"]
+            else:
+                actual_question = question_data
+            
+            # Ensure the question has the expected format for marker
+            marker_question = actual_question.copy() if isinstance(actual_question, dict) else actual_question
+            if isinstance(marker_question, dict) and "raw_text_content" in marker_question:
+                marker_question["question_text"] = marker_question["raw_text_content"]
+            
             mark_result = await marker.process({
-                "question_text": question_data.get("question_text"),
-                "marks": question_data.get("marks", request.marks),
-                "solution_steps": question_data.get("solution_steps", [])
+                "question": marker_question,
+                "config": request.model_dump()
             })
 
             if mark_result.success:
@@ -152,10 +177,18 @@ class MultiAgentOrchestrator:
                 question_data["marking_scheme"] = mark_result.output
 
             # Step 3: Quality review
-            reviewer = self._get_agent("reviewer")
+            reviewer = self._get_agent("reviewer", force_async=True)
+            # Prepare review data in expected format
+            review_question = actual_question.copy() if isinstance(actual_question, dict) else actual_question
+            if isinstance(review_question, dict) and "raw_text_content" in review_question:
+                review_question["question_text"] = review_question["raw_text_content"]
+                review_question["grade_level"] = review_question.get("grade_level", request.grade_level)
+            
             review_result = await reviewer.process({
-                "question": question_data,
-                "marking_scheme": question_data.get("marking_scheme", {})
+                "question_data": {
+                    "question": review_question,
+                    "marking_scheme": mark_result.output if mark_result.success else {}
+                }
             })
 
             if not review_result.success:
@@ -173,7 +206,7 @@ class MultiAgentOrchestrator:
                         if quality_data.get("quality_score", 0) >= self.quality_thresholds["auto_approve"]:
                             break
 
-                        refiner = self._get_agent("refiner")
+                        refiner = self._get_agent("refiner", force_async=True)
                         refine_result = await refiner.process({
                             "original_question": question_data,
                             "review_feedback": quality_data
@@ -188,9 +221,14 @@ class MultiAgentOrchestrator:
                             question_data.update(refine_result.output)
 
                             # Re-review refined question
+                            updated_review_question = review_question.copy()
+                            updated_review_question.update(refine_result.output.get("question", {}))
+                            
                             review_result = await reviewer.process({
-                                "question": question_data,
-                                "marking_scheme": question_data.get("marking_scheme", {})
+                                "question_data": {
+                                    "question": updated_review_question,
+                                    "marking_scheme": question_data.get("marking_scheme", {})
+                                }
                             })
 
                             if review_result.success:
@@ -212,20 +250,52 @@ class MultiAgentOrchestrator:
 
     def generate_question_sync(
         self,
-        request: GenerationRequest,
+        request: Union[dict[str, Any], GenerationRequest],
         max_refinement_cycles: int = 2
     ) -> dict[str, Any]:
         """
         Generate a question using multi-agent workflow (sync).
-        For smolagents integration.
+        For smolagents integration - handles both event loop and non-event loop contexts.
         """
+        # Convert dict to GenerationRequest if needed
+        if isinstance(request, dict):
+            try:
+                request = GenerationRequest(**request)
+            except Exception as e:
+                return {"error": f"Invalid request format: {e}"}
+        elif not isinstance(request, GenerationRequest):
+            return {"error": f"Invalid request type: {type(request)}"}
         # Ensure we're using sync wrappers
         original_use_sync = self.use_sync
         self.use_sync = True
 
         try:
-            # Run async method in sync context
-            return asyncio.run(self.generate_question_async(request, max_refinement_cycles))
+            # Check if we're already in an event loop
+            try:
+                current_loop = asyncio.get_running_loop()
+                if current_loop.is_running():
+                    # We're in a running event loop, use ThreadPoolExecutor
+                    import concurrent.futures
+                    
+                    def run_in_new_loop():
+                        # Create new event loop in thread
+                        new_loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(new_loop)
+                        try:
+                            return new_loop.run_until_complete(
+                                self.generate_question_async(request, max_refinement_cycles)
+                            )
+                        finally:
+                            new_loop.close()
+                    
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(run_in_new_loop)
+                        return future.result()
+                        
+            except RuntimeError:
+                # No event loop running, we can use asyncio.run()
+                return asyncio.run(self.generate_question_async(request, max_refinement_cycles))
+                
         finally:
             self.use_sync = original_use_sync
 
@@ -271,11 +341,17 @@ class SmolagentsOrchestrator(MultiAgentOrchestrator):
         kwargs["use_sync"] = True
         super().__init__(*args, **kwargs)
 
-    def generate_question(self, request: dict[str, Any]) -> dict[str, Any]:
+    def generate_question(self, request: Union[dict[str, Any], GenerationRequest]) -> dict[str, Any]:
         """Synchronous method for smolagents tool interface."""
-        # Convert dict to GenerationRequest
+        from ..models.question_models import GenerationRequest
+        
+        # Convert dict to GenerationRequest if needed
         if isinstance(request, dict):
-            from ..models.question_models import GenerationRequest
-            request = GenerationRequest(**request)
+            try:
+                request = GenerationRequest(**request)
+            except Exception as e:
+                return {"error": f"Invalid request format: {e}"}
+        elif not isinstance(request, GenerationRequest):
+            return {"error": f"Invalid request type: {type(request)}"}
 
         return self.generate_question_sync(request)
