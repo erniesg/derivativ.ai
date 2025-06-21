@@ -55,6 +55,10 @@ class RefinementAgent(BaseAgent):
 
             json_parser = JSONParser()
 
+        # Create agent-compatible LLM interface
+        from ..services.agent_llm_interface import AgentLLMInterface
+        self.llm_interface = AgentLLMInterface(llm_service)
+        
         super().__init__(name, llm_service)
         self.llm_service = llm_service  # Store for easy access
         self.prompt_manager = prompt_manager
@@ -243,7 +247,7 @@ Please provide a completely improved question in JSON format with improvements_m
         try:
             prompt = self._create_refinement_prompt(original_question, strategy)
 
-            llm_response = await self.llm_service.generate(
+            llm_response = await self.llm_interface.generate(
                 prompt=prompt, max_tokens=1500, temperature=0.7
             )
 
@@ -279,7 +283,7 @@ Provide improved question in JSON format:
 {{"question_text": "improved question", "marks": {original_question['marks']}, "improvements_made": ["list of improvements"]}}
 """
 
-            llm_response = await self.llm_service.generate(
+            llm_response = await self.llm_interface.generate(
                 prompt=fallback_prompt, max_tokens=800, temperature=0.7
             )
 

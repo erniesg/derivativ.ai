@@ -24,6 +24,7 @@ class CommandWord(str, Enum):
     WORK_OUT = "Work out"
     WRITE = "Write"
     WRITE_DOWN = "Write down"
+    SOLVE = "Solve"
 
 
 class SubjectContentReference(str, Enum):

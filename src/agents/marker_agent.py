@@ -73,6 +73,10 @@ class MarkerAgent(BaseAgent):
         if json_parser is None:
             json_parser = JSONParser()
 
+        # Create agent-compatible LLM interface
+        from ..services.agent_llm_interface import AgentLLMInterface
+        self.llm_interface = AgentLLMInterface(llm_service)
+        
         super().__init__(name, llm_service, config)
 
         self.llm_service = llm_service
@@ -235,8 +239,8 @@ class MarkerAgent(BaseAgent):
             prompt = await self.prompt_manager.render_prompt(prompt_config, config.llm_model.value)
             self._observe(f"Generated prompt for marking scheme (length: {len(prompt)})")
 
-            # Call LLM service
-            llm_response = await self.llm_service.generate(
+            # Call LLM service via agent interface
+            llm_response = await self.llm_interface.generate(
                 prompt=prompt,
                 model=config.llm_model,
                 temperature=config.temperature,
@@ -279,7 +283,7 @@ Total marks: {config.marks}
 
 Return JSON with: total_marks, mark_allocation_criteria (with criterion_text, marks_value, mark_type), final_answers"""
 
-            llm_response = await self.llm_service.generate(
+            llm_response = await self.llm_interface.generate(
                 prompt=simplified_prompt,
                 model=LLMModel.GPT_4O_MINI,  # Use faster model for fallback
                 temperature=0.5,
