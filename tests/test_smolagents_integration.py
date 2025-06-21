@@ -214,14 +214,13 @@ class TestLLMServiceSelection:
     def test_get_llm_service_with_openai(self, mock_factory):
         """Test LLM service selection with OpenAI key."""
         mock_service = Mock()
-        mock_factory.return_value.detect_provider.return_value = "openai"
         mock_factory.return_value.get_service.return_value = mock_service
 
         service = _get_llm_service()
 
         mock_factory.assert_called_once()
-        mock_factory.return_value.detect_provider.assert_called_once_with("openai")
         mock_factory.return_value.get_service.assert_called_once_with("openai")
+        assert service == mock_service
 
     @patch.dict("os.environ", {}, clear=True)
     def test_get_llm_service_fallback_to_mock(self):
@@ -236,7 +235,7 @@ class TestLLMServiceSelection:
     @patch("src.agents.smolagents_integration.LLMFactory")
     def test_get_llm_service_factory_error_fallback(self, mock_factory):
         """Test LLM service fallback when factory fails."""
-        mock_factory.return_value.detect_provider.side_effect = Exception("Factory error")
+        mock_factory.return_value.get_service.side_effect = Exception("Factory error")
 
         service = _get_llm_service()
 

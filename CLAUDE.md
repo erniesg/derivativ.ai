@@ -559,6 +559,24 @@ async def agent_generate(self, template: str, **overrides):
 - `CLAUDE.md` - Main instructions for Claude agents (this file)
 - `.env` - Environment variables (created by tools/setup_api_keys.py)
 
+**CRITICAL: Python Import Best Practices:**
+```python
+# ❌ NEVER DO THIS - terrible path manipulation
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, project_root)
+
+# ✅ PROPER APPROACHES:
+# 1. Use pip install -e . for development installs
+# 2. Use relative imports within packages
+# 3. Use PYTHONPATH environment variable if needed
+# 4. Use proper package structure with __init__.py files
+```
+
+**Code Quality Standards:**
+- `# noqa: PLR0915` - Use for complex functions that legitimately need many statements
+- `# noqa: E402` - Use only in examples/ for import after path manipulation (discouraged)
+- Always prefer proper package structure over path manipulation
+
 
 ### TDD Development Cycle with Modal + smolagents
 ```bash
