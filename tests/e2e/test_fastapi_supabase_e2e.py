@@ -60,7 +60,7 @@ def mock_question_generation_service():
             raw_text_content="Calculate the area of a triangle with base 6cm and height 4cm.",
             taxonomy=QuestionTaxonomy(
                 topic_path=["Geometry", "Triangles"],
-                subject_content_references=["G.1.2"],
+                subject_content_references=["C5.2"],
                 skill_tags=["area_calculation"],
             ),
             solution_and_marking_scheme=SolutionAndMarkingScheme(

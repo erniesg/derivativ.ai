@@ -57,13 +57,12 @@ def generate_math_question(
 
         # Use existing event loop if available, otherwise create new one
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_closed():
-                raise RuntimeError("Event loop is closed")
-            # Run in existing loop using run_until_complete
-            result = loop.run_until_complete(agent.process(request_data))
+            loop = asyncio.get_running_loop()
+            # If we're already in an async context, we need to use asyncio.create_task
+            # But since this is a sync function, we'll use asyncio.run instead
+            result = asyncio.run(agent.process(request_data))
         except RuntimeError:
-            # No event loop or closed, create new one
+            # No running loop, safe to use asyncio.run
             result = asyncio.run(agent.process(request_data))
 
         if result.success:
@@ -130,10 +129,8 @@ def review_question_quality(question_data: str) -> str:
 
         # Use existing event loop if available, otherwise create new one
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_closed():
-                raise RuntimeError("Event loop is closed")
-            result = loop.run_until_complete(
+            loop = asyncio.get_running_loop()
+            result = asyncio.run(
                 agent.process(
                     {"question_data": {"question": question, "marking_scheme": marking_scheme}}
                 )
@@ -205,10 +202,8 @@ def refine_question(original_question: str, feedback: str) -> str:
 
         # Use existing event loop if available, otherwise create new one
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_closed():
-                raise RuntimeError("Event loop is closed")
-            result = loop.run_until_complete(
+            loop = asyncio.get_running_loop()
+            result = asyncio.run(
                 agent.process({"original_question": question, "quality_decision": quality_decision})
             )
         except RuntimeError:

@@ -102,7 +102,7 @@ async def demo_multi_agent_workflow():
 
     mock_factory = LLMFactory()
     # Override factory to return mock services
-    mock_factory._create_service = lambda provider, config: MockLLMService(provider)
+    mock_factory._create_service = lambda provider: MockLLMService()
     orchestrator = MultiAgentOrchestrator(llm_factory=mock_factory)
 
     # Prepare request
@@ -139,7 +139,7 @@ def demo_smolagents_orchestration():
 
     # Create smolagents orchestrator with mock LLM
     mock_factory = LLMFactory()
-    mock_factory._create_service = lambda provider, config: MockLLMService(provider)
+    mock_factory._create_service = lambda provider: MockLLMService()
     orchestrator = SmolagentsOrchestrator(llm_factory=mock_factory)
 
     # Prepare request (as dict, like smolagents would)

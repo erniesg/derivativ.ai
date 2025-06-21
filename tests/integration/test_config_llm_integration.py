@@ -4,7 +4,6 @@ Tests written first following TDD approach.
 """
 
 import os
-import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -20,13 +19,10 @@ from src.models.llm_models import (
 )
 
 
-class TestConfigManagerIntegration:
-    """Test integration between configuration management and LLM models."""
-
-    @pytest.fixture
-    def sample_config_yaml(self):
-        """Sample YAML configuration for testing."""
-        return """
+@pytest.fixture
+def sample_config_yaml():
+    """Sample YAML configuration for testing."""
+    return """
 # LLM Provider Configuration
 llm_providers:
   openai:
@@ -93,17 +89,25 @@ agents:
       frequency_penalty: 0.2
 """
 
-    @pytest.fixture
-    def temp_config_file(self, sample_config_yaml):
-        """Create temporary config file for testing."""
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
-            f.write(sample_config_yaml)
-            temp_path = f.name
 
-        yield temp_path
+@pytest.fixture
+def temp_config_file(sample_config_yaml):
+    """Create temporary config file for testing."""
+    import os
+    import tempfile
 
-        # Cleanup
-        os.unlink(temp_path)
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        f.write(sample_config_yaml)
+        temp_path = f.name
+
+    yield temp_path
+
+    # Cleanup
+    os.unlink(temp_path)
+
+
+class TestConfigManagerIntegration:
+    """Test integration between configuration management and LLM models."""
 
     @pytest.fixture
     def sample_env_vars(self):

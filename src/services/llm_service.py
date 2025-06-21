@@ -239,31 +239,32 @@ class MockLLMService(LLMService):
 
             # Create appropriate mark allocation based on total marks
             if marks == 1:
-                criteria = [
+                content = f"""{{
+                "total_marks": {marks},
+                "mark_allocation_criteria": [
                     {{"criterion_text": "Correct answer", "marks_value": 1, "mark_type": "A"}}
-                ]
+                ],
+                "final_answers": [{{"answer_text": "17", "value_numeric": 17}}]
+            }}"""
             elif marks == 2:
-                criteria = [
+                content = f"""{{
+                "total_marks": {marks},
+                "mark_allocation_criteria": [
                     {{"criterion_text": "Method shown", "marks_value": 1, "mark_type": "M"}},
-                    {{"criterion_text": "Correct answer", "marks_value": 1, "mark_type": "A"}},
-                ]
+                    {{"criterion_text": "Correct answer", "marks_value": 1, "mark_type": "A"}}
+                ],
+                "final_answers": [{{"answer_text": "17", "value_numeric": 17}}]
+            }}"""
             else:
                 # For 3+ marks, distribute appropriately
-                criteria = [
-                    {{"criterion_text": "Correct method", "marks_value": 1, "mark_type": "M"}},
-                    {
-                        {
-                            "criterion_text": "Correct working",
-                            "marks_value": marks - 2,
-                            "mark_type": "M",
-                        }
-                    },
-                    {{"criterion_text": "Final answer", "marks_value": 1, "mark_type": "A"}},
-                ]
-
-            content = f"""{{
+                working_marks = marks - 2
+                content = f"""{{
                 "total_marks": {marks},
-                "mark_allocation_criteria": {criteria},
+                "mark_allocation_criteria": [
+                    {{"criterion_text": "Correct method", "marks_value": 1, "mark_type": "M"}},
+                    {{"criterion_text": "Correct working", "marks_value": {working_marks}, "mark_type": "M"}},
+                    {{"criterion_text": "Final answer", "marks_value": 1, "mark_type": "A"}}
+                ],
                 "final_answers": [{{"answer_text": "17", "value_numeric": 17}}]
             }}"""
         # ReviewAgent expects quality assessment JSON

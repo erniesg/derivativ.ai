@@ -294,7 +294,7 @@ class TestAPIPerformance:
                 "topic": "statistics",
                 "tier": "Extended",
                 "marks": 4,
-                "command_word": "Analyze",
+                "command_word": "Calculate",
             }
 
             # Make multiple requests
