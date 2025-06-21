@@ -34,8 +34,9 @@ def create_env_file():  # noqa: PLR0915
     if env_file.exists():
         with open(env_file) as f:
             for line in f:
-                if "=" in line and not line.strip().startswith("#"):
-                    key, value = line.strip().split("=", 1)
+                line = line.strip()
+                if "=" in line and not line.startswith("#") and line:
+                    key, value = line.split("=", 1)
                     existing_keys[key] = value
 
     # Collect API keys (showing existing values)
@@ -75,6 +76,17 @@ def create_env_file():  # noqa: PLR0915
     if provider and provider in ["openai", "anthropic", "google"]:
         keys["LLM_PROVIDERS_DEFAULT_PROVIDER"] = provider
 
+    # Preserve other existing settings
+    other_settings = {}
+    if env_file.exists():
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if "=" in line and not line.startswith("#") and line:
+                    key, value = line.split("=", 1)
+                    if key not in keys:
+                        other_settings[key] = value
+
     # Write .env file
     env_content = []
     env_content.append("# LLM Provider API Keys")
@@ -89,12 +101,24 @@ def create_env_file():  # noqa: PLR0915
         [
             "",
             "# Development Settings",
-            "DEBUG=false",
-            "LOG_LEVEL=INFO",
-            "DEMO_MODE=false",
-            "USE_MOCK_LLM=false",
         ]
     )
+    
+    # Add other existing settings
+    for key, value in other_settings.items():
+        env_content.append(f"{key}={value}")
+    
+    # Add defaults if not present
+    defaults = {
+        "DEBUG": "false",
+        "LOG_LEVEL": "INFO", 
+        "DEMO_MODE": "false",
+        "USE_MOCK_LLM": "false"
+    }
+    
+    for key, default_value in defaults.items():
+        if key not in other_settings:
+            env_content.append(f"{key}={default_value}")
 
     with open(env_file, "w") as f:
         f.write("\n".join(env_content))
@@ -187,6 +211,19 @@ def test_smolagents_setup():
     print("=" * 40)
 
     try:
+        # Load .env file if it exists
+        from pathlib import Path
+        env_file = Path(".env")
+        env_vars = {}
+        
+        if env_file.exists():
+            with open(env_file) as f:
+                for line in f:
+                    line = line.strip()
+                    if "=" in line and not line.startswith("#") and line:
+                        key, value = line.split("=", 1)
+                        env_vars[key] = value
+        
         # Check if smolagents is installed
         try:
             import smolagents  # noqa: F401
@@ -196,18 +233,33 @@ def test_smolagents_setup():
             return False
         print("✅ smolagents installed")
 
-        # Check environment variables
-        has_hf_token = bool(os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_API_TOKEN"))
+        # Check environment variables (both os.getenv and .env file)
+        has_hf_token = bool(
+            os.getenv("HF_TOKEN") or 
+            os.getenv("HUGGINGFACE_API_TOKEN") or
+            env_vars.get("HF_TOKEN") or
+            env_vars.get("HUGGINGFACE_API_TOKEN")
+        )
         has_llm_keys = any(
             [
-                os.getenv("OPENAI_API_KEY"),
-                os.getenv("ANTHROPIC_API_KEY"),
-                os.getenv("GOOGLE_API_KEY"),
+                os.getenv("OPENAI_API_KEY") or env_vars.get("OPENAI_API_KEY"),
+                os.getenv("ANTHROPIC_API_KEY") or env_vars.get("ANTHROPIC_API_KEY"),
+                os.getenv("GOOGLE_API_KEY") or env_vars.get("GOOGLE_API_KEY"),
             ]
         )
 
         print(f"✅ HF_TOKEN: {'Found' if has_hf_token else 'Missing'}")
         print(f"✅ LLM APIs: {'Found' if has_llm_keys else 'Missing'}")
+        
+        if has_llm_keys:
+            available_apis = []
+            if os.getenv("OPENAI_API_KEY") or env_vars.get("OPENAI_API_KEY"):
+                available_apis.append("OpenAI")
+            if os.getenv("ANTHROPIC_API_KEY") or env_vars.get("ANTHROPIC_API_KEY"):
+                available_apis.append("Anthropic")
+            if os.getenv("GOOGLE_API_KEY") or env_vars.get("GOOGLE_API_KEY"):
+                available_apis.append("Google")
+            print(f"   Available: {', '.join(available_apis)}")
 
         # Test smolagents integration
         from src.agents.smolagents_integration import create_derivativ_agent
@@ -222,6 +274,11 @@ def test_smolagents_setup():
             print("⚠️  Tools-only mode (no model reasoning)")
             print("   Set HF_TOKEN for full interactive experience")
             print("   Run: python examples/smolagents_tools_demo.py")
+            
+        if has_llm_keys:
+            print("✅ Our tools will use real LLM APIs")
+        else:
+            print("⚠️  Our tools will use mock responses")
 
         return True
 
