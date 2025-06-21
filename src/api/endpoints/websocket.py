@@ -7,8 +7,9 @@ import contextlib
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
+from src.api.dependencies import get_question_generation_service
 from src.realtime.supabase_realtime import get_realtime_client
 from src.services.question_generation_service import QuestionGenerationService
 
@@ -65,13 +66,18 @@ async def websocket_question_updates(websocket: WebSocket, question_id: str):
 
 
 @router.websocket("/ws/generate/{session_id}")
-async def websocket_generate(websocket: WebSocket, session_id: str):
+async def websocket_generate(
+    websocket: WebSocket,
+    session_id: str,
+    service: QuestionGenerationService = Depends(get_question_generation_service),
+):
     """
     WebSocket endpoint for real-time question generation with agent updates and Supabase Realtime.
 
     Args:
         websocket: WebSocket connection
         session_id: Generation session identifier
+        service: Question generation service (injected)
     """
     await websocket.accept()
 
@@ -93,8 +99,19 @@ async def websocket_generate(websocket: WebSocket, session_id: str):
                 request_data = data.get("request", {})
 
                 try:
+                    # Use injected service, fallback to global for backwards compatibility
+                    generation_service = service or question_generation_service
+                    if not generation_service:
+                        await websocket.send_json(
+                            {
+                                "type": "error",
+                                "message": "Question generation service not available",
+                            }
+                        )
+                        continue
+
                     # Stream generation updates from service
-                    async for update in question_generation_service.generate_questions_stream(
+                    async for update in generation_service.generate_questions_stream(
                         request_data, session_id
                     ):
                         await websocket.send_json(update)

@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 from src.api.dependencies import (
     get_question_generation_service,
     get_question_repository,
+    get_session_repository,
 )
 from src.api.main import app
 from src.models.enums import CommandWord, Tier
@@ -283,33 +284,41 @@ class TestSessionAPI:
             agent_results=[],
         )
 
-    @patch("src.api.endpoints.sessions.session_repository")
-    def test_get_session_success(self, mock_repository, client, sample_session):
+    def test_get_session_success(self, client, sample_session):
         """Test successful session retrieval."""
         # Mock successful retrieval
+        mock_repository = Mock()
         mock_repository.get_session = Mock(return_value=sample_session)
+        app.dependency_overrides[get_session_repository] = lambda: mock_repository
 
-        response = client.get(f"/api/sessions/{sample_session.session_id}")
+        try:
+            response = client.get(f"/api/sessions/{sample_session.session_id}")
 
-        assert response.status_code == 200
-        data = response.json()
-        assert data["session_id"] == str(sample_session.session_id)
-        assert "request" in data
-        assert "questions" in data
-        assert "agent_results" in data
+            assert response.status_code == 200
+            data = response.json()
+            assert data["session_id"] == str(sample_session.session_id)
+            assert "request" in data
+            assert "questions" in data
+            assert "agent_results" in data
+        finally:
+            # Clean up dependency override
+            app.dependency_overrides.clear()
 
-    @patch("src.api.endpoints.sessions.session_repository")
-    def test_get_session_not_found(self, mock_repository, client):
+    def test_get_session_not_found(self, client):
         """Test session not found."""
         # Mock session not found
+        mock_repository = Mock()
         mock_repository.get_session = Mock(return_value=None)
+        app.dependency_overrides[get_session_repository] = lambda: mock_repository
 
-        response = client.get("/api/sessions/nonexistent-id")
+        try:
+            response = client.get("/api/sessions/nonexistent-id")
 
-        assert response.status_code == 404
+            assert response.status_code == 404
+        finally:
+            app.dependency_overrides.clear()
 
-    @patch("src.api.endpoints.sessions.session_repository")
-    def test_list_sessions_success(self, mock_repository, client):
+    def test_list_sessions_success(self, client):
         """Test successful session listing."""
         # Mock session list
         mock_sessions = [
@@ -321,14 +330,19 @@ class TestSessionAPI:
                 "created_at": datetime.utcnow().isoformat(),
             }
         ]
+        mock_repository = Mock()
         mock_repository.list_sessions = Mock(return_value=mock_sessions)
+        app.dependency_overrides[get_session_repository] = lambda: mock_repository
 
-        response = client.get("/api/sessions?status=candidate&limit=10")
+        try:
+            response = client.get("/api/sessions?status=candidate&limit=10")
 
-        assert response.status_code == 200
-        data = response.json()
-        assert "sessions" in data
-        assert len(data["sessions"]) == 1
+            assert response.status_code == 200
+            data = response.json()
+            assert "sessions" in data
+            assert len(data["sessions"]) == 1
+        finally:
+            app.dependency_overrides.clear()
 
 
 class TestWebSocketAPI:
@@ -341,14 +355,20 @@ class TestWebSocketAPI:
 
     def test_websocket_connection(self, client):
         """Test WebSocket connection establishment."""
-        with client.websocket_connect("/api/ws/generate/test-session-id") as websocket:
-            # Test connection is established
-            data = websocket.receive_json()
-            assert data["type"] == "connection_established"
-            assert data["session_id"] == "test-session-id"
+        # Mock the service to avoid credential requirement
+        mock_service = Mock()
+        app.dependency_overrides[get_question_generation_service] = lambda: mock_service
 
-    @patch("src.api.endpoints.websocket.question_generation_service")
-    def test_websocket_generation_updates(self, mock_service, client):
+        try:
+            with client.websocket_connect("/api/ws/generate/test-session-id") as websocket:
+                # Test connection is established
+                data = websocket.receive_json()
+                assert data["type"] == "connection_established"
+                assert data["session_id"] == "test-session-id"
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_websocket_generation_updates(self, client):
         """Test WebSocket receives generation updates."""
 
         # Mock generation service with updates
@@ -358,26 +378,34 @@ class TestWebSocketAPI:
             yield {"type": "agent_update", "agent": "reviewer", "status": "complete"}
             yield {"type": "generation_complete", "session_id": "test-session"}
 
+        mock_service = Mock()
         mock_service.generate_questions_stream = mock_generate_with_updates
+        app.dependency_overrides[get_question_generation_service] = lambda: mock_service
 
-        with client.websocket_connect("/api/ws/generate/test-session") as websocket:
-            # Send generation request
-            websocket.send_json(
-                {"action": "generate", "request": {"topic": "algebra", "tier": "core", "marks": 3}}
-            )
+        try:
+            with client.websocket_connect("/api/ws/generate/test-session") as websocket:
+                # Send generation request
+                websocket.send_json(
+                    {
+                        "action": "generate",
+                        "request": {"topic": "algebra", "tier": "core", "marks": 3},
+                    }
+                )
 
-            # First receive connection confirmation
-            connection = websocket.receive_json()
-            assert connection["type"] == "connection_established"
+                # First receive connection confirmation
+                connection = websocket.receive_json()
+                assert connection["type"] == "connection_established"
 
-            # Then receive updates
-            update1 = websocket.receive_json()
-            assert update1["type"] == "agent_update"
-            assert update1["agent"] == "question_generator"
+                # Then receive updates
+                update1 = websocket.receive_json()
+                assert update1["type"] == "agent_update"
+                assert update1["agent"] == "question_generator"
 
-            update2 = websocket.receive_json()
-            assert update2["type"] == "agent_update"
-            assert update2["agent"] == "reviewer"
+                update2 = websocket.receive_json()
+                assert update2["type"] == "agent_update"
+                assert update2["agent"] == "reviewer"
 
-            final = websocket.receive_json()
-            assert final["type"] == "generation_complete"
+                final = websocket.receive_json()
+                assert final["type"] == "generation_complete"
+        finally:
+            app.dependency_overrides.clear()
