@@ -80,15 +80,52 @@ def review_question_quality(question_data: str) -> str:
         from ..agents.review_agent import ReviewAgent
 
         # Parse input
-        question = json.loads(question_data)
+        question_raw = json.loads(question_data)
+        
+        # Handle nested question structure from question generator
+        if "question" in question_raw:
+            question = question_raw["question"]
+        else:
+            question = question_raw
+            
+        # Ensure question has expected format for review agent
+        if isinstance(question, dict) and "raw_text_content" in question:
+            question["question_text"] = question["raw_text_content"]
+            
+        # Add any missing required fields with defaults
+        if isinstance(question, dict):
+            if "grade_level" not in question:
+                question["grade_level"] = 8  # Default grade level
+            if "marks" not in question:
+                question["marks"] = 3  # Default marks
+            if "command_word" not in question:
+                question["command_word"] = "Calculate"  # Default command word
 
         # Create agent
         llm_service = _get_llm_service()
         agent = ReviewAgent(llm_service=llm_service)
 
-        # Process synchronously
+        # Create a basic marking scheme if none exists
+        marking_scheme = {
+            "total_marks_for_part": question.get("marks", 3),
+            "mark_allocation_criteria": [
+                {
+                    "criterion_id": "crit_1",
+                    "criterion_text": "Correct method and answer",
+                    "mark_code_display": "M1",
+                    "marks_value": question.get("marks", 3)
+                }
+            ]
+        }
+        
+        # Process synchronously - use correct input format for review agent
         import asyncio
-        result = asyncio.run(agent.process({"question": question}))
+        result = asyncio.run(agent.process({
+            "question_data": {
+                "question": question,
+                "marking_scheme": marking_scheme
+            }
+        }))
 
         if result.success:
             return json.dumps(result.output, indent=2)
@@ -152,8 +189,10 @@ def _get_llm_service():
         if key_value:
             try:
                 factory = LLMFactory()
-                config = {"llm_providers": {"default_provider": key_name.lower().replace("_api_key", "")}}
-                return factory.create_from_config(config)
+                provider_name = key_name.lower().replace("_api_key", "")
+                # Use the correct factory methods
+                provider = factory.detect_provider(provider_name)
+                return factory.get_service(provider)
             except Exception:
                 pass
 
