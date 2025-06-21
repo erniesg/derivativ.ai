@@ -6,12 +6,13 @@ Tests generation speed, concurrent handling, and database performance.
 import asyncio
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 
+from src.api.dependencies import get_question_generation_service, get_question_repository
 from src.api.main import app
 from src.models.enums import CommandWord, Tier
 from src.models.question_models import GenerationRequest, GenerationSession
@@ -94,9 +95,17 @@ class TestAPIPerformance:
     @pytest.mark.performance
     def test_question_generation_speed(self, client, mock_fast_generation_service):
         """Test question generation completes within target time."""
-        with patch("src.api.endpoints.questions.question_repository") as mock_repo:
-            mock_repo.save_question.return_value = "test-id"
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.save_question.return_value = "test-id"
 
+        # Override dependencies
+        app.dependency_overrides[get_question_generation_service] = (
+            lambda: mock_fast_generation_service
+        )
+        app.dependency_overrides[get_question_repository] = lambda: mock_repo
+
+        try:
             request_data = {
                 "topic": "algebra",
                 "tier": "Core",
@@ -111,13 +120,23 @@ class TestAPIPerformance:
             assert response.status_code == 201
             assert generation_time < 30.0  # Target: sub-30 second generation
             assert generation_time > 0.05  # Should take some time (not mocked completely)
+        finally:
+            app.dependency_overrides.clear()
 
     @pytest.mark.performance
     def test_concurrent_request_handling(self, client, mock_fast_generation_service):
         """Test API can handle multiple concurrent requests."""
-        with patch("src.api.endpoints.questions.question_repository") as mock_repo:
-            mock_repo.save_question.return_value = "test-id"
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.save_question.return_value = "test-id"
 
+        # Override dependencies
+        app.dependency_overrides[get_question_generation_service] = (
+            lambda: mock_fast_generation_service
+        )
+        app.dependency_overrides[get_question_repository] = lambda: mock_repo
+
+        try:
             request_data = {
                 "topic": "geometry",
                 "tier": "Core",
@@ -147,6 +166,8 @@ class TestAPIPerformance:
             # (5 requests * 0.1s each = 0.5s sequential vs ~0.2s concurrent)
             assert total_time < 1.0
             assert len(responses) == num_requests
+        finally:
+            app.dependency_overrides.clear()
 
     @pytest.mark.performance
     def test_question_listing_performance(self, client):
@@ -165,9 +186,12 @@ class TestAPIPerformance:
             for i in range(100)  # 100 questions
         ]
 
-        with patch("src.api.endpoints.questions.question_repository") as mock_repo:
-            mock_repo.list_questions.return_value = mock_questions
+        # Mock repository
+        mock_repo = Mock()
+        mock_repo.list_questions.return_value = mock_questions
+        app.dependency_overrides[get_question_repository] = lambda: mock_repo
 
+        try:
             start_time = time.time()
             response = client.get("/api/questions?limit=50")
             response_time = time.time() - start_time
@@ -177,29 +201,41 @@ class TestAPIPerformance:
 
             data = response.json()
             assert len(data["questions"]) == 100
+        finally:
+            app.dependency_overrides.clear()
 
     @pytest.mark.performance
     def test_websocket_connection_speed(self, client):
         """Test WebSocket connection establishment speed."""
-        start_time = time.time()
+        # Mock service for WebSocket
+        mock_service = Mock()
+        app.dependency_overrides[get_question_generation_service] = lambda: mock_service
 
-        with client.websocket_connect("/api/ws/generate/perf-test-session") as websocket:
-            connection_time = time.time() - start_time
+        try:
+            start_time = time.time()
 
-            # Receive connection confirmation
-            data = websocket.receive_json()
-            confirmation_time = time.time() - start_time
+            with client.websocket_connect("/api/ws/generate/perf-test-session") as websocket:
+                connection_time = time.time() - start_time
 
-            assert data["type"] == "connection_established"
-            assert connection_time < 0.1  # Connection should be fast
-            assert confirmation_time < 0.2  # Confirmation should be quick
+                # Receive connection confirmation
+                data = websocket.receive_json()
+                confirmation_time = time.time() - start_time
+
+                assert data["type"] == "connection_established"
+                assert connection_time < 0.1  # Connection should be fast
+                assert confirmation_time < 0.2  # Confirmation should be quick
+        finally:
+            app.dependency_overrides.clear()
 
     @pytest.mark.performance
     def test_websocket_streaming_performance(self, client, mock_fast_generation_service):
         """Test WebSocket streaming performance."""
-        with patch(
-            "src.api.endpoints.websocket.question_generation_service", mock_fast_generation_service
-        ):
+        # Override dependency for WebSocket endpoint
+        app.dependency_overrides[get_question_generation_service] = (
+            lambda: mock_fast_generation_service
+        )
+
+        try:
             start_time = time.time()
 
             with client.websocket_connect("/api/ws/generate/stream-perf-test") as websocket:
@@ -232,6 +268,8 @@ class TestAPIPerformance:
                 # Should complete quickly with mocked service
                 assert total_time < 1.0
                 assert len(messages) == 3
+        finally:
+            app.dependency_overrides.clear()
 
     @pytest.mark.performance
     def test_memory_usage_during_generation(self, client, mock_fast_generation_service):
@@ -243,9 +281,15 @@ class TestAPIPerformance:
         process = psutil.Process(os.getpid())
         initial_memory = process.memory_info().rss / 1024 / 1024  # MB
 
-        with patch("src.api.endpoints.questions.question_repository") as mock_repo:
-            mock_repo.save_question.return_value = "test-id"
+        # Mock dependencies
+        mock_repo = Mock()
+        mock_repo.save_question.return_value = "test-id"
+        app.dependency_overrides[get_question_generation_service] = (
+            lambda: mock_fast_generation_service
+        )
+        app.dependency_overrides[get_question_repository] = lambda: mock_repo
 
+        try:
             request_data = {
                 "topic": "statistics",
                 "tier": "Extended",
@@ -263,6 +307,8 @@ class TestAPIPerformance:
 
             # Memory growth should be reasonable (less than 50MB for 10 requests)
             assert memory_growth < 50
+        finally:
+            app.dependency_overrides.clear()
 
     @pytest.mark.performance
     def test_error_response_performance(self, client):
@@ -280,9 +326,15 @@ class TestAPIPerformance:
     @pytest.mark.slow
     def test_generation_timeout_handling(self, client, mock_slow_generation_service):
         """Test handling of slow generation (should complete or timeout gracefully)."""
-        with patch("src.api.endpoints.questions.question_repository") as mock_repo:
-            mock_repo.save_question.return_value = "test-id"
+        # Mock dependencies
+        mock_repo = Mock()
+        mock_repo.save_question.return_value = "test-id"
+        app.dependency_overrides[get_question_generation_service] = (
+            lambda: mock_slow_generation_service
+        )
+        app.dependency_overrides[get_question_repository] = lambda: mock_repo
 
+        try:
             request_data = {
                 "topic": "calculus",
                 "tier": "Extended",
@@ -308,6 +360,8 @@ class TestAPIPerformance:
                 # Timeout exceptions should be handled gracefully
                 generation_time = time.time() - start_time
                 assert generation_time >= 30.0  # Should have tried for reasonable time
+        finally:
+            app.dependency_overrides.clear()
 
 
 class TestDatabasePerformance:
@@ -320,6 +374,7 @@ class TestDatabasePerformance:
         from unittest.mock import Mock
 
         from src.database.supabase_repository import QuestionRepository
+        from tests.conftest import create_test_question
 
         # Mock Supabase client with fast response
         mock_client = Mock()
@@ -329,20 +384,8 @@ class TestDatabasePerformance:
 
         repository = QuestionRepository(mock_client)
 
-        # Create test question
-        from src.models.question_models import Question, QuestionTaxonomy
-
-        question = Question(
-            question_id_local="test",
-            question_id_global=str(uuid4()),
-            question_number_display="Test",
-            marks=3,
-            command_word=CommandWord.CALCULATE,
-            raw_text_content="Test question",
-            taxonomy=QuestionTaxonomy(
-                topic_path=["Test"], subject_content_references=[], skill_tags=[]
-            ),
-        )
+        # Create test question using helper
+        question = create_test_question()
 
         start_time = time.time()
         result = repository.save_question(question)
@@ -358,6 +401,10 @@ class TestDatabasePerformance:
         from unittest.mock import Mock
 
         from src.database.supabase_repository import QuestionRepository
+        from tests.conftest import create_test_question
+
+        # Create a test question to get the proper structure
+        test_question = create_test_question()
 
         # Mock Supabase client
         mock_client = Mock()
@@ -365,19 +412,7 @@ class TestDatabasePerformance:
         mock_response.data = [
             {
                 "question_id_global": "test-id",
-                "content_json": {
-                    "question_id_local": "test",
-                    "question_id_global": "test-id",
-                    "question_number_display": "Test",
-                    "marks": 3,
-                    "command_word": "Calculate",
-                    "raw_text_content": "Test question",
-                    "taxonomy": {
-                        "topic_path": ["Test"],
-                        "subject_content_references": [],
-                        "skill_tags": [],
-                    },
-                },
+                "content_json": test_question.model_dump(),
             }
         ]
         mock_client.table.return_value.select.return_value.eq.return_value.execute.return_value = (

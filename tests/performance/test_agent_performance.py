@@ -4,6 +4,7 @@ Tests load, stress, timing, and concurrency scenarios.
 """
 
 import asyncio
+import json
 import time
 from unittest.mock import AsyncMock
 
@@ -20,8 +21,29 @@ class TestAgentPerformance:
     @pytest.mark.asyncio
     async def test_concurrent_question_generation(self):
         """Test multiple concurrent question generation requests"""
-        # GIVEN: Agent and multiple requests
+        # GIVEN: Agent with fast mocked LLM responses (to test agent logic performance)
         agent = QuestionGeneratorAgent()
+
+        # Mock the LLM service to return valid question JSON quickly
+        question_json = {
+            "question_text": "Calculate the value of 3x + 2 when x = 5",
+            "marks": 2,
+            "command_word": "Calculate",
+            "solution_steps": ["Substitute x = 5", "Calculate 3(5) + 2", "Simplify to get 17"],
+            "final_answer": "17",
+        }
+
+        agent.llm_service.generate = AsyncMock(
+            return_value=LLMResponse(
+                content=json.dumps(question_json),
+                model_used="gpt-4o",
+                provider="mock",
+                tokens_used=150,
+                cost_estimate=0.002,
+                latency_ms=100,  # Fast response to test agent concurrency
+            )
+        )
+
         request_data = {"topic": "algebra", "marks": 2, "tier": "Core"}
 
         # WHEN: Processing multiple requests concurrently
@@ -38,8 +60,34 @@ class TestAgentPerformance:
     @pytest.mark.asyncio
     async def test_concurrent_marking_generation(self):
         """Test multiple concurrent marking scheme generation requests"""
-        # GIVEN: Agent and multiple requests
+        # GIVEN: Agent with mocked LLM service
         agent = MarkerAgent()
+
+        # Mock the LLM service to return valid marking scheme JSON
+        marking_scheme_json = {
+            "total_marks": 2,
+            "mark_allocation_criteria": [
+                {
+                    "criterion_text": "Set up percentage calculation",
+                    "marks_value": 1,
+                    "mark_type": "M",
+                },
+                {"criterion_text": "Correct answer: 36", "marks_value": 1, "mark_type": "A"},
+            ],
+            "final_answers": [{"answer_text": "36", "value_numeric": 36}],
+        }
+
+        agent.llm_service.generate = AsyncMock(
+            return_value=LLMResponse(
+                content=json.dumps(marking_scheme_json),
+                model_used="gpt-4o",
+                provider="mock",
+                tokens_used=200,
+                cost_estimate=0.003,
+                latency_ms=1500,
+            )
+        )
+
         request_data = {
             "question": {
                 "question_text": "Calculate 15% of 240",
@@ -165,9 +213,28 @@ class TestAgentPerformance:
     @pytest.mark.asyncio
     async def test_large_batch_processing(self):
         """Test processing a larger batch of requests"""
-        # GIVEN: Agents and batch of requests
+        # GIVEN: Question agent with mocked LLM service
         question_agent = QuestionGeneratorAgent()
-        marker_agent = MarkerAgent()
+
+        # Mock the LLM service to return valid question JSON
+        question_json = {
+            "question_text": "Calculate the value of 2x + 3 when x = 4",
+            "marks": 2,
+            "command_word": "Calculate",
+            "solution_steps": ["Substitute x = 4", "Calculate 2(4) + 3", "Simplify to get 11"],
+            "final_answer": "11",
+        }
+
+        question_agent.llm_service.generate = AsyncMock(
+            return_value=LLMResponse(
+                content=json.dumps(question_json),
+                model_used="gpt-4o",
+                provider="mock",
+                tokens_used=150,
+                cost_estimate=0.002,
+                latency_ms=1000,
+            )
+        )
 
         topics = ["algebra", "geometry", "statistics", "trigonometry", "calculus"]
         batch_size = 10
