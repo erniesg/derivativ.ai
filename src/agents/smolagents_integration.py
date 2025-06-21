@@ -54,14 +54,17 @@ def generate_math_question(
 
         # Process synchronously (smolagents expects sync)
         import asyncio
-        
-        # Create a new event loop to avoid cleanup issues
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+
+        # Use existing event loop if available, otherwise create new one
         try:
+            loop = asyncio.get_event_loop()
+            if loop.is_closed():
+                raise RuntimeError("Event loop is closed")
+            # Run in existing loop using run_until_complete
             result = loop.run_until_complete(agent.process(request_data))
-        finally:
-            loop.close()
+        except RuntimeError:
+            # No event loop or closed, create new one
+            result = asyncio.run(agent.process(request_data))
 
         if result.success:
             return json.dumps(result.output, indent=2)
@@ -117,26 +120,30 @@ def review_question_quality(question_data: str) -> str:
                     "criterion_id": "crit_1",
                     "criterion_text": "Correct method and answer",
                     "mark_code_display": "M1",
-                    "marks_value": question.get("marks", 3)
+                    "marks_value": question.get("marks", 3),
                 }
-            ]
+            ],
         }
 
         # Process synchronously - use correct input format for review agent
         import asyncio
-        
-        # Create a new event loop to avoid cleanup issues
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+
+        # Use existing event loop if available, otherwise create new one
         try:
-            result = loop.run_until_complete(agent.process({
-                "question_data": {
-                    "question": question,
-                    "marking_scheme": marking_scheme
-                }
-            }))
-        finally:
-            loop.close()
+            loop = asyncio.get_event_loop()
+            if loop.is_closed():
+                raise RuntimeError("Event loop is closed")
+            result = loop.run_until_complete(
+                agent.process(
+                    {"question_data": {"question": question, "marking_scheme": marking_scheme}}
+                )
+            )
+        except RuntimeError:
+            result = asyncio.run(
+                agent.process(
+                    {"question_data": {"question": question, "marking_scheme": marking_scheme}}
+                )
+            )
 
         if result.success:
             return json.dumps(result.output, indent=2)
@@ -168,11 +175,11 @@ def refine_question(original_question: str, feedback: str) -> str:
 
         # Extract the actual question if nested
         question = question_raw.get("question", question_raw)
-        
+
         # Ensure question has expected format
         if isinstance(question, dict) and "raw_text_content" in question:
             question["question_text"] = question["raw_text_content"]
-            
+
         # Add missing required fields with defaults
         if isinstance(question, dict):
             if "grade_level" not in question:
@@ -186,7 +193,7 @@ def refine_question(original_question: str, feedback: str) -> str:
         quality_decision = {
             "action": "refine",  # Default action
             "quality_score": review_feedback.get("quality_score", 0.5),
-            "suggested_improvements": review_feedback.get("feedback", "Improve question quality")
+            "suggested_improvements": review_feedback.get("feedback", "Improve question quality"),
         }
 
         # Create agent
@@ -195,17 +202,19 @@ def refine_question(original_question: str, feedback: str) -> str:
 
         # Process synchronously with correct input format
         import asyncio
-        
-        # Create a new event loop to avoid cleanup issues
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+
+        # Use existing event loop if available, otherwise create new one
         try:
-            result = loop.run_until_complete(agent.process({
-                "original_question": question,
-                "quality_decision": quality_decision
-            }))
-        finally:
-            loop.close()
+            loop = asyncio.get_event_loop()
+            if loop.is_closed():
+                raise RuntimeError("Event loop is closed")
+            result = loop.run_until_complete(
+                agent.process({"original_question": question, "quality_decision": quality_decision})
+            )
+        except RuntimeError:
+            result = asyncio.run(
+                agent.process({"original_question": question, "quality_decision": quality_decision})
+            )
 
         if result.success:
             return json.dumps(result.output, indent=2)
@@ -231,13 +240,22 @@ def _get_llm_service():
             try:
                 factory = LLMFactory()
                 provider_name = key_name.lower().replace("_api_key", "")
-                # Use the correct factory methods
-                provider = factory.detect_provider(provider_name)
-                return factory.get_service(provider)
-            except Exception:
-                pass
+
+                # Map provider names correctly
+                provider_mapping = {
+                    "openai": "openai",
+                    "anthropic": "anthropic",
+                    "google": "gemini",
+                }
+                mapped_provider = provider_mapping.get(provider_name, provider_name)
+
+                return factory.get_service(mapped_provider)
+            except Exception as e:
+                print(f"Failed to create {provider_name} service: {e}")
+                continue
 
     # Fall back to mock service
+    print("No valid API keys found, using MockLLMService")
     return MockLLMService()
 
 
@@ -271,9 +289,18 @@ class DerivativSmolagents:
     def _create_model(self):
         """Create appropriate model instance."""
         try:
-            return InferenceClientModel(model_id=self.model_id)
-        except Exception:
-            # If InferenceClientModel fails, we'll handle it in the tools
+            # Check if we have HF token for hosted inference
+            hf_token = os.getenv("HF_TOKEN") or os.getenv("HUGGINGFACE_API_TOKEN")
+            if hf_token:
+                return InferenceClientModel(model_id=self.model_id, token=hf_token)
+            else:
+                # No HF token - use local model or return None to use our tools directly
+                print(
+                    "No HF_TOKEN found, smolagents will use tools directly without model reasoning"
+                )
+                return None
+        except Exception as e:
+            print(f"Failed to create InferenceClientModel: {e}")
             return None
 
     def create_question_generator_agent(self) -> CodeAgent:
@@ -284,7 +311,7 @@ class DerivativSmolagents:
             tools=[generate_math_question],
             model=self.model,
             name="question_generator",
-            description="Generates Cambridge IGCSE Mathematics questions with proper marking schemes"
+            description="Generates Cambridge IGCSE Mathematics questions with proper marking schemes",
         )
 
     def create_quality_control_agent(self) -> CodeAgent:
@@ -295,7 +322,7 @@ class DerivativSmolagents:
             tools=[generate_math_question, review_question_quality, refine_question],
             model=self.model,
             name="quality_controller",
-            description="Generates, reviews, and refines mathematics questions for optimal quality"
+            description="Generates, reviews, and refines mathematics questions for optimal quality",
         )
 
     def create_multi_agent_system(self) -> CodeAgent:
@@ -308,7 +335,7 @@ class DerivativSmolagents:
             model=self.model,
             add_base_tools=True,  # Adds web search and other utilities
             name="derivativ_ai",
-            description="Complete AI-powered mathematics education platform"
+            description="Complete AI-powered mathematics education platform",
         )
 
         return agent
@@ -316,8 +343,7 @@ class DerivativSmolagents:
 
 # Convenience function for quick setup
 def create_derivativ_agent(
-    model_id: Optional[str] = None,
-    agent_type: str = "multi_agent"
+    model_id: Optional[str] = None, agent_type: str = "multi_agent"
 ) -> CodeAgent:
     """
     Quick setup function for creating Derivativ AI smolagents.
@@ -383,4 +409,5 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Demo error: {e}")
         import traceback
+
         traceback.print_exc()

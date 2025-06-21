@@ -551,9 +551,18 @@ async def agent_generate(self, template: str, **overrides):
 
 ## 🔧 DERIVATIV DEVELOPMENT WORKFLOW
 
+### File Organization Rules for Claude
+**CRITICAL: Where to put setup/test files:**
+- `tools/` - Setup scripts for API keys, configuration wizards (✅ tools/setup_api_keys.py exists)
+- `tests/` - ALL test files (unit, integration, e2e, performance) - NO random test files elsewhere
+- `examples/` - Demo scripts and working examples (✅ smolagents demos exist)
+- `CLAUDE.md` - Main instructions for Claude agents (this file)
+- `.env` - Environment variables (created by tools/setup_api_keys.py)
+
+
 ### TDD Development Cycle with Modal + smolagents
 ```bash
-# 1. Write failing tests first
+# 1. Write failing tests first (in tests/ directory ONLY)
 pytest tests/test_modal_agents.py::test_question_generator_modal_function -v
 # EXPECTED: Test fails (Red)
 

@@ -36,7 +36,7 @@ class MultiAgentOrchestrator:
         self,
         llm_factory: Optional[LLMFactory] = None,
         quality_thresholds: Optional[dict[str, float]] = None,
-        use_sync: bool = False
+        use_sync: bool = False,
     ):
         """
         Initialize orchestrator with agents.
@@ -61,10 +61,14 @@ class MultiAgentOrchestrator:
         # Initialize agents (created on demand)
         self._agents = {}
 
-    def _get_agent(self, agent_type: str, force_async: bool = False) -> Union[BaseAgent, SyncAgentWrapper]:
+    def _get_agent(
+        self, agent_type: str, force_async: bool = False
+    ) -> Union[BaseAgent, SyncAgentWrapper]:
         """Get or create an agent instance."""
-        cache_key = f"{agent_type}_{'async' if force_async else 'sync' if self.use_sync else 'async'}"
-        
+        cache_key = (
+            f"{agent_type}_{'async' if force_async else 'sync' if self.use_sync else 'async'}"
+        )
+
         if cache_key not in self._agents:
             # Create LLM service for agent
             llm_service = self._create_llm_service_for_agent(agent_type)
@@ -99,12 +103,12 @@ class MultiAgentOrchestrator:
                 "generator": config.agents.get("question_generator", {}),
                 "marker": config.agents.get("marker", {}),
                 "reviewer": config.agents.get("reviewer", {}),
-                "refiner": config.agents.get("refinement", {})
+                "refiner": config.agents.get("refinement", {}),
             }
 
             agent_config = agent_configs.get(agent_type, {})
             model = agent_config.get("model", "gpt-4o-mini")
-            
+
             # Detect provider from model name
             try:
                 provider = self.llm_factory.detect_provider(model)
@@ -112,17 +116,16 @@ class MultiAgentOrchestrator:
             except ValueError:
                 # Fallback to openai for unknown models
                 return self.llm_factory.get_service("openai")
-                
+
         except Exception as e:
             # Fallback to mock service for testing
             from ..services.mock_llm_service import MockLLMService
+
             logger.warning(f"Could not create LLM service for {agent_type}, using mock: {e}")
             return MockLLMService()
 
-    async def generate_question_async(
-        self,
-        request: GenerationRequest,
-        max_refinement_cycles: int = 2
+    async def generate_question_async(  # noqa: PLR0915
+        self, request: GenerationRequest, max_refinement_cycles: int = 2
     ) -> dict[str, Any]:
         """
         Generate a question using multi-agent workflow (async).
@@ -138,7 +141,7 @@ class MultiAgentOrchestrator:
             "agents_used": [],
             "reasoning_steps": {},
             "final_quality_score": 0.0,
-            "refinement_cycles": 0
+            "refinement_cycles": 0,
         }
 
         try:
@@ -156,20 +159,18 @@ class MultiAgentOrchestrator:
             # Step 2: Create marking scheme
             marker = self._get_agent("marker", force_async=True)
             # Extract the question from the question_data if it's nested
-            if "question" in question_data:
-                actual_question = question_data["question"]
-            else:
-                actual_question = question_data
-            
+            actual_question = question_data.get("question", question_data)
+
             # Ensure the question has the expected format for marker
-            marker_question = actual_question.copy() if isinstance(actual_question, dict) else actual_question
+            marker_question = (
+                actual_question.copy() if isinstance(actual_question, dict) else actual_question
+            )
             if isinstance(marker_question, dict) and "raw_text_content" in marker_question:
                 marker_question["question_text"] = marker_question["raw_text_content"]
-            
-            mark_result = await marker.process({
-                "question": marker_question,
-                "config": request.model_dump()
-            })
+
+            mark_result = await marker.process(
+                {"question": marker_question, "config": request.model_dump()}
+            )
 
             if mark_result.success:
                 workflow_result["agents_used"].append("marker")
@@ -179,17 +180,23 @@ class MultiAgentOrchestrator:
             # Step 3: Quality review
             reviewer = self._get_agent("reviewer", force_async=True)
             # Prepare review data in expected format
-            review_question = actual_question.copy() if isinstance(actual_question, dict) else actual_question
+            review_question = (
+                actual_question.copy() if isinstance(actual_question, dict) else actual_question
+            )
             if isinstance(review_question, dict) and "raw_text_content" in review_question:
                 review_question["question_text"] = review_question["raw_text_content"]
-                review_question["grade_level"] = review_question.get("grade_level", request.grade_level)
-            
-            review_result = await reviewer.process({
-                "question_data": {
-                    "question": review_question,
-                    "marking_scheme": mark_result.output if mark_result.success else {}
+                review_question["grade_level"] = review_question.get(
+                    "grade_level", request.grade_level
+                )
+
+            review_result = await reviewer.process(
+                {
+                    "question_data": {
+                        "question": review_question,
+                        "marking_scheme": mark_result.output if mark_result.success else {},
+                    }
                 }
-            })
+            )
 
             if not review_result.success:
                 logger.warning(f"Review failed: {review_result.error}")
@@ -203,18 +210,22 @@ class MultiAgentOrchestrator:
                 # Step 4: Refinement if needed
                 if quality_data.get("quality_score", 0) < self.quality_thresholds["auto_approve"]:
                     for cycle in range(max_refinement_cycles):
-                        if quality_data.get("quality_score", 0) >= self.quality_thresholds["auto_approve"]:
+                        if (
+                            quality_data.get("quality_score", 0)
+                            >= self.quality_thresholds["auto_approve"]
+                        ):
                             break
 
                         refiner = self._get_agent("refiner", force_async=True)
-                        refine_result = await refiner.process({
-                            "original_question": question_data,
-                            "review_feedback": quality_data
-                        })
+                        refine_result = await refiner.process(
+                            {"original_question": question_data, "review_feedback": quality_data}
+                        )
 
                         if refine_result.success:
                             workflow_result["agents_used"].append(f"refiner_cycle_{cycle + 1}")
-                            workflow_result["reasoning_steps"][f"refiner_cycle_{cycle + 1}"] = refine_result.reasoning_steps
+                            workflow_result["reasoning_steps"][
+                                f"refiner_cycle_{cycle + 1}"
+                            ] = refine_result.reasoning_steps
                             workflow_result["refinement_cycles"] += 1
 
                             # Update question with refinements
@@ -223,17 +234,21 @@ class MultiAgentOrchestrator:
                             # Re-review refined question
                             updated_review_question = review_question.copy()
                             updated_review_question.update(refine_result.output.get("question", {}))
-                            
-                            review_result = await reviewer.process({
-                                "question_data": {
-                                    "question": updated_review_question,
-                                    "marking_scheme": question_data.get("marking_scheme", {})
+
+                            review_result = await reviewer.process(
+                                {
+                                    "question_data": {
+                                        "question": updated_review_question,
+                                        "marking_scheme": question_data.get("marking_scheme", {}),
+                                    }
                                 }
-                            })
+                            )
 
                             if review_result.success:
                                 quality_data = review_result.output
-                                workflow_result["final_quality_score"] = quality_data.get("quality_score", 0.5)
+                                workflow_result["final_quality_score"] = quality_data.get(
+                                    "quality_score", 0.5
+                                )
 
             # Compile final result
             workflow_result["question"] = question_data
@@ -249,9 +264,7 @@ class MultiAgentOrchestrator:
             return workflow_result
 
     def generate_question_sync(
-        self,
-        request: Union[dict[str, Any], GenerationRequest],
-        max_refinement_cycles: int = 2
+        self, request: Union[dict[str, Any], GenerationRequest], max_refinement_cycles: int = 2
     ) -> dict[str, Any]:
         """
         Generate a question using multi-agent workflow (sync).
@@ -276,7 +289,7 @@ class MultiAgentOrchestrator:
                 if current_loop.is_running():
                     # We're in a running event loop, use ThreadPoolExecutor
                     import concurrent.futures
-                    
+
                     def run_in_new_loop():
                         # Create new event loop in thread
                         new_loop = asyncio.new_event_loop()
@@ -287,15 +300,15 @@ class MultiAgentOrchestrator:
                             )
                         finally:
                             new_loop.close()
-                    
+
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         future = executor.submit(run_in_new_loop)
                         return future.result()
-                        
+
             except RuntimeError:
                 # No event loop running, we can use asyncio.run()
                 return asyncio.run(self.generate_question_async(request, max_refinement_cycles))
-                
+
         finally:
             self.use_sync = original_use_sync
 
@@ -341,10 +354,12 @@ class SmolagentsOrchestrator(MultiAgentOrchestrator):
         kwargs["use_sync"] = True
         super().__init__(*args, **kwargs)
 
-    def generate_question(self, request: Union[dict[str, Any], GenerationRequest]) -> dict[str, Any]:
+    def generate_question(
+        self, request: Union[dict[str, Any], GenerationRequest]
+    ) -> dict[str, Any]:
         """Synchronous method for smolagents tool interface."""
         from ..models.question_models import GenerationRequest
-        
+
         # Convert dict to GenerationRequest if needed
         if isinstance(request, dict):
             try:
