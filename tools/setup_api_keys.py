@@ -266,6 +266,55 @@ def _check_api_availability(env_vars):
     return has_hf_token, has_llm_keys, available_apis
 
 
+def test_pandoc_setup():
+    """Test if pandoc is properly installed and configured."""
+    print("\n🧪 Testing pandoc setup...")
+    print("=" * 40)
+
+    try:
+        import subprocess
+
+        # Check if pandoc is installed
+        result = subprocess.run(
+            ["pandoc", "--version"], capture_output=True, text=True, check=False
+        )
+        if result.returncode == 0:
+            version = result.stdout.split("\n")[0]
+            print(f"✅ {version}")
+        else:
+            print("❌ Pandoc not found")
+            print("   Install with: brew install pandoc")
+            return False
+
+        # Check if pdflatex is available (for PDF generation)
+        result = subprocess.run(
+            ["pdflatex", "--version"], capture_output=True, text=True, check=False
+        )
+        if result.returncode == 0:
+            print("✅ pdflatex available (PDF generation supported)")
+        else:
+            print("⚠️  pdflatex not found (PDF generation will fail)")
+            print("   Install with: brew install --cask mactex")
+
+        print("🚀 Document generation ready!")
+        print("   Supported formats: HTML, Markdown, DOCX, LaTeX")
+        if result.returncode == 0:
+            print("   PDF support: Available")
+        else:
+            print("   PDF support: Install pdflatex for PDF generation")
+
+        return True
+
+    except FileNotFoundError:
+        print("❌ Pandoc not installed")
+        print("   Install with: brew install pandoc")
+        print("   For PDF support: brew install --cask mactex")
+        return False
+    except Exception as e:
+        print(f"❌ Pandoc test failed: {e}")
+        return False
+
+
 def test_smolagents_setup():
     """Test if smolagents is properly configured."""
     print("\n🧪 Testing smolagents setup...")
@@ -332,21 +381,24 @@ def main():
         print("\nWhat would you like to do?")
         print("1. Set up API keys (.env file)")
         print("2. Test smolagents setup")
-        print("3. Show pricing information")
-        print("4. Show getting started guide")
-        print("5. Exit")
+        print("3. Test pandoc setup (document generation)")
+        print("4. Show pricing information")
+        print("5. Show getting started guide")
+        print("6. Exit")
 
-        choice = input("\nChoice (1-5): ").strip()
+        choice = input("\nChoice (1-6): ").strip()
 
         if choice == "1":
             create_env_file()
         elif choice == "2":
             test_smolagents_setup()
         elif choice == "3":
-            show_pricing_info()
+            test_pandoc_setup()
         elif choice == "4":
-            show_getting_started()
+            show_pricing_info()
         elif choice == "5":
+            show_getting_started()
+        elif choice == "6":
             print("👋 Happy coding!")
             break
         else:

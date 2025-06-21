@@ -56,15 +56,15 @@ class TestDocumentFormatterAgent:
                         {
                             "question_text": "Solve: x² + 5x + 6 = 0",
                             "marks": 3,
-                            "command_word": "Calculate"
+                            "command_word": "Calculate",
                         },
                         {
                             "question_text": "Factor: x² - 4x + 4",
                             "marks": 2,
-                            "command_word": "Factor"
-                        }
+                            "command_word": "Factor",
+                        },
                     ],
-                    "total_marks": 5
+                    "total_marks": 5,
                 },
                 order_index=1,
             ),
@@ -123,32 +123,33 @@ class TestDocumentFormatterAgent:
     def test_markdown_for_slides_with_personalization(self, formatter_agent, sample_document):
         """Test slide formatting with visual learner personalization."""
         personalization = {"learning_style": "visual"}
-        slides_markdown = formatter_agent._format_to_markdown_for_slides(sample_document, personalization)
+        slides_markdown = formatter_agent._format_to_markdown_for_slides(
+            sample_document, personalization
+        )
 
         assert "💡 *Consider drawing a diagram" in slides_markdown
         # Visual learners get fewer questions per slide
         assert slides_markdown.count("---") >= 4  # More slide breaks
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     @pytest.mark.asyncio
-    async def test_pandoc_pdf_conversion_success(self, mock_subprocess, formatter_agent, sample_document):
+    async def test_pandoc_pdf_conversion_success(
+        self, mock_subprocess, formatter_agent, sample_document
+    ):
         """Test successful PDF conversion with pandoc."""
         # Mock successful pandoc execution
         mock_subprocess.return_value = MagicMock(returncode=0)
 
-        with patch('tempfile.NamedTemporaryFile') as mock_tempfile, \
-             patch('pathlib.Path.unlink') as mock_unlink:
-
+        with patch("tempfile.NamedTemporaryFile") as mock_tempfile, patch(
+            "pathlib.Path.unlink"
+        ) as mock_unlink:
             # Mock temporary file
             mock_file = MagicMock()
             mock_file.name = "/tmp/test_doc.md"
             mock_tempfile.return_value.__enter__.return_value = mock_file
 
             # Execute conversion
-            result = await formatter_agent._format_with_pandoc(
-                sample_document,
-                ExportFormat.PDF
-            )
+            result = await formatter_agent._format_with_pandoc(sample_document, ExportFormat.PDF)
 
             # Verify pandoc was called with correct arguments
             mock_subprocess.assert_called_once()
@@ -161,47 +162,47 @@ class TestDocumentFormatterAgent:
             assert "--mathjax" in call_args
 
             # Should return output file path
-            assert result.endswith('.pdf')
+            assert result.endswith(".pdf")
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     @pytest.mark.asyncio
-    async def test_pandoc_docx_conversion_success(self, mock_subprocess, formatter_agent, sample_document):
+    async def test_pandoc_docx_conversion_success(
+        self, mock_subprocess, formatter_agent, sample_document
+    ):
         """Test successful DOCX conversion with pandoc."""
         mock_subprocess.return_value = MagicMock(returncode=0)
 
-        with patch('tempfile.NamedTemporaryFile') as mock_tempfile, \
-             patch('pathlib.Path.unlink') as mock_unlink:
-
+        with patch("tempfile.NamedTemporaryFile") as mock_tempfile, patch(
+            "pathlib.Path.unlink"
+        ) as mock_unlink:
             mock_file = MagicMock()
             mock_file.name = "/tmp/test_doc.md"
             mock_tempfile.return_value.__enter__.return_value = mock_file
 
-            result = await formatter_agent._format_with_pandoc(
-                sample_document,
-                ExportFormat.DOCX
-            )
+            result = await formatter_agent._format_with_pandoc(sample_document, ExportFormat.DOCX)
 
             # Verify DOCX-specific arguments
             call_args = mock_subprocess.call_args[0][0]
             assert "pandoc" in call_args
-            assert result.endswith('.docx')
+            assert result.endswith(".docx")
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     @pytest.mark.asyncio
-    async def test_pandoc_slides_conversion_success(self, mock_subprocess, formatter_agent, sample_document):
+    async def test_pandoc_slides_conversion_success(
+        self, mock_subprocess, formatter_agent, sample_document
+    ):
         """Test successful PowerPoint slides conversion with pandoc."""
         mock_subprocess.return_value = MagicMock(returncode=0)
 
-        with patch('tempfile.NamedTemporaryFile') as mock_tempfile, \
-             patch('pathlib.Path.unlink') as mock_unlink:
-
+        with patch("tempfile.NamedTemporaryFile") as mock_tempfile, patch(
+            "pathlib.Path.unlink"
+        ) as mock_unlink:
             mock_file = MagicMock()
             mock_file.name = "/tmp/test_doc.md"
             mock_tempfile.return_value.__enter__.return_value = mock_file
 
             result = await formatter_agent._format_with_pandoc(
-                sample_document,
-                ExportFormat.SLIDES_PPTX
+                sample_document, ExportFormat.SLIDES_PPTX
             )
 
             # Verify slides-specific arguments
@@ -210,30 +211,29 @@ class TestDocumentFormatterAgent:
             assert "-t" in call_args
             assert "pptx" in call_args
             assert "--slide-level=2" in call_args
-            assert result.endswith('.pptx')
+            assert result.endswith(".pptx")
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     @pytest.mark.asyncio
-    async def test_pandoc_conversion_failure(self, mock_subprocess, formatter_agent, sample_document):
+    async def test_pandoc_conversion_failure(
+        self, mock_subprocess, formatter_agent, sample_document
+    ):
         """Test pandoc conversion failure handling."""
         # Mock pandoc failure
         mock_subprocess.side_effect = subprocess.CalledProcessError(
-            1, 'pandoc', stderr="pandoc: pdflatex not found"
+            1, "pandoc", stderr="pandoc: pdflatex not found"
         )
 
-        with patch('tempfile.NamedTemporaryFile') as mock_tempfile, \
-             patch('pathlib.Path.unlink') as mock_unlink:
-
+        with patch("tempfile.NamedTemporaryFile") as mock_tempfile, patch(
+            "pathlib.Path.unlink"
+        ) as mock_unlink:
             mock_file = MagicMock()
             mock_file.name = "/tmp/test_doc.md"
             mock_tempfile.return_value.__enter__.return_value = mock_file
 
             # Should raise ValueError with pandoc error
             with pytest.raises(ValueError, match="Document conversion failed"):
-                await formatter_agent._format_with_pandoc(
-                    sample_document,
-                    ExportFormat.PDF
-                )
+                await formatter_agent._format_with_pandoc(sample_document, ExportFormat.PDF)
 
             # Should clean up files on failure
             mock_unlink.assert_called()
@@ -241,11 +241,7 @@ class TestDocumentFormatterAgent:
     @pytest.mark.asyncio
     async def test_format_document_execution(self, formatter_agent, sample_document):
         """Test document formatting execution flow."""
-        format_request = {
-            "document": sample_document,
-            "format": ExportFormat.HTML,
-            "options": {}
-        }
+        format_request = {"document": sample_document, "format": ExportFormat.HTML, "options": {}}
 
         result = await formatter_agent._execute(format_request)
 
@@ -258,17 +254,10 @@ class TestDocumentFormatterAgent:
         """Test personalization settings extraction."""
         # Document with applied customizations
         sample_document.applied_customizations = {
-            "personalization_context": {
-                "learning_style": "visual",
-                "font_size": "large"
-            }
+            "personalization_context": {"learning_style": "visual", "font_size": "large"}
         }
 
-        export_options = {
-            "export_personalization": {
-                "high_contrast": True
-            }
-        }
+        export_options = {"export_personalization": {"high_contrast": True}}
 
         personalization = formatter_agent._extract_personalization(sample_document, export_options)
 
@@ -278,11 +267,7 @@ class TestDocumentFormatterAgent:
 
     def test_custom_css_generation(self, formatter_agent):
         """Test custom CSS generation for personalization."""
-        personalization = {
-            "learning_style": "visual",
-            "font_size": "large",
-            "high_contrast": True
-        }
+        personalization = {"learning_style": "visual", "font_size": "large", "high_contrast": True}
 
         css = formatter_agent._generate_custom_css(personalization)
 
@@ -296,7 +281,7 @@ class TestDocumentFormatterAgent:
         format_request = {
             "document": sample_document,
             "format": "unsupported_format",
-            "options": {}
+            "options": {},
         }
 
         result = await formatter_agent._execute(format_request)
@@ -311,7 +296,7 @@ class TestDocumentFormatterAgent:
         valid_request = {
             "document": sample_document,
             "format": ExportFormat.PDF,
-            "options": {"custom": "value"}
+            "options": {"custom": "value"},
         }
 
         parsed = formatter_agent._parse_format_request(valid_request)
@@ -325,16 +310,17 @@ class TestDocumentFormatterAgent:
 
         # Invalid format
         with pytest.raises(ValueError, match="Unsupported format"):
-            formatter_agent._parse_format_request({
-                "document": sample_document,
-                "format": "invalid_format"
-            })
+            formatter_agent._parse_format_request(
+                {"document": sample_document, "format": "invalid_format"}
+            )
 
 
 # Integration test requiring actual pandoc installation
 @pytest.mark.integration
-@pytest.mark.skipif(not Path("/usr/bin/pandoc").exists() and not Path("/usr/local/bin/pandoc").exists(),
-                   reason="pandoc not installed")
+@pytest.mark.skipif(
+    not Path("/usr/bin/pandoc").exists() and not Path("/usr/local/bin/pandoc").exists(),
+    reason="pandoc not installed",
+)
 class TestDocumentFormatterIntegration:
     """Integration tests with real pandoc (requires pandoc installation)."""
 
@@ -383,12 +369,11 @@ class TestDocumentFormatterIntegration:
         """Test real pandoc HTML conversion."""
         try:
             output_file = await formatter_agent._format_with_pandoc(
-                sample_document,
-                ExportFormat.HTML
+                sample_document, ExportFormat.HTML
             )
 
             assert Path(output_file).exists()
-            assert output_file.endswith('.html')
+            assert output_file.endswith(".html")
 
             # Read and verify content
             with open(output_file) as f:

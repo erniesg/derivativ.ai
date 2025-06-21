@@ -224,7 +224,12 @@ class DocumentFormatterAgent(BaseAgent):
             return self._format_to_html(document, personalization)
         elif format_type == ExportFormat.MARKDOWN:
             return self._format_to_markdown(document, personalization)
-        elif format_type in [ExportFormat.PDF, ExportFormat.DOCX, ExportFormat.LATEX, ExportFormat.SLIDES_PPTX]:
+        elif format_type in [
+            ExportFormat.PDF,
+            ExportFormat.DOCX,
+            ExportFormat.LATEX,
+            ExportFormat.SLIDES_PPTX,
+        ]:
             # Use pandoc for these formats
             return await self._format_with_pandoc(document, format_type, personalization, options)
         else:
@@ -399,7 +404,6 @@ class DocumentFormatterAgent(BaseAgent):
 
         return content
 
-
     def _format_to_markdown(
         self, document: GeneratedDocument, personalization: dict[str, Any] = None
     ) -> str:
@@ -488,7 +492,9 @@ class DocumentFormatterAgent(BaseAgent):
                 questions = section.content_data.get("questions", [])
 
                 # For slides, limit questions per slide
-                max_questions_per_slide = 2 if personalization.get("learning_style") == "visual" else 3
+                max_questions_per_slide = (
+                    2 if personalization.get("learning_style") == "visual" else 3
+                )
 
                 for i, question in enumerate(questions):
                     if i > 0 and i % max_questions_per_slide == 0:
@@ -496,12 +502,16 @@ class DocumentFormatterAgent(BaseAgent):
                         markdown += f"## {section.title} (continued)\n\n"
 
                     question_num = i + 1
-                    markdown += f"**Question {question_num}** ({question.get('marks', 0)} marks)\n\n"
+                    markdown += (
+                        f"**Question {question_num}** ({question.get('marks', 0)} marks)\n\n"
+                    )
                     markdown += f"{question.get('question_text', '')}\n\n"
 
                     # Add visual hints for visual learners in slides
                     if personalization.get("learning_style") == "visual":
-                        markdown += "> 💡 *Consider drawing a diagram to visualize this problem*\n\n"
+                        markdown += (
+                            "> 💡 *Consider drawing a diagram to visualize this problem*\n\n"
+                        )
 
             elif section.content_type == "learning_objectives":
                 objectives_text = section.content_data.get("objectives_text", "")
@@ -563,59 +573,76 @@ class DocumentFormatterAgent(BaseAgent):
                 markdown_content = self._format_to_markdown(document, personalization)
 
             # Create temporary input file
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as f:
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".md", delete=False, encoding="utf-8"
+            ) as f:
                 f.write(markdown_content)
                 input_file = f.name
 
             # Determine output file extension
             extensions = {
-                ExportFormat.PDF: '.pdf',
-                ExportFormat.DOCX: '.docx',
-                ExportFormat.SLIDES_PPTX: '.pptx',
-                ExportFormat.LATEX: '.tex',
+                ExportFormat.PDF: ".pdf",
+                ExportFormat.DOCX: ".docx",
+                ExportFormat.SLIDES_PPTX: ".pptx",
+                ExportFormat.LATEX: ".tex",
             }
 
-            output_file = input_file.replace('.md', extensions[format_type])
+            output_file = input_file.replace(".md", extensions[format_type])
 
             # Build pandoc command
-            cmd = ['pandoc', input_file, '-o', output_file]
+            cmd = ["pandoc", input_file, "-o", output_file]
 
             # Add format-specific options
             if format_type == ExportFormat.PDF:
-                cmd.extend([
-                    '--pdf-engine=pdflatex',
-                    '--variable', 'geometry:margin=2.5cm',
-                    '--variable', 'fontsize=12pt',
-                ])
+                cmd.extend(
+                    [
+                        "--pdf-engine=pdflatex",
+                        "--variable",
+                        "geometry:margin=2.5cm",
+                        "--variable",
+                        "fontsize=12pt",
+                    ]
+                )
                 # Add math support
-                cmd.extend(['--mathjax'])
+                cmd.extend(["--mathjax"])
 
             elif format_type == ExportFormat.DOCX:
                 # Add reference doc for styling if available
-                cmd.extend(['--reference-doc=/dev/null'])  # Use default styling for now
+                cmd.extend(["--reference-doc=/dev/null"])  # Use default styling for now
 
             elif format_type == ExportFormat.SLIDES_PPTX:
-                cmd.extend([
-                    '-t', 'pptx',
-                    '--slide-level=2',  # Level 2 headers create new slides
-                ])
+                cmd.extend(
+                    [
+                        "-t",
+                        "pptx",
+                        "--slide-level=2",  # Level 2 headers create new slides
+                    ]
+                )
 
             elif format_type == ExportFormat.LATEX:
-                cmd.extend([
-                    '-t', 'latex',
-                    '--standalone',
-                ])
+                cmd.extend(
+                    [
+                        "-t",
+                        "latex",
+                        "--standalone",
+                    ]
+                )
 
             # Add metadata
-            cmd.extend([
-                '--metadata', f'title={document.title}',
-                '--metadata', 'author=Derivativ AI',
-                '--metadata', f'date={document.generated_at[:10]}',  # Just the date part
-            ])
+            cmd.extend(
+                [
+                    "--metadata",
+                    f"title={document.title}",
+                    "--metadata",
+                    "author=Derivativ AI",
+                    "--metadata",
+                    f"date={document.generated_at[:10]}",  # Just the date part
+                ]
+            )
 
             # Add custom styling from personalization
-            if personalization.get('font_size') == 'large' and format_type == ExportFormat.PDF:
-                cmd.extend(['--variable', 'fontsize=14pt'])
+            if personalization.get("font_size") == "large" and format_type == ExportFormat.PDF:
+                cmd.extend(["--variable", "fontsize=14pt"])
 
             self._act("Executing pandoc conversion", {"command": " ".join(cmd)})
 
@@ -632,9 +659,9 @@ class DocumentFormatterAgent(BaseAgent):
         except subprocess.CalledProcessError as e:
             logger.error(f"Pandoc conversion failed: {e.stderr}")
             # Clean up files
-            if 'input_file' in locals():
+            if "input_file" in locals():
                 Path(input_file).unlink(missing_ok=True)
-            if 'output_file' in locals():
+            if "output_file" in locals():
                 Path(output_file).unlink(missing_ok=True)
             raise ValueError(f"Document conversion failed: {e.stderr}")
         except Exception as e:

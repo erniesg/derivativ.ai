@@ -96,6 +96,12 @@ class PromptManager:
             "quality_review": self._get_quality_review_template(),
             "question_refinement": self._get_question_refinement_template(),
             "system_prompts": self._get_system_prompts_template(),
+            # Document generation templates
+            "document_generation": self._get_document_generation_template(),
+            "worksheet_generation": self._get_worksheet_generation_template(),
+            "notes_generation": self._get_notes_generation_template(),
+            "textbook_generation": self._get_textbook_generation_template(),
+            "slides_generation": self._get_slides_generation_template(),
         }
 
     async def render_prompt(self, config: PromptConfig, model_name: Optional[str] = None) -> str:
@@ -582,6 +588,331 @@ Instructions: {{ instructions }}"""
             ],
             optional_variables=["context", "instructions"],
             tags=["system", "prompts", "educational", "context"],
+        )
+
+    def _get_document_generation_template(self) -> PromptTemplate:
+        """Get built-in document generation template."""
+        content = """You are an expert Cambridge IGCSE Mathematics educator. Generate a structured document following these specifications:
+
+**Document Requirements:**
+- Document Type: {{ document_type }}
+- Detail Level: {{ detail_level }}
+- Title: {{ title }}
+- Topic: {{ topic }}
+- Target Grade: {{ target_grade }}
+{% if tier is defined and tier -%}
+- Tier: {{ tier }}
+{% endif -%}
+{% if custom_instructions is defined and custom_instructions -%}
+- Custom Instructions: {{ custom_instructions }}
+{% endif -%}
+{% if personalization_context is defined and personalization_context -%}
+- Personalization: {{ personalization_context | tojson }}
+{% endif %}
+
+**Structure Guidelines:**
+{% for section_type in structure_pattern -%}
+- {{ section_type.replace('_', ' ').title() }}
+{% endfor %}
+
+**Cambridge Standards:**
+- Follow Cambridge IGCSE curriculum requirements
+- Use appropriate mathematical terminology and notation
+- Ensure content matches the specified difficulty level
+- Include clear learning objectives where appropriate
+
+**Output Format:**
+Return a JSON object with the following structure:
+{
+  "title": "{{ title }}",
+  "document_type": "{{ document_type }}",
+  "detail_level": "{{ detail_level }}",
+  "sections": [
+    {
+      "title": "Section Title",
+      "content_type": "section_type",
+      "content_data": {
+        "appropriate": "data for this section type"
+      },
+      "order_index": 0
+    }
+  ],
+  "estimated_duration": "time in minutes",
+  "total_questions": "number if applicable"
+}
+
+Generate educationally valuable content that matches the specified detail level and document type."""
+
+        return PromptTemplate(
+            name="document_generation",
+            version="latest",
+            content=content,
+            description="Generate structured educational documents",
+            required_variables=[
+                "document_type",
+                "detail_level",
+                "title",
+                "topic",
+                "target_grade",
+                "structure_pattern",
+            ],
+            optional_variables=["tier", "custom_instructions", "personalization_context"],
+            tags=["document", "generation", "cambridge", "igcse"],
+        )
+
+    def _get_worksheet_generation_template(self) -> PromptTemplate:
+        """Get built-in worksheet generation template."""
+        content = """You are an expert Cambridge IGCSE Mathematics educator. Generate a practice worksheet with the following specifications:
+
+**Worksheet Requirements:**
+- Title: {{ title }}
+- Topic: {{ topic }}
+- Detail Level: {{ detail_level }}
+- Target Grade: {{ target_grade }}
+- Estimated Duration: {{ estimated_duration | default(30) }} minutes
+{% if custom_instructions is defined and custom_instructions -%}
+- Special Instructions: {{ custom_instructions }}
+{% endif -%}
+
+**Content Structure:**
+{% if detail_level == "minimal" -%}
+- Practice questions with answer key
+{% elif detail_level == "medium" -%}
+- Learning objectives
+- Key formulas
+- Practice questions
+- Step-by-step solutions
+{% elif detail_level == "comprehensive" -%}
+- Learning objectives
+- Key concepts review
+- Worked examples
+- Practice questions (varied difficulty)
+- Detailed solutions with explanations
+{% elif detail_level == "guided" -%}
+- Learning objectives
+- Concept introduction with examples
+- Guided practice with hints
+- Independent practice questions
+- Self-assessment rubric
+{% endif %}
+
+**Question Requirements:**
+- Include 5-8 questions of appropriate difficulty
+- Mix of question types (calculation, application, problem-solving)
+- Clear marking scheme with total marks
+- Use official Cambridge command words
+
+**Output Format:**
+Return a JSON object with sections containing appropriate question and solution data.
+
+Generate a comprehensive worksheet that provides effective practice for Cambridge IGCSE students."""
+
+        return PromptTemplate(
+            name="worksheet_generation",
+            version="latest",
+            content=content,
+            description="Generate practice worksheets for Cambridge IGCSE Mathematics",
+            required_variables=["title", "topic", "detail_level", "target_grade"],
+            optional_variables=["estimated_duration", "custom_instructions"],
+            tags=["worksheet", "practice", "cambridge", "igcse"],
+        )
+
+    def _get_notes_generation_template(self) -> PromptTemplate:
+        """Get built-in notes generation template."""
+        content = """You are an expert Cambridge IGCSE Mathematics educator. Generate comprehensive study notes with the following specifications:
+
+**Notes Requirements:**
+- Title: {{ title }}
+- Topic: {{ topic }}
+- Detail Level: {{ detail_level }}
+- Target Grade: {{ target_grade }}
+{% if custom_instructions is defined and custom_instructions -%}
+- Special Focus: {{ custom_instructions }}
+{% endif -%}
+
+**Content Structure:**
+{% if detail_level == "minimal" -%}
+- Key concepts summary
+- Essential formulas
+- Quick practice problems
+{% elif detail_level == "medium" -%}
+- Learning objectives
+- Detailed explanations
+- Key formulas with examples
+- Practice problems
+- Summary points
+{% elif detail_level == "comprehensive" -%}
+- Learning objectives
+- Detailed theory with examples
+- Key formulas and derivations
+- Worked examples (multiple approaches)
+- Practice problems with solutions
+- Common misconceptions
+- Exam tips and strategies
+{% elif detail_level == "guided" -%}
+- Step-by-step concept building
+- Interactive examples with questions
+- Progressive difficulty practice
+- Self-check questions
+- Study planning guidance
+{% endif %}
+
+**Educational Standards:**
+- Follow Cambridge IGCSE curriculum sequence
+- Use clear, age-appropriate explanations
+- Include visual aids descriptions where helpful
+- Provide multiple solution methods where applicable
+
+**Output Format:**
+Return a JSON object with structured sections containing explanatory content, examples, and practice materials.
+
+Generate notes that effectively support student learning and exam preparation."""
+
+        return PromptTemplate(
+            name="notes_generation",
+            version="latest",
+            content=content,
+            description="Generate study notes for Cambridge IGCSE Mathematics",
+            required_variables=["title", "topic", "detail_level", "target_grade"],
+            optional_variables=["custom_instructions"],
+            tags=["notes", "study", "cambridge", "igcse"],
+        )
+
+    def _get_textbook_generation_template(self) -> PromptTemplate:
+        """Get built-in textbook generation template."""
+        content = """You are an expert Cambridge IGCSE Mathematics curriculum designer. Generate a comprehensive textbook section with the following specifications:
+
+**Textbook Requirements:**
+- Title: {{ title }}
+- Topic: {{ topic }}
+- Detail Level: {{ detail_level }}
+- Target Grade: {{ target_grade }}
+- Chapter/Section Focus: {{ custom_instructions | default("Complete topic coverage") }}
+
+**Content Structure:**
+{% if detail_level == "minimal" -%}
+- Introduction to concepts
+- Key definitions and formulas
+- Basic examples
+- Chapter exercises
+{% elif detail_level == "medium" -%}
+- Learning objectives
+- Conceptual introduction
+- Detailed explanations with examples
+- Key formulas and theorems
+- Worked examples
+- Practice exercises
+- Chapter summary
+{% elif detail_level == "comprehensive" -%}
+- Learning objectives and prerequisites
+- Historical context and real-world applications
+- Detailed theory with multiple representations
+- Derivations and proofs (where appropriate)
+- Extensive worked examples
+- Progressive exercises (basic to advanced)
+- Extension activities
+- Chapter review and assessment
+{% elif detail_level == "guided" -%}
+- Clear learning pathway
+- Step-by-step concept development
+- Interactive elements and discovery activities
+- Scaffolded examples
+- Differentiated exercises
+- Self-assessment opportunities
+- Study skills integration
+{% endif %}
+
+**Academic Standards:**
+- University-level pedagogical approach
+- Multiple learning style accommodations
+- Cross-curricular connections where relevant
+- Preparation for advanced study
+- Research-based teaching methods
+
+**Output Format:**
+Return a JSON object with comprehensive educational content suitable for textbook publication.
+
+Generate content that provides thorough understanding and supports diverse learning needs."""
+
+        return PromptTemplate(
+            name="textbook_generation",
+            version="latest",
+            content=content,
+            description="Generate comprehensive textbook content for Cambridge IGCSE Mathematics",
+            required_variables=["title", "topic", "detail_level", "target_grade"],
+            optional_variables=["custom_instructions"],
+            tags=["textbook", "comprehensive", "cambridge", "igcse"],
+        )
+
+    def _get_slides_generation_template(self) -> PromptTemplate:
+        """Get built-in slides generation template."""
+        content = """You are an expert Cambridge IGCSE Mathematics educator. Generate presentation slides with the following specifications:
+
+**Slides Requirements:**
+- Title: {{ title }}
+- Topic: {{ topic }}
+- Detail Level: {{ detail_level }}
+- Target Grade: {{ target_grade }}
+- Presentation Duration: {{ estimated_duration | default(20) }} minutes
+{% if custom_instructions is defined and custom_instructions -%}
+- Presentation Focus: {{ custom_instructions }}
+{% endif -%}
+
+**Slide Structure:**
+{% if detail_level == "minimal" -%}
+- Title slide
+- Key concepts (2-3 slides)
+- Quick examples
+- Summary slide
+{% elif detail_level == "medium" -%}
+- Title slide
+- Learning objectives
+- Concept introduction
+- Key formulas
+- Worked examples
+- Practice opportunity
+- Summary and next steps
+{% elif detail_level == "comprehensive" -%}
+- Title slide
+- Learning objectives and context
+- Detailed concept explanation
+- Multiple examples and applications
+- Interactive practice activities
+- Real-world connections
+- Assessment opportunities
+- Extension activities
+- Summary and reflection
+{% elif detail_level == "guided" -%}
+- Title slide
+- Learning journey overview
+- Step-by-step concept building
+- Interactive discovery activities
+- Guided practice with feedback
+- Independent application
+- Self-assessment
+- Next steps planning
+{% endif %}
+
+**Presentation Best Practices:**
+- Clear, concise bullet points
+- Visual elements descriptions
+- Interactive opportunities
+- Appropriate pacing for audience
+- Engagement strategies
+
+**Output Format:**
+Return a JSON object with slides structured for effective presentation delivery.
+
+Generate slides that engage students and facilitate effective mathematics instruction."""
+
+        return PromptTemplate(
+            name="slides_generation",
+            version="latest",
+            content=content,
+            description="Generate presentation slides for Cambridge IGCSE Mathematics",
+            required_variables=["title", "topic", "detail_level", "target_grade"],
+            optional_variables=["estimated_duration", "custom_instructions"],
+            tags=["slides", "presentation", "cambridge", "igcse"],
         )
 
 

@@ -35,9 +35,11 @@ from src.services.llm_service import LLMService  # noqa: E402
 def check_pandoc_installation():
     """Check if pandoc is installed and available."""
     try:
-        result = subprocess.run(['pandoc', '--version'], capture_output=True, text=True, check=False)
+        result = subprocess.run(
+            ["pandoc", "--version"], capture_output=True, text=True, check=False
+        )
         if result.returncode == 0:
-            version = result.stdout.split('\n')[0]
+            version = result.stdout.split("\n")[0]
             print(f"✅ Found {version}")
             return True
         else:
@@ -76,20 +78,20 @@ def create_sample_document():
                     {
                         "question_text": "Solve: x² + 5x + 6 = 0",
                         "marks": 3,
-                        "command_word": "Calculate"
+                        "command_word": "Calculate",
                     },
                     {
                         "question_text": "Factor completely: x² - 4x + 4",
                         "marks": 2,
-                        "command_word": "Factor"
+                        "command_word": "Factor",
                     },
                     {
                         "question_text": "Find the vertex of: y = x² - 6x + 8",
                         "marks": 4,
-                        "command_word": "Find"
-                    }
+                        "command_word": "Find",
+                    },
                 ],
-                "total_marks": 9
+                "total_marks": 9,
             },
             order_index=2,
         ),
@@ -102,16 +104,19 @@ def create_sample_document():
                         "question_text": "Solve: x² - 7x + 12 = 0",
                         "marks": 3,
                         "solution_steps": [
-                            {"step_number": 1, "description_text": "Look for two numbers that multiply to 12 and add to -7"},
+                            {
+                                "step_number": 1,
+                                "description_text": "Look for two numbers that multiply to 12 and add to -7",
+                            },
                             {"step_number": 2, "description_text": "The numbers are -3 and -4"},
                             {"step_number": 3, "description_text": "Factor: (x - 3)(x - 4) = 0"},
-                            {"step_number": 4, "description_text": "Therefore: x = 3 or x = 4"}
-                        ]
+                            {"step_number": 4, "description_text": "Therefore: x = 3 or x = 4"},
+                        ],
                     }
                 ]
             },
             order_index=3,
-        )
+        ),
     ]
 
     request = DocumentGenerationRequest(
@@ -121,7 +126,7 @@ def create_sample_document():
         topic="quadratic_equations",
         tier=Tier.EXTENDED,
         custom_instructions="Include step-by-step solutions and visual learning aids",
-        personalization_context={"learning_style": "visual", "difficulty_preference": "gradual"}
+        personalization_context={"learning_style": "visual", "difficulty_preference": "gradual"},
     )
 
     return GeneratedDocument(
@@ -136,8 +141,11 @@ def create_sample_document():
         estimated_duration=25,
         applied_customizations={
             "custom_instructions": "Include step-by-step solutions and visual learning aids",
-            "personalization_context": {"learning_style": "visual", "difficulty_preference": "gradual"}
-        }
+            "personalization_context": {
+                "learning_style": "visual",
+                "difficulty_preference": "gradual",
+            },
+        },
     )
 
 
@@ -181,9 +189,7 @@ async def demo_document_conversion():
             personalization = document.applied_customizations.get("personalization_context", {})
 
             output_file = await formatter._format_with_pandoc(
-                document,
-                format_type,
-                personalization
+                document, format_type, personalization
             )
 
             if Path(output_file).exists():
@@ -210,7 +216,7 @@ async def demo_document_conversion():
 
         print("\n🧹 Cleanup:")
         cleanup_choice = input("Delete generated files? (y/N): ").lower().strip()
-        if cleanup_choice == 'y':
+        if cleanup_choice == "y":
             for file_path in results.values():
                 try:
                     Path(file_path).unlink()
@@ -245,7 +251,7 @@ async def demo_slides_conversion():
     slides_markdown = formatter._format_to_markdown_for_slides(document, personalization)
 
     print("📝 Slides Markdown Structure:")
-    lines = slides_markdown.split('\n')
+    lines = slides_markdown.split("\n")
     slide_count = 0
     for i, line in enumerate(lines):
         if line.strip() == "---":
@@ -255,7 +261,9 @@ async def demo_slides_conversion():
             print(f"      🏷️  {line}")
 
     print(f"\n📊 Total slides: {slide_count}")
-    print(f"💡 Visual learner optimizations: {'Applied' if 'diagram' in slides_markdown else 'None'}")
+    print(
+        f"💡 Visual learner optimizations: {'Applied' if 'diagram' in slides_markdown else 'None'}"
+    )
 
 
 if __name__ == "__main__":
@@ -270,4 +278,5 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"\n❌ Demo failed: {e}")
         import traceback
+
         traceback.print_exc()
