@@ -10,6 +10,10 @@ from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
 
+from src.api.dependencies import (
+    get_question_generation_service,
+    get_question_repository,
+)
 from src.api.main import app
 from src.models.enums import CommandWord, Tier
 from src.models.question_models import GenerationRequest, GenerationSession, Question
@@ -93,10 +97,7 @@ class TestQuestionGenerationAPI:
         assert data["service"] == "derivativ-api"
         # Status may be healthy or unhealthy depending on configuration
 
-    @patch("src.api.dependencies.get_question_generation_service")
-    def test_generate_question_success(
-        self, mock_get_service, client, sample_generation_request, sample_question
-    ):
+    def test_generate_question_success(self, client, sample_generation_request, sample_question):
         """Test successful question generation."""
         # Mock successful generation
         mock_session = GenerationSession(
@@ -108,73 +109,97 @@ class TestQuestionGenerationAPI:
         )
         mock_service = AsyncMock()
         mock_service.generate_questions = AsyncMock(return_value=mock_session)
-        mock_get_service.return_value = mock_service
 
-        response = client.post("/api/questions/generate", json=sample_generation_request)
+        # Override the dependency
+        app.dependency_overrides[get_question_generation_service] = lambda: mock_service
 
-        assert response.status_code == 201
-        data = response.json()
-        assert "session_id" in data
-        assert "questions" in data
-        assert len(data["questions"]) == 1
-        assert data["status"] == "candidate"
+        try:
+            response = client.post("/api/questions/generate", json=sample_generation_request)
 
-        # Verify service was called correctly
-        mock_service.generate_questions.assert_called_once()
+            assert response.status_code == 201
+            data = response.json()
+            assert "session_id" in data
+            assert "questions" in data
+            assert len(data["questions"]) == 1
+            assert data["status"] == "candidate"
 
-    @patch("src.api.endpoints.questions.question_generation_service")
-    def test_generate_question_validation_error(self, mock_service, client):
+            # Verify service was called correctly
+            mock_service.generate_questions.assert_called_once()
+        finally:
+            # Clean up dependency override
+            app.dependency_overrides.clear()
+
+    def test_generate_question_validation_error(self, client):
         """Test generation with invalid request data."""
-        invalid_request = {
-            "topic": "",  # Invalid: empty topic
-            "marks": -1,  # Invalid: negative marks
-        }
+        # Mock service (even though it shouldn't be called)
+        mock_service = AsyncMock()
+        app.dependency_overrides[get_question_generation_service] = lambda: mock_service
 
-        response = client.post("/api/questions/generate", json=invalid_request)
+        try:
+            invalid_request = {
+                "topic": "",  # Invalid: empty topic
+                "marks": -1,  # Invalid: negative marks
+            }
 
-        assert response.status_code == 422
-        assert "detail" in response.json()
+            response = client.post("/api/questions/generate", json=invalid_request)
 
-        # Service should not be called for invalid requests
-        mock_service.generate_questions.assert_not_called()
+            assert response.status_code == 422
+            assert "detail" in response.json()
 
-    @patch("src.api.endpoints.questions.question_generation_service")
-    def test_generate_question_service_error(self, mock_service, client, sample_generation_request):
+            # Service should not be called for invalid requests
+            mock_service.generate_questions.assert_not_called()
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_generate_question_service_error(self, client, sample_generation_request):
         """Test generation when service fails."""
         # Mock service failure
+        mock_service = AsyncMock()
         mock_service.generate_questions = AsyncMock(side_effect=Exception("Generation failed"))
+        app.dependency_overrides[get_question_generation_service] = lambda: mock_service
 
-        response = client.post("/api/questions/generate", json=sample_generation_request)
+        try:
+            response = client.post("/api/questions/generate", json=sample_generation_request)
 
-        assert response.status_code == 500
-        data = response.json()
-        assert "detail" in data
-        assert "Generation failed" in data["detail"]
+            assert response.status_code == 500
+            data = response.json()
+            assert "detail" in data
+            assert "Generation failed" in data["detail"]
+        finally:
+            app.dependency_overrides.clear()
 
-    @patch("src.api.endpoints.questions.question_repository")
-    def test_get_question_success(self, mock_repository, client, sample_question):
+    def test_get_question_success(self, client, sample_question):
         """Test successful question retrieval."""
         # Mock successful retrieval
+        mock_repository = Mock()
         mock_repository.get_question = Mock(return_value=sample_question)
+        app.dependency_overrides[get_question_repository] = lambda: mock_repository
 
-        response = client.get(f"/api/questions/{sample_question.question_id_global}")
+        try:
+            response = client.get(f"/api/questions/{sample_question.question_id_global}")
 
-        assert response.status_code == 200
-        data = response.json()
-        assert data["question_id_global"] == sample_question.question_id_global
-        assert data["marks"] == sample_question.marks
+            assert response.status_code == 200
+            data = response.json()
+            assert data["question_id_global"] == sample_question.question_id_global
+            assert data["marks"] == sample_question.marks
+        finally:
+            app.dependency_overrides.clear()
 
-    @patch("src.api.endpoints.questions.question_repository")
-    def test_get_question_not_found(self, mock_repository, client):
+    def test_get_question_not_found(self, client):
         """Test question not found."""
         # Mock question not found
+        mock_repository = Mock()
         mock_repository.get_question = Mock(return_value=None)
+        app.dependency_overrides[get_question_repository] = lambda: mock_repository
 
-        response = client.get("/api/questions/nonexistent-id")
+        try:
+            response = client.get("/api/questions/nonexistent-id")
 
-        assert response.status_code == 404
-        data = response.json()
-        assert "not found" in data["detail"].lower()
+            assert response.status_code == 404
+            data = response.json()
+            assert "not found" in data["detail"].lower()
+        finally:
+            app.dependency_overrides.clear()
 
     @patch("src.api.endpoints.questions.question_repository")
     def test_list_questions_success(self, mock_repository, client):
