@@ -139,11 +139,11 @@ class TestAgentPerformance:
             # Success on 3rd try
             return LLMResponse(
                 content='{"question_text": "Test question", "marks": 2, "command_word": "Calculate"}',
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=50,
                 cost_estimate=0.001,
-                generation_time=1.0,
+                latency_ms=1000,
             )
 
         mock_llm = AsyncMock()

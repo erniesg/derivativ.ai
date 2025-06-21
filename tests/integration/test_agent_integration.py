@@ -34,11 +34,11 @@ class TestAgentServiceIntegration:
         agent.llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(question_json),
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=150,
                 cost_estimate=0.002,
-                generation_time=2.0,
+                latency_ms=2000,
             )
         )
 
@@ -81,11 +81,11 @@ class TestAgentServiceIntegration:
         agent.llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(marking_scheme_json),
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=200,
                 cost_estimate=0.003,
-                generation_time=2.5,
+                latency_ms=2500,
             )
         )
 

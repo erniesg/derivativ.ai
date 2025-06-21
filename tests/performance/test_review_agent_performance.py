@@ -41,11 +41,11 @@ class TestReviewAgentPerformance:
         agent.llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(quality_response),
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=150,
                 cost_estimate=0.002,
-                generation_time=1.0,
+                latency_ms=1000,
             )
         )
 
@@ -117,11 +117,11 @@ class TestReviewAgentPerformance:
                         "decision": "manual_review",
                     }
                 ),
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=200,
                 cost_estimate=0.003,
-                generation_time=1.5,
+                latency_ms=1500,
             )
         )
 
@@ -231,11 +231,11 @@ class TestReviewAgentPerformance:
             call_count += 1
             return LLMResponse(
                 content=json.dumps(response),
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=300 + (call_count % 200),  # Variable token usage
                 cost_estimate=0.005,
-                generation_time=2.0,
+                latency_ms=2000,
             )
 
         agent.llm_service.generate = AsyncMock(side_effect=mock_generate)
@@ -317,11 +317,11 @@ class TestReviewAgentPerformance:
                         "decision": "approve",
                     }
                 ),
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=150,
                 cost_estimate=0.002,
-                generation_time=1.0,
+                latency_ms=1000,
             ),
             # Simulated timeout
             lambda: (_ for _ in ()).throw(asyncio.TimeoutError("Request timeout")),
@@ -423,11 +423,11 @@ class TestReviewAgentPerformance:
             agent.llm_service.generate = AsyncMock(
                 return_value=LLMResponse(
                     content=json.dumps(quality_response),
-                    model="gpt-4o",
+                    model_used="gpt-4o",
                     provider="mock",
                     tokens_used=200,
                     cost_estimate=0.003,
-                    generation_time=1.5,
+                    latency_ms=1500,
                 )
             )
 
