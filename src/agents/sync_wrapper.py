@@ -5,9 +5,9 @@ Particularly useful for smolagents integration which is synchronous.
 
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, Optional
+from typing import Any
 
-from .base_agent import BaseAgent, AgentResult
+from .base_agent import AgentResult, BaseAgent
 
 
 class SyncAgentWrapper:
@@ -15,25 +15,25 @@ class SyncAgentWrapper:
     Wraps async agents to provide synchronous interface.
     Useful for integrating with smolagents or other sync frameworks.
     """
-    
+
     def __init__(self, agent: BaseAgent):
         """
         Initialize wrapper with an async agent.
-        
+
         Args:
             agent: The async agent to wrap
         """
         self.agent = agent
         self._loop = None
         self._thread_executor = ThreadPoolExecutor(max_workers=1)
-    
-    def process(self, input_data: Dict[str, Any]) -> AgentResult:
+
+    def process(self, input_data: dict[str, Any]) -> AgentResult:
         """
         Synchronous version of agent.process().
-        
+
         Args:
             input_data: Input data for the agent
-            
+
         Returns:
             AgentResult from the agent
         """
@@ -46,8 +46,8 @@ class SyncAgentWrapper:
         except RuntimeError:
             # No event loop, we can create one
             return asyncio.run(self.agent.process(input_data))
-    
-    def _run_in_new_loop(self, input_data: Dict[str, Any]) -> AgentResult:
+
+    def _run_in_new_loop(self, input_data: dict[str, Any]) -> AgentResult:
         """Run agent in a new event loop in a separate thread."""
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -55,7 +55,7 @@ class SyncAgentWrapper:
             return loop.run_until_complete(self.agent.process(input_data))
         finally:
             loop.close()
-    
+
     def __getattr__(self, name: str) -> Any:
         """Forward attribute access to the wrapped agent."""
         return getattr(self.agent, name)
@@ -64,11 +64,11 @@ class SyncAgentWrapper:
 def make_sync_agent(agent_class: type[BaseAgent], *args, **kwargs) -> SyncAgentWrapper:
     """
     Factory function to create a synchronous version of an agent.
-    
+
     Args:
         agent_class: The agent class to instantiate
         *args, **kwargs: Arguments for agent initialization
-        
+
     Returns:
         SyncAgentWrapper instance
     """

@@ -4,7 +4,7 @@ Provides realistic responses without requiring API keys.
 """
 
 import asyncio
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any
 
 from ..models.llm_models import LLMRequest, LLMResponse
 from ..models.streaming_models import StreamingChunk, StreamingGenerator
@@ -176,7 +176,7 @@ class MockLLMService(LLMService):
         # Generic response
         return f"This is a mock response to: {prompt[:100]}..."
 
-    async def get_available_models(self) -> List[str]:
+    async def get_available_models(self) -> list[str]:
         """Return available mock models."""
         return ["mock-gpt-4", "mock-claude-3", "mock-gemini-2"]
 
@@ -188,7 +188,7 @@ class MockLLMService(LLMService):
         """Mock connection is always valid."""
         return True
 
-    def get_usage_stats(self) -> Dict[str, Any]:
+    def get_usage_stats(self) -> dict[str, Any]:
         """Return mock usage statistics."""
         return {
             "total_tokens_used": self.total_tokens_used,
@@ -201,7 +201,7 @@ class MockLLMService(LLMService):
         """Generate non-streaming response (same as generate for mock)."""
         return await self.generate(request)
 
-    async def batch_generate(self, requests: List[LLMRequest]) -> List[LLMResponse]:
+    async def batch_generate(self, requests: list[LLMRequest]) -> list[LLMResponse]:
         """Generate batch responses."""
         responses = []
         for request in requests:
@@ -210,7 +210,7 @@ class MockLLMService(LLMService):
         return responses
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> "MockLLMService":
+    def from_config(cls, config: dict[str, Any]) -> "MockLLMService":
         """Create mock service from config."""
         return cls(provider_name=config.get("provider", "mock"))
 

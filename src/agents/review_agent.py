@@ -63,7 +63,7 @@ class ReviewAgent(BaseAgent):
         # Create agent-compatible LLM interface
         from ..services.agent_llm_interface import AgentLLMInterface
         self.llm_interface = AgentLLMInterface(llm_service)
-        
+
         super().__init__(name, llm_service)
         self.llm_service = llm_service  # Store for easy access
         self.prompt_manager = prompt_manager

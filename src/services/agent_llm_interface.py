@@ -3,7 +3,7 @@ Agent-compatible LLM interface.
 Provides a simpler interface for agents while using our LLMService underneath.
 """
 
-from typing import Any, Dict, Optional, Union
+from typing import Optional, Union
 
 from ..models.enums import LLMModel
 from ..models.llm_models import LLMRequest, LLMResponse
@@ -16,16 +16,16 @@ class AgentLLMInterface:
     Simple LLM interface for agents.
     Wraps our LLMService to provide the interface agents expect.
     """
-    
+
     def __init__(self, llm_service: LLMService):
         """
         Initialize with an LLM service.
-        
+
         Args:
             llm_service: The underlying LLM service to use
         """
         self.llm_service = llm_service
-    
+
     async def generate(
         self,
         prompt: str,
@@ -37,7 +37,7 @@ class AgentLLMInterface:
     ) -> LLMResponse:
         """
         Generate a response using the LLM service.
-        
+
         Args:
             prompt: The prompt to send to the LLM
             model: Model to use
@@ -45,7 +45,7 @@ class AgentLLMInterface:
             max_tokens: Maximum tokens to generate
             timeout: Timeout in seconds
             **kwargs: Additional parameters
-            
+
         Returns:
             LLM response
         """
@@ -54,7 +54,7 @@ class AgentLLMInterface:
             model_str = model.value
         else:
             model_str = str(model)
-        
+
         # Create LLMRequest
         request = LLMRequest(
             model=model_str,
@@ -65,10 +65,10 @@ class AgentLLMInterface:
             timeout=timeout,
             **kwargs
         )
-        
+
         # Call the underlying service
         response = await self.llm_service.generate(request)
-        
+
         # Ensure we return LLMResponse, not StreamingGenerator
         if hasattr(response, 'content'):
             return response
@@ -78,7 +78,7 @@ class AgentLLMInterface:
             async for chunk in response:
                 if hasattr(chunk, 'content'):
                     chunks.append(chunk.content)
-            
+
             # Create a response from collected chunks
             return LLMResponse(
                 content=''.join(chunks),
@@ -96,14 +96,14 @@ class AgentLLMInterface:
 def create_agent_llm_interface(llm_service: Optional[LLMService] = None) -> AgentLLMInterface:
     """
     Create an agent-compatible LLM interface.
-    
+
     Args:
         llm_service: LLM service to use (creates mock if None)
-        
+
     Returns:
         AgentLLMInterface instance
     """
     if llm_service is None:
         llm_service = MockLLMService()
-    
+
     return AgentLLMInterface(llm_service)
