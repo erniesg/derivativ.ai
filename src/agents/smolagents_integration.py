@@ -54,7 +54,14 @@ def generate_math_question(
 
         # Process synchronously (smolagents expects sync)
         import asyncio
-        result = asyncio.run(agent.process(request_data))
+        
+        # Create a new event loop to avoid cleanup issues
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(agent.process(request_data))
+        finally:
+            loop.close()
 
         if result.success:
             return json.dumps(result.output, indent=2)
@@ -81,17 +88,14 @@ def review_question_quality(question_data: str) -> str:
 
         # Parse input
         question_raw = json.loads(question_data)
-        
+
         # Handle nested question structure from question generator
-        if "question" in question_raw:
-            question = question_raw["question"]
-        else:
-            question = question_raw
-            
+        question = question_raw.get("question", question_raw)
+
         # Ensure question has expected format for review agent
         if isinstance(question, dict) and "raw_text_content" in question:
             question["question_text"] = question["raw_text_content"]
-            
+
         # Add any missing required fields with defaults
         if isinstance(question, dict):
             if "grade_level" not in question:
@@ -117,15 +121,22 @@ def review_question_quality(question_data: str) -> str:
                 }
             ]
         }
-        
+
         # Process synchronously - use correct input format for review agent
         import asyncio
-        result = asyncio.run(agent.process({
-            "question_data": {
-                "question": question,
-                "marking_scheme": marking_scheme
-            }
-        }))
+        
+        # Create a new event loop to avoid cleanup issues
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(agent.process({
+                "question_data": {
+                    "question": question,
+                    "marking_scheme": marking_scheme
+                }
+            }))
+        finally:
+            loop.close()
 
         if result.success:
             return json.dumps(result.output, indent=2)
@@ -152,19 +163,49 @@ def refine_question(original_question: str, feedback: str) -> str:
         from ..agents.refinement_agent import RefinementAgent
 
         # Parse inputs
-        question = json.loads(original_question)
+        question_raw = json.loads(original_question)
         review_feedback = json.loads(feedback)
+
+        # Extract the actual question if nested
+        question = question_raw.get("question", question_raw)
+        
+        # Ensure question has expected format
+        if isinstance(question, dict) and "raw_text_content" in question:
+            question["question_text"] = question["raw_text_content"]
+            
+        # Add missing required fields with defaults
+        if isinstance(question, dict):
+            if "grade_level" not in question:
+                question["grade_level"] = 8
+            if "marks" not in question:
+                question["marks"] = 3
+            if "command_word" not in question:
+                question["command_word"] = "Calculate"
+
+        # Create quality decision format expected by refinement agent
+        quality_decision = {
+            "action": "refine",  # Default action
+            "quality_score": review_feedback.get("quality_score", 0.5),
+            "suggested_improvements": review_feedback.get("feedback", "Improve question quality")
+        }
 
         # Create agent
         llm_service = _get_llm_service()
         agent = RefinementAgent(llm_service=llm_service)
 
-        # Process synchronously
+        # Process synchronously with correct input format
         import asyncio
-        result = asyncio.run(agent.process({
-            "original_question": question,
-            "review_feedback": review_feedback
-        }))
+        
+        # Create a new event loop to avoid cleanup issues
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            result = loop.run_until_complete(agent.process({
+                "original_question": question,
+                "quality_decision": quality_decision
+            }))
+        finally:
+            loop.close()
 
         if result.success:
             return json.dumps(result.output, indent=2)
