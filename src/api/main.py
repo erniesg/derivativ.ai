@@ -1,0 +1,68 @@
+"""
+Main FastAPI application with Supabase integration.
+Provides REST API and WebSocket endpoints for question generation.
+"""
+
+import logging
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from src.api.endpoints import questions, sessions, websocket
+from src.core.config import get_settings
+
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan manager."""
+    # Startup
+    logger.info("Starting Derivativ API...")
+    yield
+    # Shutdown
+    logger.info("Shutting down Derivativ API...")
+
+
+# Create FastAPI app
+app = FastAPI(
+    title="Derivativ AI API",
+    description="AI-powered Cambridge IGCSE Mathematics question generation platform",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure based on environment
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "healthy", "service": "derivativ-api"}
+
+
+# Include routers
+app.include_router(questions.router, prefix="/api", tags=["questions"])
+app.include_router(sessions.router, prefix="/api", tags=["sessions"])
+app.include_router(websocket.router, prefix="/api", tags=["websocket"])
+
+
+if __name__ == "__main__":
+    import uvicorn
+
+    settings = get_settings()
+    uvicorn.run(
+        "src.api.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=settings.debug,
+        log_level="info" if not settings.debug else "debug",
+    )
