@@ -677,3 +677,48 @@ The key differentiator is sophisticated agent collaboration with transparent rea
 ---
 
 **Implementation Ready**: All planning complete. Time to start building with **TODO 1.1: Initialize Derivativ Project Structure** using the comprehensive TDD approach outlined in `tdd_todo.md` and `STRATEGIC_PLAN.md`.
+
+---
+
+## 📝 DERIVATIV NAMING CONVENTIONS
+
+### File and Directory Naming Standards
+
+#### Avoid Repetitive/Redundant Terms
+❌ **Bad Examples:**
+- `demo_agent_workflow.py` + `demo_live_agents.py` (repetitive "demo")
+- `test_agent_test.py` (redundant "test")
+- `utils_helper_functions.py` (redundant "helper")
+- `config_settings_manager.py` (redundant "settings")
+
+✅ **Good Examples:**
+- `examples/mock_workflow.py` + `examples/live_apis.py` (clear, distinct)
+- `tests/test_agents.py` (concise)
+- `src/utils/formatting.py` (specific purpose)
+- `src/core/config.py` (simple, clear)
+
+#### Directory Structure Principles
+- **`examples/`**: Runnable demonstration scripts
+- **`src/`**: Core application code organized by domain
+- **`tests/`**: Test files mirroring src/ structure
+- **`docs/`**: Documentation and guides
+
+#### Naming Pattern Guidelines
+1. **Be specific, not generic**: `live_apis.py` > `demo2.py`
+2. **Avoid redundancy**: `mock_workflow.py` > `mock_agents_demo.py`
+3. **Use domain language**: `question_generator.py` > `generator_thing.py`
+4. **Keep it short but clear**: `auth.py` > `authentication_manager_module.py`
+5. **Group related files**: `examples/` contains all runnable demos
+
+#### Examples Directory Standards
+- **Purpose-driven names**: What the file demonstrates, not that it's a demo
+- **Clear differentiation**: Each file should have a distinct, obvious purpose
+- **Runnable scripts**: All files should be executable examples of system capabilities
+
+#### Agent and Service Naming
+- **Agents**: `[Domain]Agent` (e.g., `QuestionGeneratorAgent`, `ReviewAgent`)
+- **Services**: `[Purpose]Service` (e.g., `LLMService`, `PromptManager`)
+- **Interfaces**: `[Purpose]Interface` (e.g., `AgentLLMInterface`)
+- **Factories**: `[Domain]Factory` (e.g., `LLMFactory`)
+
+This ensures clean, predictable naming that scales with project growth.

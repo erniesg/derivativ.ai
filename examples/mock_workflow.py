@@ -16,7 +16,7 @@ load_dotenv()
 # Add src to path
 import sys
 
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.agents.orchestrator import MultiAgentOrchestrator, SmolagentsOrchestrator
 from src.agents.sync_wrapper import create_sync_question_generator
