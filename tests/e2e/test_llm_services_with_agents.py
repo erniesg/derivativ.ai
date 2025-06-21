@@ -291,7 +291,7 @@ class TestLLMServicesWithReviewAgent:
                 "tier": "Core",
             },
             "marking_scheme": {
-                "total_marks": 3,
+                "total_marks_for_part": 3,
                 "mark_allocation_criteria": [
                     {"criterion_text": "Correct substitution", "marks_value": 1, "mark_type": "M"}
                 ],
@@ -382,8 +382,11 @@ class TestLLMServicesWithRefinementAgent:
                 "question_text": "Calculate x + 2 when x = 5",
                 "marks": 2,
                 "command_word": "Calculate",
+                "grade_level": 8,
             },
             "quality_decision": {
+                "action": "refine",
+                "quality_score": 0.6,
                 "decision": "REFINE",
                 "feedback": "Question is too simple for grade level",
                 "suggested_improvements": [
@@ -549,7 +552,7 @@ class TestEndToEndMultiAgentWorkflow:
                         "grade_level": 8,
                         "tier": "Core",
                     },
-                    "marking_scheme": {"total_marks": 2, "criteria": []},
+                    "marking_scheme": {"total_marks_for_part": 2, "mark_allocation_criteria": []},
                 }
             }
         )

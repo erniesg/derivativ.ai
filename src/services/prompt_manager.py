@@ -95,6 +95,7 @@ class PromptManager:
             "marking_scheme": self._get_marking_scheme_template(),
             "quality_review": self._get_quality_review_template(),
             "question_refinement": self._get_question_refinement_template(),
+            "system_prompts": self._get_system_prompts_template(),
         }
 
     async def render_prompt(self, config: PromptConfig, model_name: Optional[str] = None) -> str:
@@ -553,6 +554,34 @@ Focus on creating a better question that addresses the feedback while maintainin
             required_variables=["original_question", "review_feedback"],
             optional_variables=[],
             tags=["refinement", "improvement", "quality", "cambridge"],
+        )
+
+    def _get_system_prompts_template(self) -> PromptTemplate:
+        """Get built-in system prompts template"""
+        content = """You are an expert {{ subject }} teacher specializing in {{ curriculum }}.
+
+Your expertise includes:
+- {{ grade }} level content
+- {{ assessment_type }} design
+- {{ pedagogical_approach }} methodology
+
+Context: {{ context }}
+Instructions: {{ instructions }}"""
+
+        return PromptTemplate(
+            name="system_prompts",
+            version="latest",
+            content=content,
+            description="Generate system prompts for different educational contexts",
+            required_variables=[
+                "subject",
+                "curriculum",
+                "grade",
+                "assessment_type",
+                "pedagogical_approach",
+            ],
+            optional_variables=["context", "instructions"],
+            tags=["system", "prompts", "educational", "context"],
         )
 
 

@@ -10,7 +10,7 @@ import pytest
 from src.models.llm_models import LLMRequest, LLMResponse
 
 # Import existing PromptManager and new models
-from src.services.prompt_manager import PromptManager, PromptConfig
+from src.services.prompt_manager import PromptConfig, PromptError, PromptManager
 
 
 class TestPromptManagerLLMIntegration:
@@ -74,19 +74,17 @@ Instructions: {{instructions}}""",
     async def test_create_llm_request_from_template(self, prompt_manager):
         """Test creating LLM request using template with variables."""
         variables = {
-            "question_type": "multiple choice",
             "topic": "quadratic equations",
-            "grade": "10th",
-            "subject": "mathematics",
-            "difficulty": "medium",
-            "num_parts": "3",
-            "assessment_type": "IGCSE",
-            "curriculum": "Cambridge",
+            "target_grade": 10,
+            "marks": 4,
+            "calculator_policy": "allowed",
+            "command_word": "Calculate",
+            "subject_content_references": ["C2.5", "C2.10"],
         }
 
         # Get rendered template
         rendered_content = await prompt_manager.render_prompt(
-            PromptConfig(template_name="question_generator", variables=variables)
+            PromptConfig(template_name="question_generation", variables=variables)
         )
 
         # Create LLM request with rendered content
@@ -99,13 +97,12 @@ Instructions: {{instructions}}""",
         )
 
         # Verify template variables were substituted
-        assert "multiple choice" in request.prompt
         assert "quadratic equations" in request.prompt
-        assert "10th grade mathematics teacher" in request.prompt
-        assert "medium" in request.prompt
-        assert "3 parts" in request.prompt
-        assert "IGCSE format" in request.prompt
-        assert "Cambridge standards" in request.prompt
+        assert "Target Grade: 10" in request.prompt
+        assert "Marks: 4" in request.prompt
+        assert "Calculator Policy: allowed" in request.prompt
+        assert "Command Word: Calculate" in request.prompt
+        assert "C2.5" in request.prompt and "C2.10" in request.prompt
 
         # Verify request structure
         assert request.model == "gpt-4.1-nano"
@@ -157,40 +154,27 @@ Instructions: {{instructions}}""",
     async def test_template_with_missing_variables(self, prompt_manager):
         """Test template rendering with missing variables."""
         variables = {
-            "question_type": "short answer",
             "topic": "photosynthesis",
-            # Missing: grade, subject, difficulty, etc.
+            # Missing required variables: target_grade, marks, calculator_policy
         }
 
-        # Should handle missing variables gracefully
-        rendered = await prompt_manager.render_prompt(
-            PromptConfig(template_name="question_generator", variables=variables)
-        )
-
-        # Create request with partially rendered template
-        request = LLMRequest(model="gpt-4.1-nano", prompt=rendered, stream=False)
-
-        # Should contain substituted variables
-        assert "short answer" in request.prompt
-        assert "photosynthesis" in request.prompt
-
-        # Missing variables should remain as placeholders or be empty
-        # (depending on PromptManager implementation)
-        assert request.prompt is not None
-        assert len(request.prompt) > 0
+        # Should raise error for missing required variables
+        with pytest.raises(PromptError):  # PromptError for missing variables
+            await prompt_manager.render_prompt(
+                PromptConfig(template_name="question_generation", variables=variables)
+            )
 
     @pytest.mark.asyncio
     async def test_create_request_for_marker_agent(self, prompt_manager):
         """Test creating LLM request for marker agent using template."""
         variables = {
             "question_text": "Calculate the area of a circle with radius 5cm. Show your working.",
-            "total_marks": "4",
-            "mark_types": "['M', 'A', 'SC']",
-            "grade": "8",
+            "total_marks": 4,
+            "target_grade": 8,
         }
 
         rendered_prompt = await prompt_manager.render_prompt(
-            PromptConfig(template_name="marker_agent", variables=variables)
+            PromptConfig(template_name="marking_scheme", variables=variables)
         )
 
         request = LLMRequest(
@@ -204,9 +188,8 @@ Instructions: {{instructions}}""",
         # Verify marking-specific content
         assert "Calculate the area of a circle" in request.prompt
         assert "Show your working" in request.prompt
-        assert "Total marks: 4" in request.prompt
-        assert "['M', 'A', 'SC']" in request.prompt
-        assert "Grade level: 8" in request.prompt
+        assert "**Total Marks:** 4" in request.prompt
+        assert "**Grade Level:** 8" in request.prompt
 
         # Verify appropriate temperature for marking
         assert request.temperature == 0.3
@@ -254,13 +237,12 @@ Instructions: {{instructions}}""",
         # Use response content in next template
         variables = {
             "question_text": first_response.content,
-            "total_marks": "3",
-            "mark_types": "['M', 'A']",
-            "grade": "7",
+            "total_marks": 3,
+            "target_grade": 7,
         }
 
         marker_prompt = await prompt_manager.render_prompt(
-            PromptConfig(template_name="marker_agent", variables=variables)
+            PromptConfig(template_name="marking_scheme", variables=variables)
         )
 
         marker_request = LLMRequest(
@@ -270,7 +252,7 @@ Instructions: {{instructions}}""",
         # Verify chaining works
         assert first_response.content in marker_request.prompt
         assert "value of x in the equation 2x + 5 = 13" in marker_request.prompt
-        assert "Total marks: 3" in marker_request.prompt
+        assert "**Total Marks:** 3" in marker_request.prompt
 
     @pytest.mark.asyncio
     async def test_bulk_request_creation_from_templates(self, prompt_manager):
@@ -278,31 +260,25 @@ Instructions: {{instructions}}""",
         # Test data for bulk question generation
         question_configs = [
             {
-                "template": "question_generator",
+                "template": "question_generation",
                 "variables": {
-                    "question_type": "multiple choice",
                     "topic": "algebra",
-                    "grade": "9th",
-                    "subject": "mathematics",
-                    "difficulty": "easy",
-                    "num_parts": "1",
-                    "assessment_type": "practice",
-                    "curriculum": "Cambridge",
+                    "target_grade": 9,
+                    "marks": 2,
+                    "calculator_policy": "not_allowed",
+                    "command_word": "Solve",
                 },
                 "model": "gpt-4.1-nano",
                 "temperature": 0.8,
             },
             {
-                "template": "question_generator",
+                "template": "question_generation",
                 "variables": {
-                    "question_type": "short answer",
                     "topic": "geometry",
-                    "grade": "10th",
-                    "subject": "mathematics",
-                    "difficulty": "medium",
-                    "num_parts": "2",
-                    "assessment_type": "IGCSE",
-                    "curriculum": "Cambridge",
+                    "target_grade": 10,
+                    "marks": 3,
+                    "calculator_policy": "allowed",
+                    "command_word": "Calculate",
                 },
                 "model": "claude-3-5-haiku-20241022",
                 "temperature": 0.7,
@@ -317,7 +293,10 @@ Instructions: {{instructions}}""",
             )
 
             request = LLMRequest(
-                model=config["model"], prompt=rendered_prompt, temperature=config["temperature"], stream=False
+                model=config["model"],
+                prompt=rendered_prompt,
+                temperature=config["temperature"],
+                stream=False,
             )
             requests.append(request)
 
@@ -327,45 +306,42 @@ Instructions: {{instructions}}""",
         # Verify first request
         assert requests[0].model == "gpt-4.1-nano"
         assert requests[0].temperature == 0.8
-        assert "multiple choice" in requests[0].prompt
         assert "algebra" in requests[0].prompt
+        assert "Target Grade: 9" in requests[0].prompt
 
         # Verify second request
         assert requests[1].model == "claude-3-5-haiku-20241022"
         assert requests[1].temperature == 0.7
-        assert "short answer" in requests[1].prompt
         assert "geometry" in requests[1].prompt
+        assert "Target Grade: 10" in requests[1].prompt
 
     @pytest.mark.asyncio
     async def test_template_caching_with_llm_requests(self, prompt_manager):
         """Test that template caching works with LLM request creation."""
         variables = {
-            "question_type": "essay",
             "topic": "climate change",
-            "grade": "11th",
-            "subject": "geography",
-            "difficulty": "hard",
-            "num_parts": "3",
-            "assessment_type": "A-level",
-            "curriculum": "Cambridge",
+            "target_grade": 11,
+            "marks": 5,
+            "calculator_policy": "not_allowed",
+            "command_word": "Explain",
         }
 
         # First call - should load and cache template
         rendered1 = await prompt_manager.render_prompt(
-            PromptConfig(template_name="question_generator", variables=variables)
+            PromptConfig(template_name="question_generation", variables=variables)
         )
         request1 = LLMRequest(model="gpt-4.1-nano", prompt=rendered1, stream=False)
 
         # Second call - should use cached template
         rendered2 = await prompt_manager.render_prompt(
-            PromptConfig(template_name="question_generator", variables=variables)
+            PromptConfig(template_name="question_generation", variables=variables)
         )
         request2 = LLMRequest(model="gpt-4.1-nano", prompt=rendered2, stream=False)
 
         # Results should be identical
         assert request1.prompt == request2.prompt
-        assert "essay" in request1.prompt
         assert "climate change" in request1.prompt
+        assert "Target Grade: 11" in request1.prompt
 
         # Verify caching behavior (implementation detail)
         # This would depend on PromptManager's caching implementation

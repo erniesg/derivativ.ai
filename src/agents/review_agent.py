@@ -106,9 +106,10 @@ class ReviewAgent(BaseAgent):
             self._think("Preparing quality assessment with Cambridge IGCSE standards")
 
             # Step 2: Generate quality assessment using LLM
-            quality_assessment_result = await self._generate_quality_assessment_with_retries(
-                question_data, max_retries=3
-            )
+            (
+                quality_assessment_result,
+                model_used,
+            ) = await self._generate_quality_assessment_with_retries(question_data, max_retries=3)
 
             # Step 3: Convert to structured quality decision
             quality_decision = self._convert_to_quality_decision_object(quality_assessment_result)
@@ -127,7 +128,7 @@ class ReviewAgent(BaseAgent):
                 "assessment_metadata": {
                     "agent_name": self.name,
                     "timestamp": self._get_timestamp(),
-                    "model_used": getattr(quality_assessment_result, "model", "unknown"),
+                    "model_used": model_used,
                     "assessment_confidence": quality_decision.confidence,
                 },
             }
@@ -186,7 +187,7 @@ class ReviewAgent(BaseAgent):
 
     async def _generate_quality_assessment_with_retries(
         self, question_data: dict[str, Any], max_retries: int = 3
-    ) -> dict[str, Any]:
+    ) -> tuple[dict[str, Any], str]:
         """
         Generate quality assessment with retry logic.
 
@@ -195,7 +196,7 @@ class ReviewAgent(BaseAgent):
             max_retries: Maximum number of retry attempts
 
         Returns:
-            Quality assessment data from LLM
+            Tuple of (quality assessment data from LLM, model used)
 
         Raises:
             Exception: If all retry attempts fail
@@ -227,7 +228,7 @@ class ReviewAgent(BaseAgent):
 
                 # Extract JSON from response
                 json_result: JSONExtractionResult = await self.json_parser.extract_json(
-                    llm_response.content, llm_response.model
+                    llm_response.content, llm_response.model_used
                 )
 
                 if not json_result.success or not json_result.data:
@@ -240,7 +241,7 @@ class ReviewAgent(BaseAgent):
                     raise ValueError("Quality scores validation failed")
 
                 self._act("Quality assessment generated successfully")
-                return json_result.data
+                return json_result.data, llm_response.model_used
 
             except Exception as e:
                 last_exception = e

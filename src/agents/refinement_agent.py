@@ -251,13 +251,18 @@ Please provide a completely improved question in JSON format with improvements_m
             from ..services.json_parser import JSONExtractionResult
 
             json_result: JSONExtractionResult = await self.json_parser.extract_json(
-                llm_response.content, llm_response.model
+                llm_response.content, llm_response.model_used
             )
 
-            if json_result.success and self._validate_refinement_response(json_result.data):
-                refined = self._apply_refinement_improvements(original_question, json_result.data)
-                refined["strategy_used"] = "primary"
-                return refined
+            if json_result.success:
+                # Extract refined_question from response if present
+                response_data = json_result.data
+                question_data = response_data.get("refined_question", response_data)
+
+                if self._validate_refinement_response(question_data):
+                    refined = self._apply_refinement_improvements(original_question, question_data)
+                    refined["strategy_used"] = "primary"
+                    return refined
 
         except Exception as e:
             primary_error = e
@@ -281,11 +286,15 @@ Provide improved question in JSON format:
             from ..services.json_parser import JSONExtractionResult
 
             json_result: JSONExtractionResult = await self.json_parser.extract_json(
-                llm_response.content, llm_response.model
+                llm_response.content, llm_response.model_used
             )
 
             if json_result.success:
-                refined = self._apply_refinement_improvements(original_question, json_result.data)
+                # Extract refined_question from response if present
+                response_data = json_result.data
+                question_data = response_data.get("refined_question", response_data)
+
+                refined = self._apply_refinement_improvements(original_question, question_data)
                 refined["strategy_used"] = "fallback"
                 return refined
 

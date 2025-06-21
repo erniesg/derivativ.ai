@@ -285,6 +285,7 @@ class OpenAILLMService(LLMService):
             "tools": None,
             "tool_choice": None,
             "user": None,
+            "stop": None,  # Add stop parameter support
         }
 
         for key, default in openai_extras.items():
