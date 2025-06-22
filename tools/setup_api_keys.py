@@ -27,6 +27,7 @@ def create_env_file():  # noqa: PLR0915
     print("- Anthropic: https://console.anthropic.com/")
     print("- Google: https://makersuite.google.com/app/apikey")
     print("- Hugging Face: https://huggingface.co/settings/tokens (for smolagents)")
+    print("- Supabase: https://supabase.com/dashboard/project/api-keys")
     print("\nPress Enter to skip any key you don't have yet or keep existing.\n")
 
     # Check existing keys
@@ -64,6 +65,16 @@ def create_env_file():  # noqa: PLR0915
     )
     new_hf = input(prompt_hf).strip()
     keys["HF_TOKEN"] = new_hf if new_hf else current_hf
+
+    current_supabase = existing_keys.get("SUPABASE_URL", "")
+    prompt_supabase = f"Supabase URL (current: {'***' + current_supabase[-4:] if current_supabase else 'not set'}): "
+    new_supabase = input(prompt_supabase).strip()
+    keys["SUPABASE_URL"] = new_supabase if new_supabase else current_supabase
+
+    current_supabase_service_role_key = existing_keys.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    prompt_supabase_service_role_key = f"Supabase Service Role Key (current: {'***' + current_supabase_service_role_key[-4:] if current_supabase_service_role_key else 'not set'}): "
+    new_supabase_service_role_key = input(prompt_supabase_service_role_key).strip()
+    keys["SUPABASE_SERVICE_ROLE_KEY"] = new_supabase_service_role_key if new_supabase_service_role_key else current_supabase_service_role_key
 
     # Optional overrides
     print("\n⚙️  Optional configuration (press Enter for defaults):")
