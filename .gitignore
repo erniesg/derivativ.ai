@@ -98,3 +98,5 @@ temp/
 
 # Internal documentation
 CLAUDE_PERSONAL.md
+
+autoassessment-module/node_modules/
