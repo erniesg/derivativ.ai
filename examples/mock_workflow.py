@@ -6,17 +6,8 @@ Demonstrates both async and sync (smolagents-compatible) usage.
 
 import asyncio
 import os
-from pathlib import Path
 
 from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
-
-# Add src to path
-import sys
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.agents.orchestrator import MultiAgentOrchestrator, SmolagentsOrchestrator
 from src.agents.sync_wrapper import create_sync_question_generator
@@ -25,12 +16,15 @@ from src.models.question_models import GenerationRequest
 from src.services.llm_factory import LLMFactory
 from src.services.mock_llm_service import MockLLMService
 
+# Load environment variables
+load_dotenv()
+
 
 def demo_standalone_sync_agent():
     """Demo: Using a single agent synchronously (smolagents-compatible)."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("DEMO 1: Standalone Synchronous Agent")
-    print("="*60)
+    print("=" * 60)
 
     # Create sync wrapper for question generator with mock LLM
     mock_llm = MockLLMService()
@@ -42,7 +36,7 @@ def demo_standalone_sync_agent():
         "tier": "Core",
         "grade_level": 8,
         "marks": 3,
-        "calculator_policy": "not_allowed"
+        "calculator_policy": "not_allowed",
     }
 
     print(f"\nGenerating question about: {request['topic']}")
@@ -64,9 +58,9 @@ def demo_standalone_sync_agent():
 
 async def demo_standalone_async_agent():
     """Demo: Using a single agent asynchronously."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("DEMO 2: Standalone Asynchronous Agent")
-    print("="*60)
+    print("=" * 60)
 
     from src.agents.question_generator import QuestionGeneratorAgent
 
@@ -80,7 +74,7 @@ async def demo_standalone_async_agent():
         "tier": "Extended",
         "grade_level": 9,
         "marks": 5,
-        "calculator_policy": "allowed"
+        "calculator_policy": "allowed",
     }
 
     print(f"\nGenerating question about: {request['topic']}")
@@ -99,15 +93,16 @@ async def demo_standalone_async_agent():
 
 async def demo_multi_agent_workflow():
     """Demo: Full multi-agent orchestration."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("DEMO 3: Multi-Agent Orchestration (Async)")
-    print("="*60)
+    print("=" * 60)
 
     # Create orchestrator with mock LLM factory
     from src.services.llm_factory import LLMFactory
+
     mock_factory = LLMFactory()
     # Override factory to return mock services
-    mock_factory._create_service = lambda provider, config: MockLLMService(provider)
+    mock_factory._create_service = lambda provider: MockLLMService()
     orchestrator = MultiAgentOrchestrator(llm_factory=mock_factory)
 
     # Prepare request
@@ -117,7 +112,7 @@ async def demo_multi_agent_workflow():
         grade_level=9,
         marks=6,
         calculator_policy=CalculatorPolicy.ALLOWED,
-        command_word=CommandWord.SOLVE
+        command_word=CommandWord.SOLVE,
     )
 
     print(f"\nOrchestrating multi-agent workflow for: {request.topic}")
@@ -138,13 +133,13 @@ async def demo_multi_agent_workflow():
 
 def demo_smolagents_orchestration():
     """Demo: Synchronous orchestration for smolagents."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("DEMO 4: Smolagents-Compatible Orchestration (Sync)")
-    print("="*60)
+    print("=" * 60)
 
     # Create smolagents orchestrator with mock LLM
     mock_factory = LLMFactory()
-    mock_factory._create_service = lambda provider, config: MockLLMService(provider)
+    mock_factory._create_service = lambda provider: MockLLMService()
     orchestrator = SmolagentsOrchestrator(llm_factory=mock_factory)
 
     # Prepare request (as dict, like smolagents would)
@@ -153,7 +148,7 @@ def demo_smolagents_orchestration():
         "tier": "Core",
         "grade_level": 7,
         "marks": 4,
-        "calculator_policy": "not_allowed"
+        "calculator_policy": "not_allowed",
     }
 
     print(f"\nRunning synchronous orchestration for: {request['topic']}")
@@ -172,9 +167,9 @@ def demo_smolagents_orchestration():
 
 def demo_smolagents_native():
     """Demo: Using smolagents natively with our tools."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("DEMO 5: Native Smolagents Integration")
-    print("="*60)
+    print("=" * 60)
 
     try:
         from src.agents.smolagents_integration import create_derivativ_agent
@@ -199,14 +194,15 @@ def demo_smolagents_native():
     except Exception as e:
         print(f"\n❌ Smolagents demo failed: {e}")
         import traceback
+
         traceback.print_exc()
 
 
 def demo_smolagents_quality_workflow():
     """Demo: Complete quality workflow using smolagents."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("DEMO 6: Smolagents Quality Control Workflow")
-    print("="*60)
+    print("=" * 60)
 
     try:
         from src.agents.smolagents_integration import create_derivativ_agent
@@ -232,6 +228,7 @@ def demo_smolagents_quality_workflow():
     except Exception as e:
         print(f"\n❌ Smolagents quality workflow failed: {e}")
         import traceback
+
         traceback.print_exc()
 
 
@@ -240,7 +237,7 @@ def check_api_keys():
     providers = {
         "OpenAI": "OPENAI_API_KEY",
         "Anthropic": "ANTHROPIC_API_KEY",
-        "Google": "GOOGLE_API_KEY"
+        "Google": "GOOGLE_API_KEY",
     }
 
     print("\n🔑 API Key Status:")
@@ -294,6 +291,7 @@ async def main():
     except Exception as e:
         print(f"\n❌ Demo error: {e}")
         import traceback
+
         traceback.print_exc()
 
     print("\n✨ Demo complete!")

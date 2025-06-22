@@ -11,7 +11,7 @@ from typing import Any, Optional, Union
 import yaml
 from dotenv import load_dotenv
 from pydantic import Field
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.models.llm_models import AppConfig
 
@@ -345,31 +345,45 @@ class Settings(BaseSettings):
     """
 
     # Database
-    database_url: Optional[str] = Field(None, env="DATABASE_URL")
+    database_url: Optional[str] = Field(
+        None, description="Database connection URL", alias="DATABASE_URL"
+    )
 
     # API Keys (redundant with ConfigManager, but useful for validation)
-    openai_api_key: Optional[str] = Field(None, env="OPENAI_API_KEY")
-    anthropic_api_key: Optional[str] = Field(None, env="ANTHROPIC_API_KEY")
-    google_api_key: Optional[str] = Field(None, env="GOOGLE_API_KEY")
+    openai_api_key: Optional[str] = Field(
+        None, description="OpenAI API key", alias="OPENAI_API_KEY"
+    )
+    anthropic_api_key: Optional[str] = Field(
+        None, description="Anthropic API key", alias="ANTHROPIC_API_KEY"
+    )
+    google_api_key: Optional[str] = Field(
+        None, description="Google API key", alias="GOOGLE_API_KEY"
+    )
 
     # Development settings
-    debug: bool = Field(False, env="DEBUG")
-    log_level: str = Field("INFO", env="LOG_LEVEL")
+    debug: bool = Field(False, description="Enable debug mode", alias="DEBUG")
+    log_level: str = Field("INFO", description="Logging level", alias="LOG_LEVEL")
 
     # Performance settings
-    max_concurrent_requests: int = Field(10, env="MAX_CONCURRENT_REQUESTS")
-    request_timeout: int = Field(30, env="REQUEST_TIMEOUT")
+    max_concurrent_requests: int = Field(
+        10, description="Maximum concurrent requests", alias="MAX_CONCURRENT_REQUESTS"
+    )
+    request_timeout: int = Field(
+        30, description="Request timeout in seconds", alias="REQUEST_TIMEOUT"
+    )
 
     # Demo/testing settings
-    demo_mode: bool = Field(False, env="DEMO_MODE")
-    use_mock_llm: bool = Field(False, env="USE_MOCK_LLM")
+    demo_mode: bool = Field(False, description="Enable demo mode", alias="DEMO_MODE")
+    use_mock_llm: bool = Field(False, description="Use mock LLM service", alias="USE_MOCK_LLM")
 
-    class Config:
-        """Pydantic configuration."""
-
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        env_prefix="",
+        # Map field names to environment variable names
+        env_ignore_empty=True,
+    )
 
 
 class _SettingsSingleton:

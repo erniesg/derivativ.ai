@@ -168,11 +168,11 @@ class TestMarkerAgent:
         mock_llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(sample_marking_scheme_json),
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=200,
                 cost_estimate=0.003,
-                generation_time=2.5,
+                latency_ms=2500,
             )
         )
 
@@ -262,11 +262,11 @@ class TestMarkerAgent:
             LLMTimeoutError("Timeout on first attempt"),
             LLMResponse(
                 content='{"total_marks": 3, "mark_allocation_criteria": [], "final_answers": []}',
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=80,
                 cost_estimate=0.001,
-                generation_time=1.5,
+                latency_ms=1500,
             ),
         ]
 
@@ -298,11 +298,11 @@ class TestMarkerAgent:
             # Fallback succeeds
             LLMResponse(
                 content='{"total_marks": 3, "mark_allocation_criteria": [], "final_answers": []}',
-                model="gpt-4o-mini",
+                model_used="gpt-4o-mini",
                 provider="mock",
                 tokens_used=50,
                 cost_estimate=0.0005,
-                generation_time=0.8,
+                latency_ms=800,
             ),
         ]
 
@@ -366,11 +366,11 @@ class TestMarkerAgent:
         mock_llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content='{"total_marks": 0, "mark_allocation_criteria": []}',  # Invalid: 0 marks
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=50,
                 cost_estimate=0.001,
-                generation_time=1.0,
+                latency_ms=1000,
             )
         )
 
@@ -468,11 +468,11 @@ class TestMarkerAgent:
         mock_llm.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(sample_marking_scheme_json),
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=150,
                 cost_estimate=0.002,
-                generation_time=2.0,
+                latency_ms=2000,
             )
         )
 
@@ -582,11 +582,11 @@ class TestMarkerAgentIntegration:
         mock_llm.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(marking_scheme_json),
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=200,
                 cost_estimate=0.003,
-                generation_time=2.5,
+                latency_ms=2500,
             )
         )
 
@@ -646,11 +646,11 @@ class TestMarkerAgentPerformance:
         mock_llm.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(marking_scheme_json),
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=120,
                 cost_estimate=0.002,
-                generation_time=1.5,
+                latency_ms=1500,
             )
         )
 

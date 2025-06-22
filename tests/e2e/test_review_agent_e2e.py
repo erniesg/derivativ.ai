@@ -179,11 +179,12 @@ class TestReviewAgentE2E:
                     (),
                     {
                         "content": json.dumps(scenario["response"]),
-                        "model": "gpt-4o",
+                        "model_used": "gpt-4o",
                         "provider": "mock",
                         "tokens_used": 200,
                         "cost_estimate": 0.003,
-                        "generation_time": 2.0,
+                        "latency_ms": 2000,
+                        "metadata": {},
                     },
                 )()
             )
@@ -258,11 +259,12 @@ class TestReviewAgentE2E:
                     (),
                     {
                         "content": json.dumps(grade_response),
-                        "model": "gpt-4o",
+                        "model_used": "gpt-4o",
                         "provider": "mock",
                         "tokens_used": 180,
                         "cost_estimate": 0.003,
-                        "generation_time": 2.0,
+                        "latency_ms": 2000,
+                        "metadata": {},
                     },
                 )()
             )
@@ -390,11 +392,12 @@ class TestReviewAgentE2E:
                     (),
                     {
                         "content": json.dumps(compliance_response),
-                        "model": "gpt-4o",
+                        "model_used": "gpt-4o",
                         "provider": "mock",
                         "tokens_used": 220,
                         "cost_estimate": 0.004,
-                        "generation_time": 2.5,
+                        "latency_ms": 2500,
+                        "metadata": {},
                     },
                 )()
             )
@@ -504,11 +507,12 @@ class TestReviewAgentE2E:
                         (),
                         {
                             "content": scenario["mock_response"],
-                            "model": "gpt-4o",
+                            "model_used": "gpt-4o",
                             "provider": "mock",
                             "tokens_used": 50,
                             "cost_estimate": 0.001,
-                            "generation_time": 1.0,
+                            "latency_ms": 1000,
+                            "metadata": {},
                         },
                     )()
                 )
@@ -560,11 +564,12 @@ class TestReviewAgentE2E:
                 (),
                 {
                     "content": json.dumps(quick_response),
-                    "model": "gpt-4o",
+                    "model_used": "gpt-4o",
                     "provider": "mock",
                     "tokens_used": 150,
                     "cost_estimate": 0.002,
-                    "generation_time": 1.5,
+                    "latency_ms": 1500,
+                    "metadata": {},
                 },
             )()
         )

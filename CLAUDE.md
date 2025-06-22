@@ -23,21 +23,28 @@
 - **LLM Services**: Multi-provider support (OpenAI, Anthropic, Google) with async streaming and fallback strategies
 - **Agent Orchestration**: Async/sync compatibility layer with proper event loop handling for production deployment
 - **Live Integration**: All LLM providers tested with real API calls (6/7 tests passing)
-- **Test Coverage**: Comprehensive test suite with unit tests, integration tests, and live API validation
-- **Setup & Configuration**: Interactive setup wizard with API key detection and smolagents configuration
+- **Database Layer**: Supabase PostgreSQL with hybrid storage (flattened + JSONB) for optimal performance
+- **Real-time Streaming**: WebSocket endpoints with Supabase Realtime for live agent updates
+- **FastAPI Backend**: Complete REST API with question generation, retrieval, and session management
+- **Test Coverage**: Comprehensive test suite (177 unit tests, integration tests, E2E tests, performance tests)
+- **Setup & Configuration**: Interactive setup wizard with API key detection and Supabase integration
 - **Demo Systems**: Both interactive (with HF_TOKEN) and tools-only demo modes ready for presentation
+- **Dependency Injection**: Production-grade service injection across all API endpoints with full test coverage
+- **Live Testing Guide**: Complete documentation for testing the full system with real APIs and database
 
 ### 🔄 IN PROGRESS
-- **Frontend Analysis**: Currently analyzing existing Vite/React frontend for agent reasoning display integration
-- **Demo UI Planning**: Preparing web interface for real-time agent workflow visualization
+- **Document Generation System**: Expanding from individual questions to worksheets, notes, and mini-textbooks with variable detail levels
+- **Frontend Integration**: Connecting existing React UI (TeacherDashboard) with FastAPI backend for document generation
+- **Template System**: Creating Jinja2 templates for different document types and detail levels (1-10 scale)
 
 ### 📋 NEXT PRIORITIES
-1. **Web Interface**: FastAPI + HTML streaming interface for live demos
-2. **Real-time Streaming**: WebSocket/SSE for agent reasoning display
-3. **Performance Optimization**: Sub-30 second question generation
-4. **Database Layer**: SQLite persistence for question storage and retrieval
+1. **Document Generation Backend**: New API endpoints and services for worksheet/notes/textbook generation
+2. **Template Management**: Detail-level templates and format transformation agents
+3. **Frontend API Integration**: Connect existing TeacherDashboard UI to new document generation endpoints
+4. **Export Functionality**: PDF/DOCX generation for generated documents
+5. **Live Demo Preparation**: Full document generation workflow demonstration
 
-**Demo Readiness**: Core multi-agent workflows functional and tested with real APIs. Ready for technical demonstration.
+**Demo Readiness**: Backend complete (177/177 tests passing) + Frontend UI ready (TeacherDashboard with material generation interface). Need document generation services to connect existing UI to backend for full demo capability.
 
 ---
 
@@ -61,39 +68,39 @@ Request → Modal Function → smolagents → [QuestionAgent, MarkerAgent, Revie
 - Automatic agent selection based on task requirements
 ```
 
-#### 2. **Modal + Neon DB Integration** (`src/derivativ/database/neon_client.py`)
+#### 2. **Supabase Database Integration** (`src/database/supabase_repository.py`)
 ```
-Modal Function → Neon DB Connection → Agent Data Persistence → Audit Trails
-- Serverless PostgreSQL with automatic scaling
-- Full audit trails for all agent interactions
-- Connection pooling optimized for Modal's execution model
-- Real-time data synchronization across agent instances
-```
-
-#### 3. **Cloudflare Edge Computing** (`cloudflare-workers/api-gateway.js`)
-```
-Frontend → Cloudflare Workers → Modal Agent Functions → Neon DB
-- Edge API gateway for global low-latency access
-- Intelligent request routing based on geography and load
-- Caching layer with R2 for frequently requested content
-- Real-time streaming via WebSockets at the edge
+FastAPI → Supabase Client → PostgreSQL Storage → Real-time Updates
+- Hybrid storage: Flattened fields for fast querying + JSONB for data fidelity
+- Repository pattern with QuestionRepository and GenerationSessionRepository
+- Real-time streaming via Supabase Realtime WebSocket connections
+- Comprehensive database schema with enum tables and RLS policies
 ```
 
-#### 4. **AI SDK Streaming Components** (`frontend/components/AgentReasoning.tsx`)
+#### 3. **Document Generation Pipeline** (`src/services/document_generation_service.py`)
 ```
-Modal Agent Updates → Cloudflare Workers → AI SDK → Streaming React Components
-- Real-time agent reasoning display using AI SDK
-- Streaming components update as agents make decisions
-- Live progress indicators for multi-agent workflows
-- Demo-friendly transparent decision-making
+UI Request → FastAPI → Question Generation → Document Formatter → Template Renderer → Export
+- Material types: Worksheets, Notes, Mini-textbooks with 1-10 detail levels
+- Template system using Jinja2 for flexible content formatting
+- Format transformation agents convert questions to document structures
+- PDF/DOCX export capabilities for teacher and student use
+```
+
+#### 4. **Frontend Integration** (`/Users/erniesg/code/erniesg/derivativ/src/pages/TeacherDashboard.tsx`)
+```
+React TeacherDashboard → FastAPI Document API → Generated Materials → Download
+- Existing UI with material type selection, topic selection, detail level slider
+- Complete teacher dashboard with stats, recent materials, and generation interface
+- Ready for backend integration (currently logs to console)
+- Material types: worksheet, notes, assessment with customizable parameters
 ```
 
 ### State Management & Persistence
-- **Neon DB**: Serverless PostgreSQL for agent data, audit trails, and question storage
-- **Cloudflare D1**: SQLite edge database for CMS content and caching
-- **Modal State**: Distributed agent state management across compute instances
-- **smolagents Logging**: Built-in reasoning and decision tracking
-- **Cloudflare R2**: Object storage for static assets and large content files
+- **Supabase PostgreSQL**: Primary database for questions, sessions, and agent data with real-time sync
+- **Hybrid Storage**: Flattened fields for fast querying + JSONB for complete model preservation
+- **Repository Pattern**: Clean separation between business logic and data persistence
+- **smolagents Logging**: Built-in reasoning and decision tracking with database audit trails
+- **Real-time Updates**: Live WebSocket streaming for agent progress and database changes
 
 ---
 

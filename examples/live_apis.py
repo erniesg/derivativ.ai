@@ -6,28 +6,22 @@ Shows agents making actual calls to OpenAI, Anthropic, and Google
 
 import asyncio
 import os
-from pathlib import Path
 
 from dotenv import load_dotenv
-
-# Load environment variables
-load_dotenv()
-
-# Add src to path
-import sys
-
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.agents.question_generator import QuestionGeneratorAgent
 from src.models.enums import CalculatorPolicy, CommandWord, LLMModel, Tier
 from src.services.llm_factory import LLMFactory
 
+# Load environment variables
+load_dotenv()
+
 
 async def demo_live_openai():
     """Demo with live OpenAI API calls."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("LIVE OpenAI Demo")
-    print("="*60)
+    print("=" * 60)
 
     try:
         # Create real OpenAI LLM service
@@ -36,10 +30,7 @@ async def demo_live_openai():
         print(f"✅ Created OpenAI service: {openai_service}")
 
         # Create agent with live LLM service
-        agent = QuestionGeneratorAgent(
-            name="LiveQuestionGenerator",
-            llm_service=openai_service
-        )
+        agent = QuestionGeneratorAgent(name="LiveQuestionGenerator", llm_service=openai_service)
 
         # Test generation request
         request_data = {
@@ -63,13 +54,17 @@ async def demo_live_openai():
             question_data = result.output.get("question", {})
             print(f"📋 Question: {question_data.get('raw_text_content', 'N/A')[:100]}...")
             print(f"🎯 Marks: {question_data.get('marks', 'N/A')}")
-            print(f"⚡ Model used: {result.output.get('generation_metadata', {}).get('model_used', 'N/A')}")
+            print(
+                f"⚡ Model used: {result.output.get('generation_metadata', {}).get('model_used', 'N/A')}"
+            )
 
             # Show agent reasoning
             print(f"\n🧠 Agent Reasoning ({len(result.reasoning_steps)} steps):")
             for i, step in enumerate(result.reasoning_steps[-5:], 1):  # Show last 5 steps
                 if isinstance(step, dict):
-                    print(f"  {i}. {step.get('type', 'unknown')}: {step.get('content', '')[:80]}...")
+                    print(
+                        f"  {i}. {step.get('type', 'unknown')}: {step.get('content', '')[:80]}..."
+                    )
                 else:
                     print(f"  {i}. {str(step)[:80]}...")
         else:
@@ -78,14 +73,15 @@ async def demo_live_openai():
     except Exception as e:
         print(f"❌ Demo failed: {e}")
         import traceback
+
         traceback.print_exc()
 
 
 async def demo_live_anthropic():
     """Demo with live Anthropic API calls."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("LIVE Anthropic Demo")
-    print("="*60)
+    print("=" * 60)
 
     try:
         # Create real Anthropic LLM service
@@ -94,10 +90,7 @@ async def demo_live_anthropic():
         print(f"✅ Created Anthropic service: {anthropic_service}")
 
         # Create agent with live LLM service
-        agent = QuestionGeneratorAgent(
-            name="LiveAnthropicGenerator",
-            llm_service=anthropic_service
-        )
+        agent = QuestionGeneratorAgent(name="LiveAnthropicGenerator", llm_service=anthropic_service)
 
         # Test generation request
         request_data = {
@@ -121,21 +114,24 @@ async def demo_live_anthropic():
             question_data = result.output.get("question", {})
             print(f"📋 Question: {question_data.get('raw_text_content', 'N/A')[:100]}...")
             print(f"🎯 Marks: {question_data.get('marks', 'N/A')}")
-            print(f"⚡ Model used: {result.output.get('generation_metadata', {}).get('model_used', 'N/A')}")
+            print(
+                f"⚡ Model used: {result.output.get('generation_metadata', {}).get('model_used', 'N/A')}"
+            )
         else:
             print(f"❌ Generation failed: {result.error}")
 
     except Exception as e:
         print(f"❌ Demo failed: {e}")
         import traceback
+
         traceback.print_exc()
 
 
 async def demo_live_gemini():
     """Demo with live Google Gemini API calls."""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("LIVE Google Gemini Demo")
-    print("="*60)
+    print("=" * 60)
 
     try:
         # Create real Gemini LLM service
@@ -144,10 +140,7 @@ async def demo_live_gemini():
         print(f"✅ Created Gemini service: {gemini_service}")
 
         # Create agent with live LLM service
-        agent = QuestionGeneratorAgent(
-            name="LiveGeminiGenerator",
-            llm_service=gemini_service
-        )
+        agent = QuestionGeneratorAgent(name="LiveGeminiGenerator", llm_service=gemini_service)
 
         # Test generation request
         request_data = {
@@ -171,13 +164,16 @@ async def demo_live_gemini():
             question_data = result.output.get("question", {})
             print(f"📋 Question: {question_data.get('raw_text_content', 'N/A')[:100]}...")
             print(f"🎯 Marks: {question_data.get('marks', 'N/A')}")
-            print(f"⚡ Model used: {result.output.get('generation_metadata', {}).get('model_used', 'N/A')}")
+            print(
+                f"⚡ Model used: {result.output.get('generation_metadata', {}).get('model_used', 'N/A')}"
+            )
         else:
             print(f"❌ Generation failed: {result.error}")
 
     except Exception as e:
         print(f"❌ Demo failed: {e}")
         import traceback
+
         traceback.print_exc()
 
 
@@ -196,7 +192,7 @@ def check_api_keys():
     return {
         "openai": bool(openai_key),
         "anthropic": bool(anthropic_key),
-        "google": bool(google_key)
+        "google": bool(google_key),
     }
 
 

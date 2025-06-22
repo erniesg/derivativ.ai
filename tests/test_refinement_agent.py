@@ -60,11 +60,11 @@ class TestRefinementAgent:
         agent.llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(refinement_response),
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=350,
                 cost_estimate=0.005,
-                generation_time=2.5,
+                latency_ms=2500,
             )
         )
 
@@ -130,11 +130,11 @@ class TestRefinementAgent:
         agent.llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(compliance_response),
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=280,
                 cost_estimate=0.004,
-                generation_time=2.0,
+                latency_ms=2000,
             )
         )
 
@@ -197,21 +197,21 @@ class TestRefinementAgent:
                 # Primary attempt - malformed JSON
                 return LLMResponse(
                     content="This is not valid JSON { malformed response",
-                    model="gpt-4o",
+                    model_used="gpt-4o",
                     provider="mock",
                     tokens_used=100,
                     cost_estimate=0.002,
-                    generation_time=1.5,
+                    latency_ms=1500,
                 )
             else:
                 # Fallback attempt - valid JSON
                 return LLMResponse(
                     content=json.dumps(fallback_response),
-                    model="gpt-4o",
+                    model_used="gpt-4o",
                     provider="mock",
                     tokens_used=200,
                     cost_estimate=0.003,
-                    generation_time=2.0,
+                    latency_ms=2000,
                 )
 
         agent.llm_service.generate = AsyncMock(side_effect=mock_generate)
@@ -270,11 +270,11 @@ class TestRefinementAgent:
         agent.llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(structure_response),
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=320,
                 cost_estimate=0.004,
-                generation_time=2.2,
+                latency_ms=2200,
             )
         )
 
@@ -343,11 +343,11 @@ class TestRefinementAgent:
         agent.llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(comprehensive_response),
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=400,
                 cost_estimate=0.006,
-                generation_time=3.0,
+                latency_ms=3000,
             )
         )
 
@@ -469,11 +469,11 @@ class TestRefinementAgent:
         agent.llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(refinement_response),
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=200,
                 cost_estimate=0.003,
-                generation_time=1.8,
+                latency_ms=1800,
             )
         )
 
@@ -524,11 +524,11 @@ class TestRefinementAgent:
         agent.llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(quick_response),
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=150,
                 cost_estimate=0.002,
-                generation_time=1.2,
+                latency_ms=1200,
             )
         )
 

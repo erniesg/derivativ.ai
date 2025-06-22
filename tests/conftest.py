@@ -171,15 +171,15 @@ class MockAsyncContext:
 
 def create_mock_llm_response(content: str, model: str = "gpt-4o", tokens: int = 100):
     """Create a mock LLM response for testing"""
-    from src.services.llm_service import LLMResponse
+    from src.models.llm_models import LLMResponse
 
     return LLMResponse(
         content=content,
-        model=model,
+        model_used=model,
         provider="mock",
         tokens_used=tokens,
         cost_estimate=0.001,
-        generation_time=1.0,
+        latency_ms=1000,
         metadata={"test": True},
     )
 

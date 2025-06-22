@@ -80,11 +80,11 @@ class TestQuestionGeneratorAgent:
         mock_llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(sample_question_json),
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=150,
                 cost_estimate=0.002,
-                generation_time=2.0,
+                latency_ms=2000,
             )
         )
 
@@ -161,11 +161,11 @@ class TestQuestionGeneratorAgent:
             LLMTimeoutError("Timeout on first attempt"),
             LLMResponse(
                 content='{"question_text": "Test question", "marks": 2}',
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=50,
                 cost_estimate=0.001,
-                generation_time=1.0,
+                latency_ms=1000,
             ),
         ]
 
@@ -197,11 +197,11 @@ class TestQuestionGeneratorAgent:
             # Fallback succeeds
             LLMResponse(
                 content='{"question_text": "Fallback question", "marks": 2}',
-                model="gpt-4o-mini",
+                model_used="gpt-4o-mini",
                 provider="mock",
                 tokens_used=30,
                 cost_estimate=0.0005,
-                generation_time=0.5,
+                latency_ms=500,
             ),
         ]
 
@@ -264,11 +264,11 @@ class TestQuestionGeneratorAgent:
         mock_llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content='{"question_text": "", "marks": 0}',  # Invalid: empty text, 0 marks
-                model="gpt-4o",
+                model_used="gpt-4o",
                 provider="mock",
                 tokens_used=50,
                 cost_estimate=0.001,
-                generation_time=1.0,
+                latency_ms=1000,
             )
         )
 

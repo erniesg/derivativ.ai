@@ -8,13 +8,10 @@ import json
 import os
 import sys
 
-# Add project root to path
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, project_root)
+# Import from installed package (requires: pip install -e .)
+from smolagents import CodeAgent
 
-from smolagents import CodeAgent  # noqa: E402
-
-from src.agents.smolagents_integration import (  # noqa: E402
+from src.agents.smolagents_integration import (
     generate_math_question,
     refine_question,
     review_question_quality,
