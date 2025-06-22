@@ -103,19 +103,55 @@ class TestDocumentGenerationIntegration:
 
         # Mock LLM service
         llm_service = MagicMock()
-        llm_service.generate_non_stream = AsyncMock(
-            return_value=MagicMock(
-                content="• Understand key concepts in geometry\n• Apply area formulas\n• Solve practical problems"
-            )
-        )
 
-        factory.create_service = MagicMock(return_value=llm_service)
+        # Mock generate_non_stream to return proper JSON response
+        mock_llm_response = MagicMock()
+        mock_llm_response.content = """{
+            "title": "Geometry Practice Worksheet",
+            "document_type": "worksheet",
+            "detail_level": "medium",
+            "sections": [
+                {
+                    "title": "Learning Objectives",
+                    "content_type": "learning_objectives",
+                    "content_data": {"objectives": ["Understand area formulas", "Apply calculations"]},
+                    "order_index": 0
+                },
+                {
+                    "title": "Practice Questions",
+                    "content_type": "practice_questions",
+                    "content_data": {"questions": []},
+                    "order_index": 1
+                }
+            ],
+            "estimated_duration": 30,
+            "total_questions": 3
+        }"""
+
+        llm_service.generate_non_stream = AsyncMock(return_value=mock_llm_response)
+
+        factory.get_service = MagicMock(return_value=llm_service)
         return factory
 
     @pytest.fixture
     def mock_prompt_manager(self):
         """Create mock prompt manager."""
-        return MagicMock(spec=PromptManager)
+        manager = MagicMock(spec=PromptManager)
+
+        # Mock render_prompt to return a proper string
+        manager.render_prompt = AsyncMock(return_value="""
+Generate a comprehensive educational document following these specifications:
+
+Document Type: worksheet
+Detail Level: medium
+Topic: geometry
+Title: Geometry Practice Worksheet
+
+Create sections with appropriate content for this detail level.
+Return a JSON object with the document structure.
+""")
+
+        return manager
 
     @pytest.fixture
     def document_service(self, mock_question_repository, mock_llm_factory, mock_prompt_manager):
@@ -155,7 +191,7 @@ class TestDocumentGenerationIntegration:
         # Check sections
         assert len(result.document.sections) > 0
         section_titles = [section.title for section in result.document.sections]
-        assert "Topic Overview" in section_titles or "Introduction" in section_titles
+        assert "Learning Objectives" in section_titles or "Practice Questions" in section_titles
 
         # Check processing metrics
         assert result.processing_time > 0

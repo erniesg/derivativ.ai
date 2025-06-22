@@ -15,6 +15,10 @@ from src.models.enums import CalculatorPolicy, CommandWord, Tier
 from src.models.question_models import GenerationRequest
 from src.services.llm_factory import LLMFactory
 from src.services.mock_llm_service import MockLLMService
+from src.services.document_generation_service import DocumentGenerationService
+from src.services.prompt_manager import PromptManager
+from src.models.document_models import DocumentGenerationRequest, DocumentType, DetailLevel
+from unittest.mock import AsyncMock, MagicMock
 
 # Load environment variables
 load_dotenv()
@@ -256,6 +260,98 @@ def check_api_keys():
     return configured
 
 
+async def demo_document_generation():
+    """Demo: Document generation workflow with mock data."""
+    print("\n" + "=" * 60)
+    print("DEMO 7: Document Generation Service")
+    print("=" * 60)
+
+    try:
+        # Create mock question repository
+        mock_repo = MagicMock()
+        mock_repo.get_question = AsyncMock(return_value=None)
+        mock_repo.list_questions = AsyncMock(return_value=[])
+
+        # Create real LLM factory and prompt manager
+        llm_factory = LLMFactory()
+        prompt_manager = PromptManager()
+
+        # Create document generation service
+        doc_service = DocumentGenerationService(
+            question_repository=mock_repo,
+            llm_factory=llm_factory,
+            prompt_manager=prompt_manager
+        )
+
+        print("\n📋 Creating document generation request...")
+
+        # Create document generation request
+        request = DocumentGenerationRequest(
+            document_type=DocumentType.WORKSHEET,
+            detail_level=DetailLevel.MEDIUM,
+            title="Linear Equations Practice",
+            topic="linear_equations",
+            tier=Tier.CORE,
+            grade_level=7,
+            auto_include_questions=False,
+            max_questions=3,
+            custom_instructions="Focus on basic substitution and simple solving techniques"
+        )
+
+        print(f"📝 Document type: {request.document_type.value}")
+        print(f"🎯 Detail level: {request.detail_level.value}")
+        print(f"📚 Topic: {request.topic}")
+        print(f"✏️  Custom instructions: {request.custom_instructions}")
+
+        # Test template retrieval
+        print("\n🔧 Testing template retrieval...")
+        templates = await doc_service.get_document_templates()
+        print(f"✅ Found {len(templates)} document templates:")
+        for template_name, template_data in templates.items():
+            print(f"  • {template_name}: {template_data.supported_detail_levels}")
+
+        # Test structure patterns
+        print("\n🏗️  Testing structure patterns...")
+        patterns = await doc_service.get_structure_patterns()
+        worksheet_patterns = patterns.get('worksheet', {})
+        print(f"✅ Worksheet structure patterns: {list(worksheet_patterns.keys())}")
+
+        print(f"\n🔄 Generating document...")
+        if os.getenv('OPENAI_API_KEY'):
+            print("Using real OpenAI API...")
+            result = await doc_service.generate_document(request)
+        else:
+            print("⚠️  No OpenAI API key - skipping actual generation")
+            return
+
+        if result.success:
+            print("✅ Document generation successful!")
+            print(f"⏱️  Processing time: {result.processing_time:.2f}s")
+            print(f"📊 Questions processed: {result.questions_processed}")
+            print(f"📑 Sections generated: {result.sections_generated}")
+            print(f"🎨 Customizations applied: {result.customizations_applied}")
+
+            document = result.document
+            if document:
+                print(f"\n📄 Generated Document:")
+                print(f"  Title: {document.title}")
+                print(f"  Type: {document.document_type.value}")
+                print(f"  Detail level: {document.detail_level.value}")
+                print(f"  Estimated duration: {document.estimated_duration} minutes")
+                print(f"  Total questions: {document.total_questions}")
+
+                print(f"\n📋 Sections ({len(document.sections)}):")
+                for i, section in enumerate(document.sections, 1):
+                    print(f"  {i}. {section.title} ({section.content_type})")
+        else:
+            print(f"❌ Document generation failed: {result.error_message}")
+
+    except Exception as e:
+        print(f"❌ Document generation demo failed: {e}")
+        import traceback
+        traceback.print_exc()
+
+
 async def main():
     """Run all demos."""
     print("\n🚀 DERIVATIV AI - MULTI-AGENT SYSTEM DEMO")
@@ -287,6 +383,9 @@ async def main():
 
         # Demo 6: Smolagents quality workflow
         demo_smolagents_quality_workflow()
+
+        # Demo 7: Document generation
+        await demo_document_generation()
 
     except Exception as e:
         print(f"\n❌ Demo error: {e}")

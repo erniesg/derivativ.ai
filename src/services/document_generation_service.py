@@ -230,12 +230,16 @@ class DocumentGenerationService:
             logger.info(f"Generated prompt for {template_name}")
 
             # Generate content using LLM
-            response = await llm_service.generate_non_stream(
+            from src.models.llm_models import LLMRequest
+
+            llm_request = LLMRequest(
                 model="gpt-4o-mini",
                 prompt=rendered_prompt,
                 temperature=0.3,
                 max_tokens=4000,
             )
+
+            response = await llm_service.generate_non_stream(llm_request)
 
             # 6. Parse LLM response
             try:
@@ -489,3 +493,42 @@ class DocumentGenerationService:
             }
             for doc_type, patterns in self.structure_patterns.items()
         }
+
+    async def get_document_templates(self) -> dict[str, Any]:
+        """Get all document templates with their metadata."""
+        from src.models.document_models import DocumentTemplate
+
+        templates = {}
+        for doc_type, template_name in self.template_mappings.items():
+            structure_patterns = {}
+            for detail_level, pattern in self.structure_patterns[doc_type].items():
+                structure_patterns[detail_level.value] = pattern
+
+            # Create content rules for each supported detail level
+            content_rules = {}
+            for detail_level in self.structure_patterns[doc_type]:
+                content_rules[detail_level] = {
+                    "min_questions": 1,
+                    "max_questions": 50,
+                    "supports_custom_instructions": True,
+                    "supports_personalization": True,
+                }
+
+            templates[doc_type.value] = DocumentTemplate(
+                name=template_name,
+                document_type=doc_type,
+                supported_detail_levels=[level for level in self.structure_patterns[doc_type]],
+                structure_patterns={level: pattern for level, pattern in self.structure_patterns[doc_type].items()},
+                content_rules=content_rules,
+            )
+
+        return templates
+
+    async def save_custom_template(self, template: Any) -> str:
+        """Save a custom document template."""
+        # For now, return a placeholder ID
+        # In a full implementation, this would save to database
+        import uuid
+        template_id = str(uuid.uuid4())
+        logger.info(f"Custom template saved with ID: {template_id}")
+        return template_id

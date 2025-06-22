@@ -8,12 +8,16 @@ from functools import lru_cache
 
 from fastapi import Depends, HTTPException
 
+from src.agents.document_formatter_agent import DocumentFormatterAgent
 from src.database.supabase_repository import (
     GenerationSessionRepository,
     QuestionRepository,
     get_supabase_client,
 )
 from src.realtime.supabase_realtime import get_realtime_client
+from src.services.document_generation_service import DocumentGenerationService
+from src.services.llm_factory import LLMFactory
+from src.services.prompt_manager import PromptManager
 from src.services.question_generation_service import QuestionGenerationService
 
 
@@ -38,6 +42,12 @@ def get_supabase_credentials() -> tuple[str, str]:
         )
 
     return url, key
+
+
+@lru_cache
+def is_demo_mode() -> bool:
+    """Check if running in demo mode (no database required)."""
+    return os.getenv("DEMO_MODE", "false").lower() in ("true", "1", "yes")
 
 
 @lru_cache
@@ -119,6 +129,146 @@ def get_optional_realtime_client():
         Configured Realtime client, or None if not available
     """
     return get_realtime_client_instance()
+
+
+@lru_cache
+def get_llm_factory() -> LLMFactory:
+    """
+    Get singleton LLMFactory instance.
+
+    Returns:
+        Configured LLMFactory
+    """
+    return LLMFactory()
+
+
+@lru_cache
+def get_prompt_manager() -> PromptManager:
+    """
+    Get singleton PromptManager instance.
+
+    Returns:
+        Configured PromptManager
+    """
+    return PromptManager()
+
+
+def get_document_generation_service(
+    llm_factory: LLMFactory = Depends(get_llm_factory),
+    prompt_manager: PromptManager = Depends(get_prompt_manager),
+) -> DocumentGenerationService:
+    """
+    Get DocumentGenerationService instance.
+
+    Args:
+        llm_factory: LLM factory (injected)
+        prompt_manager: Prompt manager (injected)
+
+    Returns:
+        Configured DocumentGenerationService
+    """
+    if is_demo_mode():
+        # Use mock repository for demo mode
+        from unittest.mock import AsyncMock, MagicMock
+
+        from src.models.enums import SubjectContentReference
+        from src.models.question_models import (
+            FinalAnswer,
+            MarkingCriterion,
+            Question,
+            QuestionTaxonomy,
+            SolutionAndMarkingScheme,
+            SolverAlgorithm,
+            SolverStep,
+        )
+
+        mock_repo = MagicMock()
+
+        # Create sample question for demo
+        sample_question = Question(
+            question_id_local="1a",
+            question_id_global="demo_q1",
+            question_number_display="1 (a)",
+            marks=3,
+            command_word="Calculate",
+            raw_text_content="Calculate the area of a triangle with base 6cm and height 4cm.",
+            taxonomy=QuestionTaxonomy(
+                topic_path=["Geometry", "Area"],
+                subject_content_references=[SubjectContentReference.C5_2],
+                skill_tags=["area_calculation"],
+            ),
+            solution_and_marking_scheme=SolutionAndMarkingScheme(
+                final_answers_summary=[
+                    FinalAnswer(answer_text="12 cm²", value_numeric=12.0, unit="cm²")
+                ],
+                mark_allocation_criteria=[
+                    MarkingCriterion(
+                        criterion_id="1",
+                        criterion_text="Correct method",
+                        mark_code_display="M1",
+                        marks_value=1,
+                    ),
+                    MarkingCriterion(
+                        criterion_id="2",
+                        criterion_text="Correct answer",
+                        mark_code_display="A1",
+                        marks_value=2,
+                    ),
+                ],
+                total_marks_for_part=3,
+            ),
+            solver_algorithm=SolverAlgorithm(
+                steps=[
+                    SolverStep(
+                        step_number=1, description_text="Use formula Area = (1/2) × base × height"
+                    ),
+                    SolverStep(
+                        step_number=2,
+                        description_text="Substitute values: Area = (1/2) × 6 × 4 = 12 cm²",
+                    ),
+                ]
+            ),
+        )
+
+        mock_repo.list_questions = AsyncMock(return_value=[
+            {
+                "content_json": sample_question.model_dump(),
+                "quality_score": 0.85,
+                "tier": "Core",
+                "marks": 3,
+            }
+        ])
+
+        return DocumentGenerationService(mock_repo, llm_factory, prompt_manager)
+    else:
+        # Get real repository - this will fail if Supabase not configured
+        try:
+            client = get_database_client()
+            question_repo = QuestionRepository(client)
+            return DocumentGenerationService(question_repo, llm_factory, prompt_manager)
+        except HTTPException:
+            # Fallback to mock for demo if database not available
+            os.environ["DEMO_MODE"] = "true"
+            # Clear cache and retry with demo mode
+            is_demo_mode.cache_clear()
+            return get_document_generation_service(llm_factory, prompt_manager)
+
+
+def get_document_formatter_agent(
+    llm_factory: LLMFactory = Depends(get_llm_factory),
+) -> DocumentFormatterAgent:
+    """
+    Get DocumentFormatterAgent instance.
+
+    Args:
+        llm_factory: LLM factory (injected)
+
+    Returns:
+        Configured DocumentFormatterAgent
+    """
+    # Create LLM service for the agent
+    llm_service = llm_factory.get_service("openai")
+    return DocumentFormatterAgent(llm_service=llm_service)
 
 
 # Global service instances for backwards compatibility

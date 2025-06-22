@@ -6,7 +6,7 @@ including worksheets, notes, textbooks, and slides.
 """
 
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
@@ -257,7 +257,7 @@ async def get_generation_status(document_id: str) -> dict[str, str]:
 
 
 @router.get("/{document_id}/analytics")
-async def get_document_analytics(document_id: str) -> dict[str, any]:
+async def get_document_analytics(document_id: str) -> dict[str, Any]:
     """
     Get analytics and insights for a document.
 
