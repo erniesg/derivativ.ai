@@ -6,19 +6,19 @@ Demonstrates both async and sync (smolagents-compatible) usage.
 
 import asyncio
 import os
+from unittest.mock import AsyncMock, MagicMock
 
 from dotenv import load_dotenv
 
 from src.agents.orchestrator import MultiAgentOrchestrator, SmolagentsOrchestrator
 from src.agents.sync_wrapper import create_sync_question_generator
+from src.models.document_models import DetailLevel, DocumentGenerationRequest, DocumentType
 from src.models.enums import CalculatorPolicy, CommandWord, Tier
 from src.models.question_models import GenerationRequest
+from src.services.document_generation_service import DocumentGenerationService
 from src.services.llm_factory import LLMFactory
 from src.services.mock_llm_service import MockLLMService
-from src.services.document_generation_service import DocumentGenerationService
 from src.services.prompt_manager import PromptManager
-from src.models.document_models import DocumentGenerationRequest, DocumentType, DetailLevel
-from unittest.mock import AsyncMock, MagicMock
 
 # Load environment variables
 load_dotenv()
@@ -260,7 +260,7 @@ def check_api_keys():
     return configured
 
 
-async def demo_document_generation():
+async def demo_document_generation():  # noqa: PLR0915
     """Demo: Document generation workflow with mock data."""
     print("\n" + "=" * 60)
     print("DEMO 7: Document Generation Service")
@@ -278,9 +278,7 @@ async def demo_document_generation():
 
         # Create document generation service
         doc_service = DocumentGenerationService(
-            question_repository=mock_repo,
-            llm_factory=llm_factory,
-            prompt_manager=prompt_manager
+            question_repository=mock_repo, llm_factory=llm_factory, prompt_manager=prompt_manager
         )
 
         print("\n📋 Creating document generation request...")
@@ -295,7 +293,7 @@ async def demo_document_generation():
             grade_level=7,
             auto_include_questions=False,
             max_questions=3,
-            custom_instructions="Focus on basic substitution and simple solving techniques"
+            custom_instructions="Focus on basic substitution and simple solving techniques",
         )
 
         print(f"📝 Document type: {request.document_type.value}")
@@ -313,11 +311,11 @@ async def demo_document_generation():
         # Test structure patterns
         print("\n🏗️  Testing structure patterns...")
         patterns = await doc_service.get_structure_patterns()
-        worksheet_patterns = patterns.get('worksheet', {})
+        worksheet_patterns = patterns.get("worksheet", {})
         print(f"✅ Worksheet structure patterns: {list(worksheet_patterns.keys())}")
 
-        print(f"\n🔄 Generating document...")
-        if os.getenv('OPENAI_API_KEY'):
+        print("\n🔄 Generating document...")
+        if os.getenv("OPENAI_API_KEY"):
             print("Using real OpenAI API...")
             result = await doc_service.generate_document(request)
         else:
@@ -333,7 +331,7 @@ async def demo_document_generation():
 
             document = result.document
             if document:
-                print(f"\n📄 Generated Document:")
+                print("\n📄 Generated Document:")
                 print(f"  Title: {document.title}")
                 print(f"  Type: {document.document_type.value}")
                 print(f"  Detail level: {document.detail_level.value}")
@@ -349,6 +347,7 @@ async def demo_document_generation():
     except Exception as e:
         print(f"❌ Document generation demo failed: {e}")
         import traceback
+
         traceback.print_exc()
 
 

@@ -139,7 +139,8 @@ class TestDocumentGenerationIntegration:
         manager = MagicMock(spec=PromptManager)
 
         # Mock render_prompt to return a proper string
-        manager.render_prompt = AsyncMock(return_value="""
+        manager.render_prompt = AsyncMock(
+            return_value="""
 Generate a comprehensive educational document following these specifications:
 
 Document Type: worksheet
@@ -149,7 +150,8 @@ Title: Geometry Practice Worksheet
 
 Create sections with appropriate content for this detail level.
 Return a JSON object with the document structure.
-""")
+"""
+        )
 
         return manager
 
@@ -230,7 +232,7 @@ Return a JSON object with the document structure.
         if learning_objectives_section:
             # Check for either format: objectives_text (LLM) or objectives (mock)
             content_data = learning_objectives_section.content_data
-            assert ("objectives_text" in content_data or "objectives" in content_data)
+            assert "objectives_text" in content_data or "objectives" in content_data
             if "objectives_text" in content_data:
                 assert len(content_data["objectives_text"]) > 0
             elif "objectives" in content_data:
@@ -358,12 +360,12 @@ Return a JSON object with the document structure.
         assert result.success is True
         assert len(result.document.questions_used) > 0
         assert "test_q1" in result.document.questions_used
-        
+
         # Customizations may not be applied in mock mode
         if result.document.applied_customizations:
             # Check if custom instructions and personalization are tracked
             pass  # Just verify no error, exact content depends on implementation
-        
+
         # Customizations count may be 0 with mock data
         assert result.customizations_applied >= 0
 
@@ -440,7 +442,7 @@ Return a JSON object with the document structure.
 
         # THEN: Should generate formatted content (may be None in mock mode)
         assert result.success is True
-        
+
         # In mock mode, content may not be generated
         if result.document.content_html is not None:
             html_content = result.document.content_html
