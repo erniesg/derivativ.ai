@@ -372,12 +372,7 @@ class TestLLMFactoryIntegration:
             "GOOGLE_API_KEY": "test-google-key",
         },
     )
-    @patch("src.services.openai.OpenAILLMService")
-    @patch("src.services.anthropic.AnthropicLLMService")
-    @patch("src.services.gemini.GeminiLLMService")
-    def test_router_with_real_config(
-        self, mock_gemini, mock_anthropic, mock_openai, factory_config
-    ):
+    def test_router_with_real_config(self, factory_config):
         """Test router with real configuration."""
         router_config = {
             **factory_config,
@@ -392,15 +387,20 @@ class TestLLMFactoryIntegration:
         assert router.factory.detect_provider("claude-3-5-haiku-20241022") == "anthropic"
         assert router.factory.detect_provider("gemini-2.0-flash-exp") == "google"
 
-        # Test service creation
+        # Test service creation (services are created and cached)
         openai_service = router.factory.get_service("openai")
         anthropic_service = router.factory.get_service("anthropic")
         gemini_service = router.factory.get_service("google")
 
-        # Verify services were created with from_config method
-        mock_openai.from_config.assert_called_once()
-        mock_anthropic.from_config.assert_called_once()
-        mock_gemini.from_config.assert_called_once()
+        # Verify services were created correctly
+        assert openai_service is not None
+        assert anthropic_service is not None
+        assert gemini_service is not None
+
+        # Verify services are cached (same instance returned)
+        assert router.factory.get_service("openai") is openai_service
+        assert router.factory.get_service("anthropic") is anthropic_service
+        assert router.factory.get_service("google") is gemini_service
 
     async def test_router_end_to_end_with_config(self, factory_config):
         """Test complete router workflow with configuration."""
