@@ -28,7 +28,6 @@ class TestQuestionGenerationAPI:
         """FastAPI test client."""
         return TestClient(app)
 
-
     @pytest.fixture
     def sample_question(self):
         """Sample generated question."""
@@ -91,7 +90,7 @@ class TestQuestionGenerationAPI:
         # Mock successful generation
         mock_session = GenerationSession(
             session_id=uuid4(),
-            request=GenerationRequest(**sample_generation_request),
+            request=sample_generation_request,
             questions=[sample_question],
             quality_decisions=[],
             agent_results=[],
@@ -103,7 +102,9 @@ class TestQuestionGenerationAPI:
         app.dependency_overrides[get_question_generation_service] = lambda: mock_service
 
         try:
-            response = client.post("/api/questions/generate", json=sample_generation_request)
+            response = client.post(
+                "/api/questions/generate", json=sample_generation_request.model_dump()
+            )
 
             assert response.status_code == 201
             data = response.json()
@@ -148,7 +149,9 @@ class TestQuestionGenerationAPI:
         app.dependency_overrides[get_question_generation_service] = lambda: mock_service
 
         try:
-            response = client.post("/api/questions/generate", json=sample_generation_request)
+            response = client.post(
+                "/api/questions/generate", json=sample_generation_request.model_dump()
+            )
 
             assert response.status_code == 500
             data = response.json()
