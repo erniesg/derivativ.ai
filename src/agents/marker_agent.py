@@ -75,6 +75,7 @@ class MarkerAgent(BaseAgent):
 
         # Create agent-compatible LLM interface
         from ..services.agent_llm_interface import AgentLLMInterface
+
         self.llm_interface = AgentLLMInterface(llm_service)
 
         super().__init__(name, llm_service, config)
@@ -313,7 +314,8 @@ Return JSON with: total_marks, mark_allocation_criteria (with criterion_text, ma
             self._think("Converting JSON response to SolutionAndMarkingScheme object")
 
             # Extract basic marking data
-            total_marks = json_data.get("total_marks", question_marks)
+            # Always use the requested question_marks, not what LLM says
+            total_marks = question_marks
             criteria_data = json_data.get("mark_allocation_criteria", [])
             answers_data = json_data.get("final_answers", [])
 

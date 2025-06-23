@@ -14,6 +14,9 @@ from src.services.gemini import GeminiLLMService
 from src.services.llm_factory import LLMFactory, LLMRouter
 from src.services.openai import OpenAILLMService
 
+# Mark all tests in this module as integration tests
+pytestmark = pytest.mark.integration
+
 
 class TestOpenAIServiceIntegration:
     """Integration tests for OpenAI service with real config."""
@@ -65,7 +68,6 @@ class TestOpenAIServiceIntegration:
 
     @patch.dict("os.environ", {"OPENAI_API_KEY": "test-openai-key"})
     @patch("src.services.openai.AsyncOpenAI")
-    @pytest.mark.asyncio
     async def test_generate_with_config_defaults(self, mock_openai_client, openai_config):
         """Test generation using configuration defaults."""
         # Mock the OpenAI response
@@ -94,7 +96,6 @@ class TestOpenAIServiceIntegration:
 
     @patch.dict("os.environ", {"OPENAI_API_KEY": "test-openai-key"})
     @patch("src.services.openai.AsyncOpenAI")
-    @pytest.mark.asyncio
     async def test_streaming_with_config(self, mock_openai_client, openai_config):
         """Test streaming generation with configuration."""
 
@@ -181,7 +182,6 @@ class TestAnthropicServiceIntegration:
 
     @patch.dict("os.environ", {"ANTHROPIC_API_KEY": "test-anthropic-key"})
     @patch("src.services.anthropic.AsyncAnthropic")
-    @pytest.mark.asyncio
     async def test_generate_with_system_message(self, mock_anthropic_client, anthropic_config):
         """Test generation with system message (Anthropic-specific feature)."""
         # Mock the Anthropic response
@@ -253,7 +253,6 @@ class TestGeminiServiceIntegration:
     @patch.dict("os.environ", {"GOOGLE_API_KEY": "test-google-key"})
     @patch("src.services.gemini.genai.configure")
     @patch("src.services.gemini.genai.GenerativeModel")
-    @pytest.mark.asyncio
     async def test_generate_with_safety_settings(
         self, mock_model_class, mock_configure, gemini_config
     ):
@@ -291,7 +290,6 @@ class TestGeminiServiceIntegration:
     @patch.dict("os.environ", {"GOOGLE_API_KEY": "test-google-key"})
     @patch("src.services.gemini.genai.configure")
     @patch("src.services.gemini.genai.GenerativeModel")
-    @pytest.mark.asyncio
     async def test_free_tier_cost_calculation(
         self, mock_model_class, mock_configure, gemini_config
     ):
@@ -404,7 +402,6 @@ class TestLLMFactoryIntegration:
         mock_anthropic.from_config.assert_called_once()
         mock_gemini.from_config.assert_called_once()
 
-    @pytest.mark.asyncio
     async def test_router_end_to_end_with_config(self, factory_config):
         """Test complete router workflow with configuration."""
         router_config = {

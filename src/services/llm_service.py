@@ -140,18 +140,7 @@ class LLMService(ABC):
         pass
 
 
-# Error classes for LLM service exceptions
-class LLMError(Exception):
-    """Base exception for LLM service errors"""
-
-    def __init__(self, message: str, provider: str = None, model: str = None):
-        self.provider = provider
-        self.model = model
-        super().__init__(message)
-
-
-# Removed duplicate LLMTimeoutError and LLMRateLimitError definitions
-# They are already defined at the top of the file
+# Note: LLMError, LLMTimeoutError, and LLMRateLimitError are defined at the top of the file
 
 
 # Simple mock service for backward compatibility with tests
