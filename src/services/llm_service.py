@@ -172,6 +172,16 @@ class MockLLMService(LLMService):
 
         handler = StreamHandler(request.model, "mock", "test-stream")
 
+        # Check if a timeout is specified and respect it
+        timeout = overrides.get("timeout", None)
+
+        if timeout is not None and self.response_delay > timeout:
+            # Simulate timeout behavior
+            await asyncio.sleep(timeout + 0.1)  # Sleep slightly longer than timeout
+            raise LLMTimeoutError(
+                f"Mock LLM request timed out after {timeout}s", "mock", request.model
+            )
+
         # Simulate delay
         await asyncio.sleep(self.response_delay)
 
@@ -192,6 +202,16 @@ class MockLLMService(LLMService):
 
     async def generate_non_stream(self, request: LLMRequest, **overrides) -> LLMResponse:
         """Generate mock non-streaming response with proper JSON for agents."""
+        # Check if a timeout is specified and respect it
+        timeout = overrides.get("timeout", None)
+
+        if timeout is not None and self.response_delay > timeout:
+            # Simulate timeout behavior
+            await asyncio.sleep(timeout + 0.1)  # Sleep slightly longer than timeout
+            raise LLMTimeoutError(
+                f"Mock LLM request timed out after {timeout}s", "mock", request.model
+            )
+
         await asyncio.sleep(self.response_delay)
 
         # Check if this is for a specific agent and return appropriate JSON

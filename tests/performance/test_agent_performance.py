@@ -33,7 +33,7 @@ class TestAgentPerformance:
             "final_answer": "17",
         }
 
-        agent.llm_service.generate = AsyncMock(
+        agent.llm_interface.llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(question_json),
                 model_used="gpt-4o",
@@ -77,7 +77,7 @@ class TestAgentPerformance:
             "final_answers": [{"answer_text": "36", "value_numeric": 36}],
         }
 
-        agent.llm_service.generate = AsyncMock(
+        agent.llm_interface.llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(marking_scheme_json),
                 model_used="gpt-4o",
@@ -122,7 +122,8 @@ class TestAgentPerformance:
 
         slow_llm.generate.side_effect = slow_generate
 
-        agent.llm_service = slow_llm
+        # Replace the LLM service in the interface, not just the agent attribute
+        agent.llm_interface.llm_service = slow_llm
         agent.agent_config["generation_timeout"] = 1  # Very short timeout
         agent.agent_config["max_retries"] = 1
         agent.agent_config["enable_fallback"] = False
@@ -152,7 +153,8 @@ class TestAgentPerformance:
 
         slow_llm.generate.side_effect = slow_generate
 
-        agent.llm_service = slow_llm
+        # Replace the LLM service in the interface, not just the agent attribute
+        agent.llm_interface.llm_service = slow_llm
         agent.agent_config["generation_timeout"] = 1
         agent.agent_config["max_retries"] = 1
         agent.agent_config["enable_fallback"] = False
@@ -186,7 +188,7 @@ class TestAgentPerformance:
             "final_answer": "11",
         }
 
-        agent.llm_service.generate = AsyncMock(
+        agent.llm_interface.llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(question_json),
                 model_used="gpt-4o",
@@ -222,7 +224,7 @@ class TestAgentPerformance:
             "final_answer": "11",
         }
 
-        question_agent.llm_service.generate = AsyncMock(
+        question_agent.llm_interface.llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(question_json),
                 model_used="gpt-4o",

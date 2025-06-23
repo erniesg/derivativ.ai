@@ -38,7 +38,7 @@ class TestReviewAgentPerformance:
             "decision": "approve",
         }
 
-        agent.llm_service.generate = AsyncMock(
+        agent.llm_interface.llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(quality_response),
                 model_used="gpt-4o",
@@ -105,7 +105,7 @@ class TestReviewAgentPerformance:
         agent = ReviewAgent()
 
         # Mock consistent responses
-        agent.llm_service.generate = AsyncMock(
+        agent.llm_interface.llm_service.generate = AsyncMock(
             return_value=LLMResponse(
                 content=json.dumps(
                     {
@@ -241,7 +241,7 @@ class TestReviewAgentPerformance:
                 latency_ms=2000,
             )
 
-        agent.llm_service.generate = AsyncMock(side_effect=mock_generate)
+        agent.llm_interface.llm_service.generate = AsyncMock(side_effect=mock_generate)
 
         # Stress test with many sequential requests
         stress_count = 50
@@ -343,7 +343,7 @@ class TestReviewAgentPerformance:
             else:
                 return timeout_scenarios[0]()  # Fast response
 
-        agent.llm_service.generate = AsyncMock(side_effect=mock_generate)
+        agent.llm_interface.llm_service.generate = AsyncMock(side_effect=mock_generate)
 
         # Test with multiple requests where some will timeout
         timeout_requests = []
@@ -423,7 +423,7 @@ class TestReviewAgentPerformance:
                 "decision": expected_action,
             }
 
-            agent.llm_service.generate = AsyncMock(
+            agent.llm_interface.llm_service.generate = AsyncMock(
                 return_value=LLMResponse(
                     content=json.dumps(quality_response),
                     model_used="gpt-4o",

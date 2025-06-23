@@ -3,6 +3,7 @@ Agent-compatible LLM interface.
 Provides a simpler interface for agents while using our LLMService underneath.
 """
 
+import asyncio
 from typing import Optional, Union
 
 from ..models.enums import LLMModel
@@ -33,7 +34,7 @@ class AgentLLMInterface:
         temperature: float = 0.7,
         max_tokens: Optional[int] = None,
         timeout: Optional[int] = None,
-        **kwargs
+        **kwargs,
     ) -> LLMResponse:
         """
         Generate a response using the LLM service.
@@ -50,10 +51,7 @@ class AgentLLMInterface:
             LLM response
         """
         # Convert model enum to string if needed
-        if isinstance(model, LLMModel):
-            model_str = model.value
-        else:
-            model_str = str(model)
+        model_str = model.value if isinstance(model, LLMModel) else str(model)
 
         # Create LLMRequest
         request = LLMRequest(
@@ -63,33 +61,45 @@ class AgentLLMInterface:
             max_tokens=max_tokens or 1000,
             stream=False,
             timeout=timeout,
-            **kwargs
+            **kwargs,
         )
 
-        # Call the underlying service
-        response = await self.llm_service.generate(request)
+        # Call the underlying service with timeout enforcement
+        try:
+            if timeout and timeout > 0:
+                response = await asyncio.wait_for(
+                    self.llm_service.generate(request), timeout=timeout
+                )
+            else:
+                response = await self.llm_service.generate(request)
+        except asyncio.TimeoutError:
+            from .llm_service import LLMTimeoutError
+
+            raise LLMTimeoutError(
+                f"LLM request timed out after {timeout}s", "agent_interface", model_str
+            )
 
         # Ensure we return LLMResponse, not StreamingGenerator
-        if hasattr(response, 'content'):
+        if hasattr(response, "content"):
             return response
         else:
             # If it's a streaming response, collect it
             chunks = []
             async for chunk in response:
-                if hasattr(chunk, 'content'):
+                if hasattr(chunk, "content"):
                     chunks.append(chunk.content)
 
             # Create a response from collected chunks
             return LLMResponse(
-                content=''.join(chunks),
+                content="".join(chunks),
                 model=model_str,
-                provider=getattr(self.llm_service, 'provider_name', 'unknown'),
+                provider=getattr(self.llm_service, "provider_name", "unknown"),
                 model_used=model_str,
                 tokens_used=100,  # Approximate
                 cost_estimate=0.001,
                 generation_time=1.0,
                 latency_ms=1000,  # Add missing field
-                finish_reason="stop"
+                finish_reason="stop",
             )
 
 
