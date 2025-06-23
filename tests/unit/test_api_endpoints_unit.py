@@ -28,18 +28,6 @@ class TestQuestionGenerationAPI:
         """FastAPI test client."""
         return TestClient(app)
 
-    @pytest.fixture
-    def sample_generation_request(self):
-        """Sample generation request."""
-        return {
-            "topic": "algebra",
-            "tier": "Core",
-            "grade_level": 8,
-            "marks": 3,
-            "count": 1,
-            "calculator_policy": "not_allowed",
-            "command_word": "Calculate",
-        }
 
     @pytest.fixture
     def sample_question(self):

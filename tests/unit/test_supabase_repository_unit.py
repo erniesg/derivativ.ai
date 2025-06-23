@@ -17,13 +17,6 @@ from src.models.question_models import GenerationSession, GenerationStatus, Ques
 class TestQuestionRepository:
     """Unit tests for QuestionRepository with mocked Supabase client."""
 
-    @pytest.fixture
-    def mock_supabase_client(self):
-        """Mock Supabase client."""
-        mock_client = Mock()
-        mock_table = Mock()
-        mock_client.table.return_value = mock_table
-        return mock_client, mock_table
 
     @pytest.fixture
     def sample_question(self):
@@ -239,13 +232,6 @@ class TestQuestionRepository:
 class TestGenerationSessionRepository:
     """Unit tests for GenerationSessionRepository."""
 
-    @pytest.fixture
-    def mock_supabase_client(self):
-        """Mock Supabase client."""
-        mock_client = Mock()
-        mock_table = Mock()
-        mock_client.table.return_value = mock_table
-        return mock_client, mock_table
 
     @pytest.fixture
     def sample_session(self):

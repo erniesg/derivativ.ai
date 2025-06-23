@@ -17,7 +17,6 @@ from src.models.document_models import (
 from src.models.enums import Tier
 from src.models.llm_models import LLMResponse
 from src.services.document_generation_service import DocumentGenerationService
-from src.services.llm_factory import LLMFactory
 from src.services.prompt_manager import PromptManager
 
 
@@ -29,13 +28,6 @@ class TestDocumentGenerationService:
         """Create mock question repository."""
         return MagicMock(spec=QuestionRepository)
 
-    @pytest.fixture
-    def mock_llm_factory(self):
-        """Create mock LLM factory."""
-        factory = MagicMock(spec=LLMFactory)
-        llm_service = AsyncMock()
-        factory.get_service.return_value = llm_service
-        return factory, llm_service
 
     @pytest.fixture
     def mock_prompt_manager(self):

@@ -4,6 +4,7 @@ Pytest configuration and shared fixtures for Derivativ AI tests.
 
 import asyncio
 from typing import Any
+from unittest.mock import AsyncMock, MagicMock, Mock
 
 import pytest
 
@@ -153,6 +154,107 @@ def agent_config():
         "quality_threshold": 0.7,
         "enable_fallback": True,
     }
+
+
+# Centralized Mock Service Fixtures
+@pytest.fixture
+def mock_openai_client():
+    """Centralized mock OpenAI client for all tests."""
+    mock_client = AsyncMock()
+    mock_response = MagicMock()
+    mock_response.choices = [MagicMock()]
+    mock_response.choices[0].message.content = "Generated response from OpenAI"
+    mock_response.model = "gpt-4o-mini"
+    mock_response.usage.total_tokens = 25
+    mock_response.usage.prompt_tokens = 15
+    mock_response.usage.completion_tokens = 10
+    mock_response.usage.prompt_tokens_details = None
+    mock_response.usage.completion_tokens_details = None
+    mock_client.chat.completions.create.return_value = mock_response
+    return mock_client
+
+
+@pytest.fixture
+def mock_anthropic_client():
+    """Centralized mock Anthropic client for all tests."""
+    mock_client = AsyncMock()
+    mock_response = MagicMock()
+    mock_response.content = [MagicMock()]
+    mock_response.content[0].text = "Generated response from Anthropic"
+    mock_response.model = "claude-3-5-sonnet-20241022"
+    mock_response.usage.input_tokens = 15
+    mock_response.usage.output_tokens = 10
+    mock_client.messages.create.return_value = mock_response
+    return mock_client
+
+
+@pytest.fixture
+def mock_gemini_client():
+    """Centralized mock Gemini client for all tests."""
+    mock_client = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = "Generated response from Gemini"
+    mock_response.usage_metadata.prompt_token_count = 15
+    mock_response.usage_metadata.candidates_token_count = 10
+    mock_response.usage_metadata.total_token_count = 25
+    mock_client.generate_content_async.return_value = mock_response
+    return mock_client
+
+
+@pytest.fixture
+def mock_supabase_client():
+    """Centralized mock Supabase client for all tests."""
+    mock_client = Mock()
+    mock_table = Mock()
+    mock_client.table.return_value = mock_table
+    # Set up common return values
+    mock_table.insert.return_value = mock_table
+    mock_table.select.return_value = mock_table
+    mock_table.update.return_value = mock_table
+    mock_table.delete.return_value = mock_table
+    mock_table.execute.return_value = mock_table
+    return mock_client, mock_table
+
+
+@pytest.fixture
+def mock_llm_factory():
+    """Centralized mock LLM factory for all tests."""
+    factory = MagicMock()
+    llm_service = AsyncMock()
+    llm_service.generate.return_value = create_mock_llm_response("Test response")
+    factory.get_service.return_value = llm_service
+    return factory, llm_service
+
+
+@pytest.fixture
+def mock_openai_streaming_response():
+    """Mock OpenAI streaming response for streaming tests."""
+    mock_stream = AsyncMock()
+    mock_chunk = MagicMock()
+    mock_chunk.choices = [MagicMock()]
+    mock_chunk.choices[0].delta.content = "streaming content"
+    mock_stream.__aiter__.return_value = [mock_chunk]
+    return mock_stream
+
+
+@pytest.fixture
+def mock_anthropic_streaming_response():
+    """Mock Anthropic streaming response for streaming tests."""
+    mock_stream = AsyncMock()
+    mock_chunk = MagicMock()
+    mock_chunk.delta.text = "streaming content"
+    mock_stream.__aiter__.return_value = [mock_chunk]
+    return mock_stream
+
+
+@pytest.fixture
+def mock_gemini_streaming_response():
+    """Mock Gemini streaming response for streaming tests."""
+    mock_stream = MagicMock()
+    mock_chunk = MagicMock()
+    mock_chunk.text = "streaming content"
+    mock_stream.__iter__.return_value = [mock_chunk]
+    return mock_stream
 
 
 # Test utilities

@@ -24,10 +24,6 @@ from src.services.llm_service import LLMService
 class TestDocumentFormatterAgent:
     """Test DocumentFormatterAgent functionality."""
 
-    @pytest.fixture
-    def mock_llm_service(self):
-        """Create mock LLM service."""
-        return MagicMock(spec=LLMService)
 
     @pytest.fixture
     def formatter_agent(self, mock_llm_service):

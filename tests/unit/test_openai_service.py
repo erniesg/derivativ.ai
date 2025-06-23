@@ -4,7 +4,7 @@ Tests written first following TDD approach.
 """
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -17,26 +17,6 @@ from src.services.openai import OpenAILLMService
 
 class TestOpenAILLMService:
     """Test OpenAI LLM service implementation."""
-
-    @pytest.fixture
-    def mock_openai_client(self):
-        """Mock OpenAI client for testing."""
-        mock_client = AsyncMock()
-
-        # Mock successful response
-        mock_response = MagicMock()
-        mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = "Generated response from OpenAI"
-        mock_response.model = "gpt-4o-mini"
-        mock_response.usage.total_tokens = 25
-        mock_response.usage.prompt_tokens = 15
-        mock_response.usage.completion_tokens = 10
-        mock_response.usage.prompt_tokens_details = None
-        mock_response.usage.completion_tokens_details = None
-
-        mock_client.chat.completions.create.return_value = mock_response
-
-        return mock_client
 
     @pytest.fixture
     def sample_config(self):
