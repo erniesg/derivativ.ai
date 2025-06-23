@@ -1,10 +1,17 @@
 const { Router } = require('express');
-const { authController } = require('../controllers');
-const { authMiddleware } = require('../middleware');
-const { createUser} = authController
+const { auth: authController } = require('../controllers');
+const { supabaseAuthMiddleware } = require('../middleware/auth.middleware');
 const router = Router();
 
-router.use(authMiddleware);
-router.post('/', createUser);
+// Apply authentication middleware to all auth routes
+router.use(supabaseAuthMiddleware);
+
+// Profile management routes
+router.post('/profile', authController.createProfile);
+router.get('/profile', authController.getProfile);
+router.put('/profile', authController.updateProfile);
+
+// Backward compatibility
+router.post('/', authController.createUser);
 
 module.exports = router;
