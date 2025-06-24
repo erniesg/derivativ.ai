@@ -318,7 +318,7 @@ class LocalDiagramStorageService(DiagramStorageInterface):
 
             # Write back to file
             with open(self.metadata_file, "w") as f:
-                json.dump(metadata, f, indent=2)
+                json.dump(metadata, f, indent=2, default=str)
 
         except Exception as e:
             logger.warning(f"Failed to update metadata for {question_id}: {e}")

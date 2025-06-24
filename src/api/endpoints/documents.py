@@ -206,6 +206,9 @@ async def download_document(
         # Placeholder - would return actual file
         raise HTTPException(status_code=501, detail="Document download not yet implemented")
 
+    except HTTPException:
+        # Re-raise HTTPExceptions without wrapping them
+        raise
     except Exception as e:
         logger.error(f"Document download failed: {e}")
         raise HTTPException(status_code=500, detail="Document download failed")

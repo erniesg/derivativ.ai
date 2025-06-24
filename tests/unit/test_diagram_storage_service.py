@@ -124,10 +124,15 @@ class TriangleABC(Scene):
         question_id = "test_q1"
 
         # Mock the Manim rendering process
+        async def mock_render_side_effect(manim_file_path, output_path, scene_class_name):
+            # Create a dummy PNG file
+            output_path.write_bytes(b"dummy PNG data")
+            return True
+
         with patch.object(
             storage_service, "_render_manim_to_image", new_callable=AsyncMock
         ) as mock_render:
-            mock_render.return_value = True
+            mock_render.side_effect = mock_render_side_effect
 
             # Store diagram
             result = await storage_service.store_diagram(question_id, sample_diagram_result)
@@ -231,10 +236,15 @@ class TriangleABC(Scene):
         """Test that temporary files are cleaned up after rendering"""
         question_id = "test_q_cleanup"
 
+        async def mock_render_side_effect(manim_file_path, output_path, scene_class_name):
+            # Create a dummy PNG file
+            output_path.write_bytes(b"dummy PNG data")
+            return True
+
         with patch.object(
             storage_service, "_render_manim_to_image", new_callable=AsyncMock
         ) as mock_render:
-            mock_render.return_value = True
+            mock_render.side_effect = mock_render_side_effect
 
             # Track temp directory before and after
             initial_files = set(temp_storage_dir.iterdir())
@@ -243,15 +253,18 @@ class TriangleABC(Scene):
 
             final_files = set(temp_storage_dir.iterdir())
 
-            # Should only have the final diagram and manim code files
-            new_files = final_files - initial_files
-            assert len(new_files) == 3  # PNG, .py, metadata.json
+            # Calculate new files (metadata.json is created in __init__ so may not be "new")
+            all_files_after = list(temp_storage_dir.iterdir())
 
-            # Check file types
-            file_extensions = {f.suffix for f in new_files}
-            assert ".png" in file_extensions
-            assert ".py" in file_extensions
-            assert ".json" in file_extensions
+            # Should have PNG, .py, and metadata.json
+            file_names = [f.name for f in all_files_after]
+            assert f"{question_id}.png" in file_names
+            assert f"{question_id}.py" in file_names
+            assert "metadata.json" in file_names
+
+            # Verify no temp files remain
+            temp_files = [f for f in all_files_after if f.name.startswith("tmp")]
+            assert len(temp_files) == 0
 
     async def test_concurrent_storage_operations(self, storage_service, sample_diagram_result):
         """Test handling of concurrent storage operations"""
@@ -259,10 +272,15 @@ class TriangleABC(Scene):
 
         question_ids = ["concurrent_q1", "concurrent_q2", "concurrent_q3"]
 
+        async def mock_render_side_effect(manim_file_path, output_path, scene_class_name):
+            # Create a dummy PNG file
+            output_path.write_bytes(b"dummy PNG data")
+            return True
+
         with patch.object(
             storage_service, "_render_manim_to_image", new_callable=AsyncMock
         ) as mock_render:
-            mock_render.return_value = True
+            mock_render.side_effect = mock_render_side_effect
 
             # Store multiple diagrams concurrently
             tasks = [
