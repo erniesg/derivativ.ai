@@ -11,7 +11,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel
 
-from ..models.question_models import AgentResult
+from src.models.question_models import AgentResult
 
 
 class AgentObservation(BaseModel):

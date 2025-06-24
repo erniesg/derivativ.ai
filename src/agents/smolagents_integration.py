@@ -9,8 +9,8 @@ from typing import Optional
 
 from smolagents import CodeAgent, InferenceClientModel, tool
 
-from ..services.llm_factory import LLMFactory
-from ..services.mock_llm_service import MockLLMService
+from src.services.llm_factory import LLMFactory
+from src.services.mock_llm_service import MockLLMService
 
 
 # Create our custom agents as smolagents tools
@@ -36,7 +36,7 @@ def generate_math_question(
         JSON string containing the generated question with marking scheme
     """
     try:
-        from ..agents.question_generator import QuestionGeneratorAgent
+        from src.agents.question_generator import QuestionGeneratorAgent
 
         # Create agent with mock LLM (or real LLM if API keys available)
         llm_service = _get_llm_service()
@@ -86,7 +86,7 @@ def review_question_quality(question_data: str) -> str:
         JSON string containing quality assessment and feedback
     """
     try:
-        from ..agents.review_agent import ReviewAgent
+        from src.agents.review_agent import ReviewAgent
 
         # Parse input
         question_raw = json.loads(question_data)
@@ -164,7 +164,7 @@ def refine_question(original_question: str, feedback: str) -> str:
         JSON string containing the refined question
     """
     try:
-        from ..agents.refinement_agent import RefinementAgent
+        from src.agents.refinement_agent import RefinementAgent
 
         # Parse inputs
         question_raw = json.loads(original_question)

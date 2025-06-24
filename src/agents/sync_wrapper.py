@@ -7,7 +7,7 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
-from .base_agent import AgentResult, BaseAgent
+from src.agents.base_agent import AgentResult, BaseAgent
 
 
 class SyncAgentWrapper:
@@ -79,23 +79,27 @@ def make_sync_agent(agent_class: type[BaseAgent], *args, **kwargs) -> SyncAgentW
 # Convenience functions for each agent type
 def create_sync_question_generator(**kwargs) -> SyncAgentWrapper:
     """Create synchronous QuestionGeneratorAgent."""
-    from .question_generator import QuestionGeneratorAgent
+    from src.agents.question_generator import QuestionGeneratorAgent
+
     return make_sync_agent(QuestionGeneratorAgent, **kwargs)
 
 
 def create_sync_marker(**kwargs) -> SyncAgentWrapper:
     """Create synchronous MarkerAgent."""
-    from .marker_agent import MarkerAgent
+    from src.agents.marker_agent import MarkerAgent
+
     return make_sync_agent(MarkerAgent, **kwargs)
 
 
 def create_sync_reviewer(**kwargs) -> SyncAgentWrapper:
     """Create synchronous ReviewAgent."""
-    from .review_agent import ReviewAgent
+    from src.agents.review_agent import ReviewAgent
+
     return make_sync_agent(ReviewAgent, **kwargs)
 
 
 def create_sync_refiner(**kwargs) -> SyncAgentWrapper:
     """Create synchronous RefinementAgent."""
-    from .refinement_agent import RefinementAgent
+    from src.agents.refinement_agent import RefinementAgent
+
     return make_sync_agent(RefinementAgent, **kwargs)

@@ -5,13 +5,13 @@ Provides specialized AI agents for Cambridge IGCSE Mathematics question generati
 marking, review, and quality control with modern async patterns.
 """
 
-from .base_agent import AgentObservation, BaseAgent
-from .marker_agent import MarkerAgent
-from .orchestrator import MultiAgentOrchestrator, SmolagentsOrchestrator
-from .question_generator import QuestionGeneratorAgent
-from .refinement_agent import RefinementAgent
-from .review_agent import ReviewAgent
-from .sync_wrapper import (
+from src.agents.base_agent import AgentObservation, BaseAgent
+from src.agents.marker_agent import MarkerAgent
+from src.agents.orchestrator import MultiAgentOrchestrator, SmolagentsOrchestrator
+from src.agents.question_generator import QuestionGeneratorAgent
+from src.agents.refinement_agent import RefinementAgent
+from src.agents.review_agent import ReviewAgent
+from src.agents.sync_wrapper import (
     SyncAgentWrapper,
     create_sync_marker,
     create_sync_question_generator,

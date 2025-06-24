@@ -7,16 +7,16 @@ import asyncio
 import logging
 from typing import Any, Optional, Union
 
-from ..core.config import load_config
-from ..models.enums import QualityAction
-from ..models.question_models import GenerationRequest
-from ..services.llm_factory import LLMFactory
-from .base_agent import BaseAgent
-from .marker_agent import MarkerAgent
-from .question_generator import QuestionGeneratorAgent
-from .refinement_agent import RefinementAgent
-from .review_agent import ReviewAgent
-from .sync_wrapper import SyncAgentWrapper, make_sync_agent
+from src.agents.base_agent import BaseAgent
+from src.agents.marker_agent import MarkerAgent
+from src.agents.question_generator import QuestionGeneratorAgent
+from src.agents.refinement_agent import RefinementAgent
+from src.agents.review_agent import ReviewAgent
+from src.agents.sync_wrapper import SyncAgentWrapper, make_sync_agent
+from src.core.config import load_config
+from src.models.enums import QualityAction
+from src.models.question_models import GenerationRequest
+from src.services.llm_factory import LLMFactory
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +119,7 @@ class MultiAgentOrchestrator:
 
         except Exception as e:
             # Fallback to mock service for testing
-            from ..services.mock_llm_service import MockLLMService
+            from src.services.mock_llm_service import MockLLMService
 
             logger.warning(f"Could not create LLM service for {agent_type}, using mock: {e}")
             return MockLLMService()

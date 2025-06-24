@@ -6,10 +6,10 @@ Provides a simpler interface for agents while using our LLMService underneath.
 import asyncio
 from typing import Optional, Union
 
-from ..models.enums import LLMModel
-from ..models.llm_models import LLMRequest, LLMResponse
-from .llm_service import LLMService
-from .mock_llm_service import MockLLMService
+from src.models.enums import LLMModel
+from src.models.llm_models import LLMRequest, LLMResponse
+from src.services.llm_service import LLMService
+from src.services.mock_llm_service import MockLLMService
 
 
 class AgentLLMInterface:

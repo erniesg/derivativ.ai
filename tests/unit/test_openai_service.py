@@ -346,7 +346,7 @@ class TestOpenAIServiceIntegration:
 
         # Verify agent-specific configuration
         assert request.model == "gpt-4o-mini"  # From default config
-        assert request.temperature == 0.7  # From agent config
+        assert request.temperature == 0.8  # From agent config
         assert request.max_tokens == 2000  # From agent config
         # Extra params may be empty - just verify request is created properly
         assert isinstance(request.extra_params, dict)

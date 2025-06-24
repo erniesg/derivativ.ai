@@ -39,11 +39,20 @@ llm_defaults:
 quality_control:
   # Quality score thresholds for automated decisions
   thresholds:
-    auto_approve: 0.85     # High quality → immediate approval
-    manual_review: 0.70    # Good quality → human review queue
-    refine: 0.60           # Medium quality → improvement cycle
-    regenerate: 0.40       # Low quality → try different approach
-    reject: 0.20           # Very poor → abandon attempt
+    auto_approve: 0.85          # High quality → immediate approval
+    manual_review_upper: 0.84   # Good quality → human review queue upper bound
+    manual_review_lower: 0.60   # Good quality → human review queue lower bound
+    refine_upper: 0.59          # Medium quality → improvement cycle upper bound
+    refine_lower: 0.50          # Medium quality → improvement cycle lower bound
+    reject_threshold: 0.40      # Very poor → abandon attempt
+
+  # Assessment dimension weights
+  dimension_weights:
+    mathematical_accuracy: 0.25
+    cambridge_compliance: 0.25
+    grade_appropriateness: 0.20
+    question_clarity: 0.15
+    marking_accuracy: 0.15
 
   # Workflow limits to prevent infinite loops
   limits:
@@ -64,27 +73,65 @@ performance:
   max_refinement_attempts: 2
   generation_timeout_seconds: 30
   max_concurrent_generations: 5
+  websocket_timeout: 30.0
+
+# Retry Policy Configuration
+retry_policy:
+  max_retries: 3
+  backoff_strategy: "exponential"
+  backoff_base: 2
+  backoff_max: 60
+  linear_backoff_step: 1
+
+# Validation Limits
+validation:
+  marks:
+    min: 1
+    max: 20
+  question_text:
+    min_length: 10
+  batch:
+    max_documents: 10
+
+# Mock Service Configuration (for testing)
+mock_service:
+  response_delay: 0.1
+  failure_rate: 0.0
+  default_marks: 3
+  default_tokens: 100
+  validation_tokens: 5
 
 # Agent Configuration
 agents:
   question_generator:
-    temperature: 0.7
+    temperature: 0.8
     max_tokens: 2000
+    generation_timeout: 60
+    max_retries: 3
+    enable_fallback: true
+    fallback_temperature: 0.5
+    fallback_timeout: 30
+    quality_threshold: 0.7
     model_preference: ["gpt-4o", "claude-3-5-sonnet-20241022"]
 
   marker:
     temperature: 0.3
     max_tokens: 1500
+    fallback_temperature: 0.5
+    fallback_timeout: 30
     model_preference: ["gpt-4o", "claude-3-5-sonnet-20241022"]
 
   reviewer:
-    temperature: 0.5
+    temperature: 0.3
     max_tokens: 1000
+    max_retries: 3
     model_preference: ["claude-3-5-sonnet-20241022", "gpt-4o"]
 
   refinement:
     temperature: 0.7
-    max_tokens: 2500
+    max_tokens: 1500
+    fallback_max_tokens: 800
+    fallback_temperature: 0.7
     model_preference: ["gpt-4o", "claude-3-5-sonnet-20241022"]
     fallback_enabled: true
     preserve_original_metadata: true
@@ -121,3 +168,18 @@ templates:
   auto_create_defaults: true
   cache_templates: true
   template_version: "v1"
+
+# API Pricing Information (for cost estimation)
+pricing:
+  openai:
+    gpt-4o: {input: 0.0025, output: 0.01}
+    gpt-4o-mini: {input: 0.00015, output: 0.0006}
+    gpt-4-turbo-preview: {input: 0.01, output: 0.03}
+  anthropic:
+    claude-3-5-sonnet-20241022: {input: 0.003, output: 0.015}
+    claude-3-5-haiku-20241022: {input: 0.0008, output: 0.004}
+    claude-3-opus-20240229: {input: 0.015, output: 0.075}
+  google:
+    gemini-2.0-flash-exp: {input: 0.0, output: 0.0}  # Free tier
+    gemini-1.5-pro: {input: 0.00125, output: 0.005}
+    gemini-1.5-flash: {input: 0.000075, output: 0.0003}

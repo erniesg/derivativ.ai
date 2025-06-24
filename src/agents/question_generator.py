@@ -10,8 +10,9 @@ import logging
 from datetime import datetime
 from typing import Any, Optional
 
-from ..models.enums import CommandWord, LLMModel, SubjectContentReference
-from ..models.question_models import (
+from src.agents.base_agent import BaseAgent
+from src.models.enums import CommandWord, LLMModel, SubjectContentReference
+from src.models.question_models import (
     FinalAnswer,
     GenerationRequest,
     MarkingCriterion,
@@ -21,9 +22,8 @@ from ..models.question_models import (
     SolverAlgorithm,
     SolverStep,
 )
-from ..services import JSONParser, LLMService, PromptManager
-from ..services.prompt_manager import PromptConfig
-from .base_agent import BaseAgent
+from src.services import JSONParser, LLMService, PromptManager
+from src.services.prompt_manager import PromptConfig
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,8 @@ class QuestionGeneratorAgent(BaseAgent):
             json_parser = JSONParser()
 
         # Create agent-compatible LLM interface
-        from ..services.agent_llm_interface import AgentLLMInterface
+        from src.services.agent_llm_interface import AgentLLMInterface
+
         self.llm_interface = AgentLLMInterface(llm_service)
 
         super().__init__(name, llm_service, config)

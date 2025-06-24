@@ -9,12 +9,12 @@ import asyncio
 import logging
 from typing import Any, Optional
 
-from ..models.enums import QualityAction
-from ..models.question_models import QualityDecision
-from ..services.json_parser import JSONExtractionResult
-from ..services.llm_service import LLMService, MockLLMService
-from ..services.prompt_manager import PromptConfig, PromptManager
-from .base_agent import BaseAgent
+from src.agents.base_agent import BaseAgent
+from src.models.enums import QualityAction
+from src.models.question_models import QualityDecision
+from src.services.json_parser import JSONExtractionResult
+from src.services.llm_service import LLMService, MockLLMService
+from src.services.prompt_manager import PromptConfig, PromptManager
 
 logger = logging.getLogger(__name__)
 
@@ -56,12 +56,13 @@ class ReviewAgent(BaseAgent):
             prompt_manager = PromptManager()
 
         if json_parser is None:
-            from ..services.json_parser import JSONParser
+            from src.services.json_parser import JSONParser
 
             json_parser = JSONParser()
 
         # Create agent-compatible LLM interface
-        from ..services.agent_llm_interface import AgentLLMInterface
+        from src.services.agent_llm_interface import AgentLLMInterface
+
         self.llm_interface = AgentLLMInterface(llm_service)
 
         super().__init__(name, llm_service)

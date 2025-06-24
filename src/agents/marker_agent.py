@@ -10,17 +10,17 @@ import logging
 from datetime import datetime
 from typing import Any, Optional
 
-from ..models.enums import LLMModel
-from ..models.question_models import (
+from src.agents.base_agent import BaseAgent
+from src.models.enums import LLMModel
+from src.models.question_models import (
     FinalAnswer,
     GenerationRequest,
     MarkingCriterion,
     MarkType,
     SolutionAndMarkingScheme,
 )
-from ..services import JSONParser, LLMService, PromptManager
-from ..services.prompt_manager import PromptConfig
-from .base_agent import BaseAgent
+from src.services import JSONParser, LLMService, PromptManager
+from src.services.prompt_manager import PromptConfig
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ class MarkerAgent(BaseAgent):
         """
         # Initialize services if not provided (dependency injection pattern)
         if llm_service is None:
-            from ..services import MockLLMService
+            from src.services import MockLLMService
 
             llm_service = MockLLMService()
 
@@ -74,7 +74,7 @@ class MarkerAgent(BaseAgent):
             json_parser = JSONParser()
 
         # Create agent-compatible LLM interface
-        from ..services.agent_llm_interface import AgentLLMInterface
+        from src.services.agent_llm_interface import AgentLLMInterface
 
         self.llm_interface = AgentLLMInterface(llm_service)
 

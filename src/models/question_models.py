@@ -10,7 +10,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
 
-from .enums import (
+from src.models.enums import (
     CalculatorPolicy,
     CognitiveLevel,
     CommandWord,

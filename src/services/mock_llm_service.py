@@ -6,9 +6,9 @@ Provides realistic responses without requiring API keys.
 import asyncio
 from typing import Any
 
-from ..models.llm_models import LLMRequest, LLMResponse
-from ..models.streaming_models import StreamingChunk, StreamingGenerator
-from .llm_service import LLMService
+from src.models.llm_models import LLMRequest, LLMResponse
+from src.models.streaming_models import StreamingChunk, StreamingGenerator
+from src.services.llm_service import LLMService
 
 
 class MockLLMService(LLMService):
@@ -77,7 +77,7 @@ class MockLLMService(LLMService):
 
         # Question generation mock
         if "generate" in prompt_lower and ("question" in prompt_lower or "math" in prompt_lower):
-            return '''{
+            return """{
                 "question_text": "Calculate the value of 3x + 5 when x = 4",
                 "marks": 2,
                 "command_word": "Calculate",
@@ -99,11 +99,11 @@ class MockLLMService(LLMService):
                         "mark_type": "A"
                     }
                 ]
-            }'''
+            }"""
 
         # Marking scheme mock
         if "marking" in prompt_lower and "scheme" in prompt_lower:
-            return '''{
+            return """{
                 "total_marks": 3,
                 "marking_criteria": [
                     {
@@ -128,11 +128,11 @@ class MockLLMService(LLMService):
                 "final_answers": ["17"],
                 "alternative_methods": ["Direct substitution", "Algebraic expansion"],
                 "common_errors": ["Forgetting to substitute", "Arithmetic errors"]
-            }'''
+            }"""
 
         # Quality review mock
         if "quality" in prompt_lower and ("review" in prompt_lower or "assess" in prompt_lower):
-            return '''{
+            return """{
                 "overall_quality_score": 0.85,
                 "mathematical_accuracy": 0.95,
                 "cambridge_compliance": 0.80,
@@ -145,11 +145,11 @@ class MockLLMService(LLMService):
                     "Consider adding a diagram for visual learners"
                 ],
                 "decision": "approve"
-            }'''
+            }"""
 
         # Refinement mock
         if "refine" in prompt_lower or "improve" in prompt_lower:
-            return '''{
+            return """{
                 "refined_question": {
                     "question_text": "Calculate the value of 3x + 5 when x = 4. Show your working clearly.",
                     "marks": 2,
@@ -171,7 +171,7 @@ class MockLLMService(LLMService):
                     "cambridge_compliance": 0.90,
                     "grade_appropriateness": 0.90
                 }
-            }'''
+            }"""
 
         # Generic response
         return f"This is a mock response to: {prompt[:100]}..."
