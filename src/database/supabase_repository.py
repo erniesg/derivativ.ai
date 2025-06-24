@@ -53,21 +53,16 @@ class QuestionRepository:
             # Prepare data with flattened fields for querying + full JSON
             data = {
                 "question_id_global": question.question_id_global,
-                "tier": getattr(question.taxonomy, "tier", Tier.CORE).value,
+                "question_id_local": question.question_id_local,
+                "question_number_display": question.question_number_display,
                 "marks": question.marks,
+                "tier": getattr(question.taxonomy, "tier", Tier.CORE).value,
                 "command_word": question.command_word.value,
-                "subject_content_refs": [
-                    ref.value for ref in question.taxonomy.subject_content_references
-                ],
-                "cognitive_level": question.taxonomy.cognitive_level.value
-                if question.taxonomy.cognitive_level
-                else None,
-                "difficulty_estimate": question.taxonomy.difficulty_estimate_0_to_1,
-                "content_json": question.model_dump(),
+                "raw_text_content": question.raw_text_content,
+                "quality_score": None,  # Will be set by review agent
                 "origin": origin.value,
-                "status": GenerationStatus.CANDIDATE.value,
-                "created_at": datetime.utcnow().isoformat(),
-                "updated_at": datetime.utcnow().isoformat(),
+                "source_reference": None,  # For past papers/textbooks
+                "content_json": question.model_dump(),
             }
 
             # Insert into Supabase
@@ -133,7 +128,7 @@ class QuestionRepository:
         """
         try:
             query = self.supabase.table(self.table_name).select(
-                "id, question_id_global, tier, marks, command_word, quality_score, status, created_at"
+                "id, question_id_global, tier, marks, command_word, quality_score, created_at"
             )
 
             # Apply filters

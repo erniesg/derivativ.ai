@@ -63,7 +63,7 @@ def sample_question():
         raw_text_content="Calculate the area of a circle with radius 5cm.",
         taxonomy=QuestionTaxonomy(
             topic_path=["Geometry", "Circle"],
-            subject_content_references=["G.2.1"],
+            subject_content_references=["C5.2"],  # Valid enum value for geometry
             skill_tags=["area_calculation", "circles"],
         ),
         solution_and_marking_scheme=SolutionAndMarkingScheme(
