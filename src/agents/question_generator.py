@@ -9,6 +9,7 @@ import asyncio
 import logging
 from datetime import datetime
 from typing import Any, Optional
+from uuid import uuid4
 
 from src.agents.base_agent import BaseAgent
 from src.models.enums import CommandWord, LLMModel, SubjectContentReference
@@ -374,7 +375,7 @@ Return JSON with: question_text, marks, command_word, solution_steps, final_answ
             # Create Question object
             question = Question(
                 question_id_local=question_id,
-                question_id_global=f"derivativ_{question_id}",
+                question_id_global=str(uuid4()),
                 question_number_display="1",
                 marks=marks,
                 command_word=cmd_word,
