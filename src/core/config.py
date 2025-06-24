@@ -179,6 +179,39 @@ class ConfigManager:
                     "extra_params": {"frequency_penalty": 0.2},
                 },
             },
+            "diagram_generation": {
+                "storage": {
+                    "type": "local",
+                    "base_path": "generated_diagrams/",
+                    "auto_cleanup": False,
+                },
+                "rendering": {
+                    "quality": "low",  # low, medium, high
+                    "timeout_seconds": 60,
+                    "manim_flags": ["-ql"],  # Low quality for speed
+                },
+                "quality_control": {
+                    "min_quality_threshold": 0.8,
+                    "max_retry_attempts": 3,
+                    "auto_approve_threshold": 0.9,
+                },
+                "auto_detection": {
+                    "enabled": True,
+                    "geometry_keywords": [
+                        "triangle",
+                        "quadrilateral",
+                        "circle",
+                        "angle",
+                        "parallel",
+                        "perpendicular",
+                        "polygon",
+                        "vertex",
+                        "vertices",
+                        "diagram",
+                    ],
+                    "exclude_keywords": ["not shown", "no diagram", "text only"],
+                },
+            },
         }
 
     def _merge_configs(self, base: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
@@ -375,6 +408,21 @@ class Settings(BaseSettings):
     # Demo/testing settings
     demo_mode: bool = Field(False, description="Enable demo mode", alias="DEMO_MODE")
     use_mock_llm: bool = Field(False, description="Use mock LLM service", alias="USE_MOCK_LLM")
+
+    # Diagram storage settings
+    diagram_storage_type: str = Field(
+        "local",
+        description="Diagram storage type: local, supabase, s3",
+        alias="DIAGRAM_STORAGE_TYPE",
+    )
+    diagram_base_path: str = Field(
+        "generated_diagrams/",
+        description="Base path for diagram storage",
+        alias="DIAGRAM_BASE_PATH",
+    )
+    diagram_auto_detect: bool = Field(
+        True, description="Auto-detect when diagrams are needed", alias="DIAGRAM_AUTO_DETECT"
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

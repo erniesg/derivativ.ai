@@ -142,6 +142,38 @@ cambridge:
   grade_levels: [1, 2, 3, 4, 5, 6, 7, 8, 9]
   tiers: ["Foundation", "Higher", "Core", "Extended"]
 
+# Diagram Generation Configuration
+diagram_generation:
+  storage:
+    type: "local"
+    base_path: "generated_diagrams/"
+    auto_cleanup: false
+
+  rendering:
+    quality: "low"  # low, medium, high
+    timeout_seconds: 60
+    manim_flags: ["-ql"]  # Low quality for speed
+
+  quality_control:
+    min_quality_threshold: 0.8
+    max_retry_attempts: 3
+    auto_approve_threshold: 0.9
+
+  auto_detection:
+    enabled: true
+    geometry_keywords:
+      - "triangle"
+      - "quadrilateral"
+      - "circle"
+      - "angle"
+      - "parallel"
+      - "perpendicular"
+      - "polygon"
+      - "vertex"
+      - "vertices"
+      - "diagram"
+    exclude_keywords: ["not shown", "no diagram", "text only"]
+
 # Demo Settings
 demo:
   enabled: false
