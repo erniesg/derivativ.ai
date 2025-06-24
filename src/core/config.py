@@ -382,6 +382,14 @@ class Settings(BaseSettings):
         None, description="Database connection URL", alias="DATABASE_URL"
     )
 
+    # Supabase
+    supabase_url: Optional[str] = Field(
+        None, description="Supabase project URL", alias="SUPABASE_URL"
+    )
+    supabase_anon_key: Optional[str] = Field(
+        None, description="Supabase anonymous key", alias="SUPABASE_ANON_KEY"
+    )
+
     # API Keys (redundant with ConfigManager, but useful for validation)
     openai_api_key: Optional[str] = Field(
         None, description="OpenAI API key", alias="OPENAI_API_KEY"
