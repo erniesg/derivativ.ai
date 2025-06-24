@@ -230,14 +230,16 @@ def get_document_generation_service(
             ),
         )
 
-        mock_repo.list_questions = AsyncMock(return_value=[
-            {
-                "content_json": sample_question.model_dump(),
-                "quality_score": 0.85,
-                "tier": "Core",
-                "marks": 3,
-            }
-        ])
+        mock_repo.list_questions = AsyncMock(
+            return_value=[
+                {
+                    "content_json": sample_question.model_dump(),
+                    "quality_score": 0.85,
+                    "tier": "Core",
+                    "marks": 3,
+                }
+            ]
+        )
 
         return DocumentGenerationService(mock_repo, llm_factory, prompt_manager)
     else:
@@ -380,6 +382,16 @@ def get_system_health() -> dict:
     Returns:
         Complete health status dictionary
     """
+    if is_demo_mode():
+        # In demo mode, return healthy status without checking external dependencies
+        return {
+            "status": "healthy",
+            "service": "derivativ-api",
+            "database": "demo_mode",
+            "realtime": "demo_mode",
+            "mode": "demo",
+        }
+
     database_health = check_database_health()
     realtime_health = check_realtime_health()
 

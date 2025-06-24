@@ -137,7 +137,15 @@ class TestFastAPISupabaseE2E:
         """Test basic API health check."""
         response = client.get("/health")
         assert response.status_code == 200
-        assert response.json() == {"status": "healthy", "service": "derivativ-api"}
+
+        health_data = response.json()
+        assert health_data["status"] == "healthy"
+        assert health_data["service"] == "derivativ-api"
+
+        # In demo mode, we expect additional demo-specific fields
+        if "mode" in health_data and health_data["mode"] == "demo":
+            assert health_data["database"] == "demo_mode"
+            assert health_data["realtime"] == "demo_mode"
 
     @pytest.mark.integration
     def test_generate_question_e2e_with_database(
