@@ -347,9 +347,9 @@ class TestSupabaseConnectionIntegration:
 
     def test_database_schema_exists(self, supabase_client):
         """Test that our main tables exist with correct schema."""
-        # Test questions table exists and has correct columns
+        # Test generated_questions table exists and has correct columns
         try:
-            response = supabase_client.table("questions").select("id").limit(1).execute()
+            response = supabase_client.table("generated_questions").select("id").limit(1).execute()
             # If this doesn't raise an exception, table exists
             assert response is not None
         except Exception as e:

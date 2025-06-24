@@ -10,8 +10,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 
 from src.api.dependencies import get_question_generation_service
-from src.realtime.supabase_realtime import get_realtime_client
 from src.services.question_generation_service import QuestionGenerationService
+from src.supabase_realtime.supabase_realtime import get_realtime_client
 
 logger = logging.getLogger(__name__)
 

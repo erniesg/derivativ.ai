@@ -156,12 +156,12 @@ def verify_setup():
         repo = QuestionRepository(client)
 
         # Test basic operations
-        questions = client.table("questions").select("id").limit(1).execute()
+        questions = client.table("generated_questions").select("id").limit(1).execute()
         sessions = client.table("generation_sessions").select("id").limit(1).execute()
         tiers = client.table("tiers").select("*").execute()
 
         print("✅ All tables accessible:")
-        print(f"   • questions table: {len(questions.data)} rows")
+        print(f"   • generated_questions table: {len(questions.data)} rows")
         print(f"   • generation_sessions table: {len(sessions.data)} rows")
         print(f"   • tiers table: {len(tiers.data)} rows")
 

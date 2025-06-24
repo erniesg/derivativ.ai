@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
 
     # Cleanup realtime connections
     try:
-        from src.realtime.supabase_realtime import cleanup_realtime_client
+        from src.supabase_realtime.supabase_realtime import cleanup_realtime_client
 
         await cleanup_realtime_client()
         logger.info("Realtime connections cleaned up")

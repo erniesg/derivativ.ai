@@ -14,11 +14,11 @@ from src.database.supabase_repository import (
     QuestionRepository,
     get_supabase_client,
 )
-from src.realtime.supabase_realtime import get_realtime_client
 from src.services.document_generation_service import DocumentGenerationService
 from src.services.llm_factory import LLMFactory
 from src.services.prompt_manager import PromptManager
 from src.services.question_generation_service import QuestionGenerationService
+from src.supabase_realtime.supabase_realtime import get_realtime_client
 
 
 @lru_cache

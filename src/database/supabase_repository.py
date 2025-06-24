@@ -34,7 +34,7 @@ class QuestionRepository:
     def __init__(self, supabase_client: Client):
         """Initialize with Supabase client."""
         self.supabase = supabase_client
-        self.table_name = "questions"
+        self.table_name = "generated_questions"
 
     def save_question(
         self, question: Question, origin: QuestionOrigin = QuestionOrigin.GENERATED

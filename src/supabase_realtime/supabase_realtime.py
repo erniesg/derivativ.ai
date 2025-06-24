@@ -245,7 +245,7 @@ class SupabaseRealtimeClient:
         try:
             # Subscribe to questions table updates
             channel = await self.subscribe_to_table(
-                table="questions",
+                table="generated_questions",
                 event="*",  # Monitor all events
             )
 
