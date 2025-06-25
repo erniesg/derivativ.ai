@@ -10,7 +10,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.dependencies import get_system_health, initialize_global_services
-from src.api.endpoints import agents, documents, questions, sessions, system, templates, websocket
+from src.api.endpoints import (
+    agents,
+    documents,
+    questions,
+    sessions,
+    storage,
+    system,
+    templates,
+    websocket,
+)
 from src.core.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -71,6 +80,7 @@ async def health_check():
 # Include routers
 app.include_router(agents.router, tags=["agents"])
 app.include_router(documents.router, tags=["documents"])
+app.include_router(storage.router, tags=["storage"])
 app.include_router(questions.router, prefix="/api", tags=["questions"])
 app.include_router(sessions.router, prefix="/api", tags=["sessions"])
 app.include_router(system.router, tags=["system"])

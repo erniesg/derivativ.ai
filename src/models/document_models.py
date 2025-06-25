@@ -32,6 +32,13 @@ class DetailLevel(str, Enum):
     GUIDED = "guided"  # Step-by-step guidance
 
 
+class DocumentVersion(str, Enum):
+    """Document versions for different audiences."""
+
+    STUDENT = "student"  # Questions only, no answers/solutions
+    TEACHER = "teacher"  # Questions + answers + marking schemes + solutions
+
+
 class ContentSection(BaseModel):
     """A section within a document with specific content."""
 
@@ -143,6 +150,31 @@ class DocumentGenerationRequest(BaseModel):
         if not v or not v.strip():
             raise ValueError("title cannot be empty")
         return v.strip()
+
+
+class DocumentSection(BaseModel):
+    """A section within a document with specific content."""
+
+    title: str = Field(..., description="Section title")
+    content_type: str = Field(..., description="Type of content (text, question, example, etc.)")
+    content_data: dict[str, Any] = Field(default_factory=dict, description="Section content")
+    order_index: int = Field(..., description="Position in document")
+
+
+class DocumentStructure(BaseModel):
+    """Structure of a document with sections and metadata."""
+
+    title: str = Field(..., description="Document title")
+    document_type: DocumentType = Field(..., description="Type of document")
+    detail_level: DetailLevel = Field(..., description="Detail level used")
+    version: DocumentVersion = Field(
+        default=DocumentVersion.STUDENT, description="Document version"
+    )
+    sections: list[DocumentSection] = Field(..., description="Document sections in order")
+    estimated_duration: Optional[int] = Field(
+        None, description="Estimated completion time in minutes"
+    )
+    total_questions: int = Field(default=0, description="Total questions included")
 
 
 class GeneratedDocument(BaseModel):

@@ -5,6 +5,7 @@ Provides singleton instances of database clients and services.
 
 import os
 from functools import lru_cache
+from typing import Any
 
 from fastapi import Depends, HTTPException
 
@@ -14,10 +15,14 @@ from src.database.supabase_repository import (
     QuestionRepository,
     get_supabase_client,
 )
+from src.repositories.document_storage_repository import DocumentStorageRepository
+from src.services.document_export_service import DocumentExportService
 from src.services.document_generation_service import DocumentGenerationService
+from src.services.document_storage_service import DocumentStorageService
 from src.services.llm_factory import LLMFactory
 from src.services.prompt_manager import PromptManager
 from src.services.question_generation_service import QuestionGenerationService
+from src.services.r2_storage_service import R2StorageService
 from src.supabase_realtime.supabase_realtime import get_realtime_client
 
 
@@ -271,6 +276,225 @@ def get_document_formatter_agent(
     # Create LLM service for the agent
     llm_service = llm_factory.get_service("openai")
     return DocumentFormatterAgent(llm_service=llm_service)
+
+
+@lru_cache
+def get_demo_document_storage() -> Any:
+    """Get singleton mock document storage for demo mode."""
+    from unittest.mock import AsyncMock, MagicMock
+    from uuid import uuid4
+
+    from src.models.stored_document_models import StoredDocument
+
+    mock_repo = MagicMock(spec=DocumentStorageRepository)
+
+    # Store created documents in memory for demo mode
+    mock_repo._documents = {}
+
+    # Mock the save_document_metadata method
+    async def mock_save_document_metadata(metadata):
+        doc_id = metadata.id
+        mock_repo._documents[doc_id] = metadata
+        return doc_id
+
+    mock_repo.save_document_metadata = AsyncMock(side_effect=mock_save_document_metadata)
+
+    # Mock the retrieve_document_by_id method
+    async def mock_retrieve_document(doc_id):
+        if doc_id in mock_repo._documents:
+            metadata = mock_repo._documents[doc_id]
+            return StoredDocument(metadata=metadata, files=[], session_data={})
+        return None
+
+    mock_repo.retrieve_document_by_id = AsyncMock(side_effect=mock_retrieve_document)
+
+    # Mock update document status
+    async def mock_update_document_status(doc_id, status, metadata=None):
+        if doc_id in mock_repo._documents:
+            mock_repo._documents[doc_id].status = status
+            if metadata:
+                # Merge metadata (simplified)
+                pass
+            return True
+        return False
+
+    mock_repo.update_document_status = AsyncMock(side_effect=mock_update_document_status)
+
+    # Mock soft delete
+    async def mock_soft_delete_document(doc_id):
+        if doc_id in mock_repo._documents:
+            mock_repo._documents[doc_id].status = "deleted"
+            return True
+        return False
+
+    mock_repo.soft_delete_document = AsyncMock(side_effect=mock_soft_delete_document)
+
+    # Mock search documents
+    async def mock_search_documents(filters):
+        # Simple search logic for demo mode
+        matching_docs = []
+        for doc_id, metadata in mock_repo._documents.items():
+            # Skip deleted documents
+            if metadata.status == "deleted":
+                continue
+
+            # Apply filters
+            if filters.document_type and metadata.document_type != filters.document_type:
+                continue
+            if filters.topic and metadata.topic != filters.topic:
+                continue
+            if filters.grade_level and metadata.grade_level != filters.grade_level:
+                continue
+            if filters.status and metadata.status != filters.status:
+                continue
+            if (
+                filters.search_text
+                and filters.search_text.lower() not in (metadata.title or "").lower()
+            ):
+                continue
+
+            matching_docs.append(metadata)
+
+        # Apply pagination
+        total_count = len(matching_docs)
+        offset = filters.offset
+        limit = filters.limit
+
+        paginated_docs = matching_docs[offset : offset + limit]
+        has_more = (offset + limit) < total_count
+
+        return {
+            "documents": paginated_docs,
+            "total_count": total_count,
+            "offset": offset,
+            "limit": limit,
+            "has_more": has_more,
+        }
+
+    mock_repo.search_documents = AsyncMock(side_effect=mock_search_documents)
+    mock_repo.get_document_files = AsyncMock(return_value=[])
+    mock_repo.save_document_file = AsyncMock(return_value=uuid4())
+    mock_repo.get_document_statistics = AsyncMock(
+        return_value={
+            "total_documents": 0,
+            "total_file_size": 0,
+            "documents_by_type": {},
+            "documents_by_status": {},
+            "average_file_size": 0,
+            "generation_success_rate": 0.0,
+        }
+    )
+
+    return mock_repo
+
+
+@lru_cache
+def get_r2_storage_config() -> dict[str, str]:
+    """
+    Get R2 storage configuration from environment.
+
+    Returns:
+        R2 configuration dictionary
+
+    Raises:
+        HTTPException: If R2 credentials are not configured
+    """
+    config = {
+        "account_id": os.getenv("CLOUDFLARE_ACCOUNT_ID"),
+        "access_key_id": os.getenv("CLOUDFLARE_R2_ACCESS_KEY_ID"),
+        "secret_access_key": os.getenv("CLOUDFLARE_R2_SECRET_ACCESS_KEY"),
+        "bucket_name": os.getenv("CLOUDFLARE_R2_BUCKET_NAME"),
+        "region": os.getenv("CLOUDFLARE_R2_REGION", "auto"),
+    }
+
+    missing_keys = [key for key, value in config.items() if not value and key != "region"]
+
+    if missing_keys and not is_demo_mode():
+        raise HTTPException(
+            status_code=503,
+            detail=f"R2 storage not configured. Missing: {missing_keys}",
+        )
+
+    return config
+
+
+def get_r2_storage_service() -> R2StorageService:
+    """
+    Get R2StorageService instance.
+
+    Returns:
+        Configured R2StorageService or None in demo mode
+    """
+    if is_demo_mode():
+        # Return a mock R2 service for demo mode
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_r2_service = MagicMock(spec=R2StorageService)
+        mock_r2_service.upload_file = AsyncMock(
+            return_value={
+                "success": True,
+                "file_key": "demo/file.pdf",
+                "bucket": "demo-bucket",
+                "upload_id": "demo-upload-123",
+                "file_size": 1024,
+            }
+        )
+        mock_r2_service.download_file = AsyncMock(
+            return_value={
+                "success": True,
+                "file_key": "demo/file.pdf",
+                "content": b"demo file content",
+                "file_size": 1024,
+            }
+        )
+        mock_r2_service.delete_file = AsyncMock(
+            return_value={"success": True, "file_key": "demo/file.pdf"}
+        )
+        mock_r2_service.generate_presigned_url = AsyncMock(
+            return_value="https://demo.r2.url/file.pdf"
+        )
+        mock_r2_service.generate_file_key = MagicMock(
+            return_value="demo/documents/worksheet/doc-id/combined.pdf"
+        )
+
+        return mock_r2_service
+    else:
+        config = get_r2_storage_config()
+        return R2StorageService(config)
+
+
+def get_document_storage_repository() -> DocumentStorageRepository:
+    """
+    Get DocumentStorageRepository instance.
+
+    Returns:
+        Configured DocumentStorageRepository or mock in demo mode
+    """
+    if is_demo_mode():
+        return get_demo_document_storage()
+    else:
+        client = get_database_client()
+        return DocumentStorageRepository(client)
+
+
+def get_document_storage_service(
+    r2_service: R2StorageService = Depends(get_r2_storage_service),
+    repository: DocumentStorageRepository = Depends(get_document_storage_repository),
+) -> DocumentStorageService:
+    """
+    Get DocumentStorageService instance.
+
+    Args:
+        r2_service: R2 storage service (injected)
+        repository: Document storage repository (injected)
+
+    Returns:
+        Configured DocumentStorageService
+    """
+    # Create export service for document format conversion
+    export_service = DocumentExportService()
+
+    return DocumentStorageService(r2_service, repository, export_service)
 
 
 # Global service instances for backwards compatibility

@@ -28,7 +28,7 @@ from src.services.document_generation_service import DocumentGenerationService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/documents", tags=["Documents"])
+router = APIRouter(prefix="/api/generation/documents", tags=["Document Generation"])
 
 
 @router.post("/generate", response_model=DocumentGenerationResult)
