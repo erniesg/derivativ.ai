@@ -76,7 +76,7 @@ def create_env_file():  # noqa: PLR0915
     prompt_supabase_key = f"Supabase Anon Key (current: {'***' + current_supabase_key[-4:] if current_supabase_key else 'not set'}): "
     new_supabase_key = input(prompt_supabase_key).strip()
     keys["SUPABASE_ANON_KEY"] = new_supabase_key if new_supabase_key else current_supabase_key
-    
+
     # Optional overrides
     print("\n⚙️  Optional configuration (press Enter for defaults):")
 

@@ -3,6 +3,7 @@ Document Storage Service.
 Orchestrates complete document storage workflows including export and R2 storage.
 """
 
+import contextlib
 import logging
 from pathlib import Path
 from typing import Any, Optional
@@ -54,7 +55,7 @@ class DocumentStorageService:
         document: DocumentStructure,
         session_id: UUID,
         metadata: dict[str, Any],
-        export_formats: list[str] = ["pdf"],
+        export_formats: list[str] = None,
         create_dual_versions: bool = True,
     ) -> dict[str, Any]:
         """
@@ -73,6 +74,9 @@ class DocumentStorageService:
         Raises:
             DocumentStorageError: If storage operation fails
         """
+        if export_formats is None:
+            export_formats = ["pdf"]
+
         try:
             document_id = uuid4()
             stored_files = []
@@ -397,10 +401,8 @@ class DocumentStorageService:
             await self.repository.save_document_file(file_record)
 
             # Clean up temporary file
-            try:
+            with contextlib.suppress(Exception):
                 file_path.unlink()
-            except Exception:
-                pass  # Ignore cleanup errors
 
             logger.info(f"Successfully uploaded and registered file: {r2_file_key}")
             return file_record

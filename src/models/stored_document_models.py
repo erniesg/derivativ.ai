@@ -4,10 +4,10 @@ Defines models for document storage, search, and metadata management.
 """
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, computed_field, field_validator
 
 
 class StoredDocumentMetadata(BaseModel):
@@ -47,7 +47,8 @@ class StoredDocumentMetadata(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.now, description="Last update timestamp")
     deleted_at: Optional[datetime] = Field(None, description="Soft deletion timestamp")
 
-    @validator("document_type")
+    @field_validator("document_type")
+    @classmethod
     def validate_document_type(cls, v):
         """Validate document type."""
         valid_types = ["worksheet", "notes", "textbook", "slides"]
@@ -55,7 +56,8 @@ class StoredDocumentMetadata(BaseModel):
             raise ValueError(f"Invalid document type. Must be one of: {valid_types}")
         return v
 
-    @validator("status")
+    @field_validator("status")
+    @classmethod
     def validate_status(cls, v):
         """Validate document status."""
         valid_statuses = [
@@ -72,7 +74,8 @@ class StoredDocumentMetadata(BaseModel):
             raise ValueError(f"Invalid status. Must be one of: {valid_statuses}")
         return v
 
-    @validator("tags", pre=True)
+    @field_validator("tags", mode="before")
+    @classmethod
     def normalize_tags(cls, v):
         """Normalize tags to lowercase."""
         if isinstance(v, list):
@@ -87,7 +90,7 @@ class StoredDocumentMetadata(BaseModel):
     class Config:
         """Pydantic configuration."""
 
-        json_encoders = {datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}
+        json_encoders: ClassVar = {datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}
 
 
 class DocumentFile(BaseModel):
@@ -112,7 +115,8 @@ class DocumentFile(BaseModel):
     created_at: datetime = Field(default_factory=datetime.now, description="Creation timestamp")
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
 
-    @validator("file_format")
+    @field_validator("file_format")
+    @classmethod
     def validate_file_format(cls, v):
         """Validate file format."""
         valid_formats = ["pdf", "docx", "html", "txt", "json", "png", "jpg", "svg"]
@@ -120,7 +124,8 @@ class DocumentFile(BaseModel):
             raise ValueError(f"Invalid file format. Must be one of: {valid_formats}")
         return v
 
-    @validator("version")
+    @field_validator("version")
+    @classmethod
     def validate_version(cls, v):
         """Validate document version."""
         valid_versions = ["student", "teacher", "combined"]
@@ -128,7 +133,8 @@ class DocumentFile(BaseModel):
             raise ValueError(f"Invalid version. Must be one of: {valid_versions}")
         return v
 
-    @validator("file_key")
+    @field_validator("file_key")
+    @classmethod
     def validate_file_key(cls, v):
         """Validate file key format."""
         if not v or not isinstance(v, str):
@@ -152,7 +158,7 @@ class DocumentFile(BaseModel):
     class Config:
         """Pydantic configuration."""
 
-        json_encoders = {datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}
+        json_encoders: ClassVar = {datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}
 
 
 class StoredDocument(BaseModel):
@@ -167,7 +173,7 @@ class StoredDocument(BaseModel):
     class Config:
         """Pydantic configuration."""
 
-        json_encoders = {datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}
+        json_encoders: ClassVar = {datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}
 
 
 class DocumentSearchFilters(BaseModel):
@@ -191,7 +197,8 @@ class DocumentSearchFilters(BaseModel):
     limit: int = Field(default=50, ge=1, le=100, description="Maximum results to return")
     offset: int = Field(default=0, ge=0, description="Number of results to skip")
 
-    @validator("limit")
+    @field_validator("limit")
+    @classmethod
     def validate_limit(cls, v):
         """Validate pagination limit."""
         if v < 1 or v > 100:
@@ -201,7 +208,7 @@ class DocumentSearchFilters(BaseModel):
     class Config:
         """Pydantic configuration."""
 
-        json_encoders = {datetime: lambda v: v.isoformat()}
+        json_encoders: ClassVar = {datetime: lambda v: v.isoformat()}
 
 
 class DocumentSearchResults(BaseModel):
@@ -211,21 +218,17 @@ class DocumentSearchResults(BaseModel):
     total_count: int = Field(..., description="Total number of matching documents")
     offset: int = Field(..., description="Current offset")
     limit: int = Field(..., description="Current limit")
-    has_more: bool = Field(..., description="Whether more results are available")
 
-    @validator("has_more", always=True)
-    def calculate_has_more(cls, v, values):
+    @computed_field
+    @property
+    def has_more(self) -> bool:
         """Calculate if more results are available."""
-        total_count = values.get("total_count", 0)
-        offset = values.get("offset", 0)
-        limit = values.get("limit", 50)
-
-        return (offset + limit) < total_count
+        return (self.offset + self.limit) < self.total_count
 
     class Config:
         """Pydantic configuration."""
 
-        json_encoders = {datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}
+        json_encoders: ClassVar = {datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}
 
 
 class DocumentStatistics(BaseModel):
@@ -256,7 +259,7 @@ class DocumentStatistics(BaseModel):
     class Config:
         """Pydantic configuration."""
 
-        json_encoders = {datetime: lambda v: v.isoformat()}
+        json_encoders: ClassVar = {datetime: lambda v: v.isoformat()}
 
 
 class DocumentExportRequest(BaseModel):
@@ -275,7 +278,8 @@ class DocumentExportRequest(BaseModel):
     output_directory: Optional[str] = Field(None, description="Custom output directory")
     filename_template: Optional[str] = Field(None, description="Custom filename template")
 
-    @validator("formats")
+    @field_validator("formats")
+    @classmethod
     def validate_formats(cls, v):
         """Validate export formats."""
         valid_formats = ["pdf", "docx", "html"]
@@ -292,7 +296,7 @@ class DocumentExportRequest(BaseModel):
     class Config:
         """Pydantic configuration."""
 
-        json_encoders = {UUID: lambda v: str(v)}
+        json_encoders: ClassVar = {UUID: lambda v: str(v)}
 
 
 class DocumentExportResult(BaseModel):
@@ -311,7 +315,8 @@ class DocumentExportResult(BaseModel):
     completed_at: Optional[datetime] = Field(None, description="Export completion time")
     processing_time: Optional[float] = Field(None, description="Processing time in seconds")
 
-    @validator("status")
+    @field_validator("status")
+    @classmethod
     def validate_status(cls, v):
         """Validate export status."""
         valid_statuses = ["queued", "processing", "completed", "failed", "cancelled"]
@@ -322,7 +327,7 @@ class DocumentExportResult(BaseModel):
     class Config:
         """Pydantic configuration."""
 
-        json_encoders = {datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}
+        json_encoders: ClassVar = {datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}
 
 
 class BulkOperationRequest(BaseModel):
@@ -332,7 +337,8 @@ class BulkOperationRequest(BaseModel):
     operation: str = Field(..., description="Operation to perform")
     parameters: dict[str, Any] = Field(default_factory=dict, description="Operation parameters")
 
-    @validator("document_ids")
+    @field_validator("document_ids")
+    @classmethod
     def validate_document_ids(cls, v):
         """Validate document IDs list."""
         if not v:
@@ -343,7 +349,8 @@ class BulkOperationRequest(BaseModel):
 
         return v
 
-    @validator("operation")
+    @field_validator("operation")
+    @classmethod
     def validate_operation(cls, v):
         """Validate bulk operation type."""
         valid_operations = ["update_status", "delete", "export", "archive", "tag"]
@@ -354,7 +361,7 @@ class BulkOperationRequest(BaseModel):
     class Config:
         """Pydantic configuration."""
 
-        json_encoders = {UUID: lambda v: str(v)}
+        json_encoders: ClassVar = {UUID: lambda v: str(v)}
 
 
 class BulkOperationResult(BaseModel):
@@ -383,4 +390,4 @@ class BulkOperationResult(BaseModel):
     class Config:
         """Pydantic configuration."""
 
-        json_encoders = {datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}
+        json_encoders: ClassVar = {datetime: lambda v: v.isoformat(), UUID: lambda v: str(v)}

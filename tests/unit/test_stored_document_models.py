@@ -60,7 +60,7 @@ class TestStoredDocumentModels:
         errors = exc_info.value.errors()
         required_fields = {error["loc"][0] for error in errors if error["type"] == "missing"}
 
-        assert "id" in required_fields
+        # Note: id has default_factory so it's not required
         assert "title" in required_fields
         assert "document_type" in required_fields
 

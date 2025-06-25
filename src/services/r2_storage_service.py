@@ -432,10 +432,7 @@ class R2StorageService:
             return False
 
         # Must not be empty and have reasonable length
-        if len(file_key) == 0 or len(file_key) > 1024:
-            return False
-
-        return True
+        return not (len(file_key) == 0 or len(file_key) > 1024)
 
     def get_supported_formats(self) -> list[str]:
         """
@@ -463,18 +460,18 @@ class R2StorageService:
         if content_type:
             return content_type
 
-        # Fallback: detect from content
-        if content.startswith(b"%PDF"):
-            return "application/pdf"
-        elif content.startswith(b"PK\x03\x04"):
-            # ZIP-based formats (DOCX, etc.)
-            if file_key.endswith(".docx"):
-                return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            else:
-                return "application/zip"
-        elif content.startswith(b"<!DOCTYPE html>") or content.startswith(b"<html"):
-            return "text/html"
-        elif content.startswith(b"{") or content.startswith(b"["):
-            return "application/json"
-        else:
-            return "application/octet-stream"
+        # Fallback: detect from content signatures
+        content_detectors = [
+            (lambda c: c.startswith(b"%PDF"), "application/pdf"),
+            (lambda c: c.startswith(b"PK\x03\x04") and file_key.endswith(".docx"),
+             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+            (lambda c: c.startswith(b"PK\x03\x04"), "application/zip"),
+            (lambda c: c.startswith(b"<!DOCTYPE html>") or c.startswith(b"<html"), "text/html"),
+            (lambda c: c.startswith(b"{") or c.startswith(b"["), "application/json"),
+        ]
+
+        for detector, mime_type in content_detectors:
+            if detector(content):
+                return mime_type
+
+        return "application/octet-stream"

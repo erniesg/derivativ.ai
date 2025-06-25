@@ -20,7 +20,7 @@ from models.document_models import (
 from services.document_export_service import DocumentExportService
 
 
-async def demo_dual_version_export():
+async def demo_dual_version_export():  # noqa: PLR0915
     """Demonstrate student and teacher version export functionality."""
     print("🎓 Derivativ Dual Version Export Demo")
     print("=" * 50)

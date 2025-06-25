@@ -38,7 +38,7 @@ class PandocService:
             import subprocess
 
             result = subprocess.run(
-                [self.pandoc_path, "--version"], capture_output=True, text=True, timeout=10
+                [self.pandoc_path, "--version"], capture_output=True, text=True, timeout=10, check=False
             )
             if result.returncode != 0:
                 raise PandocError(f"Pandoc command failed: {result.stderr}")
@@ -63,7 +63,7 @@ class PandocService:
         Raises:
             PandocError: If command fails
         """
-        cmd = [self.pandoc_path] + args
+        cmd = [self.pandoc_path, *args]
 
         try:
             process = await asyncio.create_subprocess_exec(

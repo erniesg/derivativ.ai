@@ -20,7 +20,7 @@ from models.document_models import (
 from services.document_export_service import DocumentExportService
 
 
-async def demo_pandoc_export():
+async def demo_pandoc_export():  # noqa: PLR0915
     """Demonstrate complete document export functionality."""
     print("🚀 Derivativ Pandoc Export Demo")
     print("=" * 50)

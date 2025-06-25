@@ -19,8 +19,8 @@ from unittest.mock import MagicMock
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.agents.document_formatter_agent import DocumentFormatterAgent  # noqa: E402
-from src.models.document_models import (  # noqa: E402
+from src.agents.document_formatter_agent import DocumentFormatterAgent
+from src.models.document_models import (
     ContentSection,
     DetailLevel,
     DocumentGenerationRequest,
@@ -28,8 +28,8 @@ from src.models.document_models import (  # noqa: E402
     ExportFormat,
     GeneratedDocument,
 )
-from src.models.enums import Tier  # noqa: E402
-from src.services.llm_service import LLMService  # noqa: E402
+from src.models.enums import Tier
+from src.services.llm_service import LLMService
 
 
 def check_pandoc_installation():

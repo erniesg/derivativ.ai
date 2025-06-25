@@ -3,6 +3,7 @@ Document Storage Repository.
 Handles database operations for document metadata and file references.
 """
 
+import contextlib
 import logging
 from datetime import datetime
 from typing import Optional
@@ -582,10 +583,7 @@ class DocumentStorageRepository:
                 "deleted",
                 "archived",
             ]
-            if metadata.status not in valid_statuses:
-                return False
-
-            return True
+            return metadata.status in valid_statuses
 
         except Exception:
             return False
@@ -622,30 +620,24 @@ class DocumentStorageRepository:
             # Parse grade level
             grade_level = None
             if raw_filters.get("grade_level"):
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     grade_level = int(raw_filters["grade_level"])
-                except (ValueError, TypeError):
-                    pass
 
             # Parse dates
             created_after = None
             created_before = None
 
             if raw_filters.get("created_after"):
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     created_after = datetime.fromisoformat(
                         raw_filters["created_after"].replace("Z", "+00:00")
                     )
-                except (ValueError, TypeError):
-                    pass
 
             if raw_filters.get("created_before"):
-                try:
+                with contextlib.suppress(ValueError, TypeError):
                     created_before = datetime.fromisoformat(
                         raw_filters["created_before"].replace("Z", "+00:00")
                     )
-                except (ValueError, TypeError):
-                    pass
 
             # Parse tags
             tags = []
@@ -659,15 +651,11 @@ class DocumentStorageRepository:
             limit = 50
             offset = 0
 
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 limit = min(int(raw_filters.get("limit", 50)), 100)
-            except (ValueError, TypeError):
-                pass
 
-            try:
+            with contextlib.suppress(ValueError, TypeError):
                 offset = max(int(raw_filters.get("offset", 0)), 0)
-            except (ValueError, TypeError):
-                pass
 
             return DocumentSearchFilters(
                 document_type=raw_filters.get("document_type"),

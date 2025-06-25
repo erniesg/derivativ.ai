@@ -173,7 +173,7 @@ class MockLLMService(LLMService):
         handler = StreamHandler(request.model, "mock", "test-stream")
 
         # Check if a timeout is specified and respect it
-        timeout = overrides.get("timeout", None)
+        timeout = overrides.get("timeout")
 
         if timeout is not None and self.response_delay > timeout:
             # Simulate timeout behavior
@@ -203,7 +203,7 @@ class MockLLMService(LLMService):
     async def generate_non_stream(self, request: LLMRequest, **overrides) -> LLMResponse:
         """Generate mock non-streaming response with proper JSON for agents."""
         # Check if a timeout is specified and respect it
-        timeout = overrides.get("timeout", None)
+        timeout = overrides.get("timeout")
 
         if timeout is not None and self.response_delay > timeout:
             # Simulate timeout behavior
