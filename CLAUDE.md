@@ -43,6 +43,36 @@
 - **Performance Tests**: 5/19 failing (timeout handling edge cases)
 - **Export Functionality**: PDF/DOCX generation for generated documents (future enhancement)
 
+### 📋 NEXT PHASE: Pipeline Orchestration via gimme_ai Enhancement
+
+**Objective**: Enhance gimme_ai to be a generic, reusable workflow orchestration engine for Derivativ's daily question generation pipeline.
+
+**Status**: **REQUIREMENTS DOCUMENTED** - Complete implementation specification ready for next developer
+
+#### **Key Requirements**
+- **Daily Automation**: 50 Cambridge IGCSE questions at 2:00 AM Singapore Time
+- **Generic Engine**: Reusable workflow orchestration for any REST API
+- **Cloudflare Integration**: Production deployment on Cloudflare Workers
+- **Singapore Scheduling**: Proper SGT→UTC timezone conversion
+
+#### **Implementation Specifications**
+- **Location**: `GIMME_AI_ENHANCEMENT_REQUIREMENTS.md` + `gimme_ai_enhancement_specs/`
+- **Architecture**: YAML-configurable workflows with Jinja2 templating
+- **Testing Strategy**: Local development → Live API testing → Production validation
+- **Timeline**: 6-day implementation plan with TDD approach
+
+#### **Critical Cloudflare Workflows Constraints**
+- State persistence only via `step.do()` returns (hibernation resets memory)
+- Deterministic step naming required (no timestamps/random values)
+- 10,000 step limit per workflow
+- Idempotent operations essential for retry reliability
+
+**Key Benefits**:
+- **Scheduling**: Reliable daily 2 AM SGT execution via Cloudflare cron triggers
+- **Scalability**: Parallel question generation across 6 mathematical topics
+- **Reliability**: Automatic retry with exponential backoff, comprehensive error recovery
+- **Reusability**: Generic enough for any REST API orchestration beyond Derivativ
+
 **Demo Readiness**: **100% READY** - Complete full-stack functionality with 187/192 tests passing. All critical workflows tested and working. Frontend and backend fully integrated with reliable demo mode.
 
 ### 🚀 LIVE DEMO SETUP
