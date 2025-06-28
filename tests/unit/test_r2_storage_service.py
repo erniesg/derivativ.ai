@@ -109,7 +109,8 @@ class TestR2StorageService:
         expected_content = b"test document content"
 
         # Mock get_object response
-        mock_response = {"Body": type("MockBody", (), {"read": lambda: expected_content})()}
+        mock_body = type("MockBody", (), {"read": lambda self: expected_content})()
+        mock_response = {"Body": mock_body}
         mock_boto3_client.get_object.return_value = mock_response
 
         # Act
@@ -244,11 +245,13 @@ class TestR2StorageService:
                     "Key": "documents/worksheets/algebra.pdf",
                     "Size": 1024,
                     "LastModified": datetime.now(),
+                    "ETag": '"abc123"',
                 },
                 {
                     "Key": "documents/worksheets/geometry.pdf",
                     "Size": 2048,
                     "LastModified": datetime.now(),
+                    "ETag": '"def456"',
                 },
             ]
         }
@@ -265,7 +268,7 @@ class TestR2StorageService:
         assert files[1]["size"] == 2048
 
         mock_boto3_client.list_objects_v2.assert_called_once_with(
-            Bucket="test-bucket", Prefix=prefix
+            Bucket="test-bucket", Prefix=prefix, MaxKeys=1000
         )
 
     async def test_get_file_metadata(self, r2_service, mock_boto3_client):
