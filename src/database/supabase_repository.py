@@ -7,6 +7,7 @@ import logging
 from datetime import datetime
 from typing import Any, Optional
 
+from src.core.config import get_settings
 from src.models.enums import CommandWord, QuestionOrigin, Tier
 from src.models.question_models import GenerationSession, GenerationStatus, Question
 from supabase import Client, create_client
@@ -34,7 +35,8 @@ class QuestionRepository:
     def __init__(self, supabase_client: Client):
         """Initialize with Supabase client."""
         self.supabase = supabase_client
-        self.table_name = "generated_questions"
+        settings = get_settings()
+        self.table_name = f"{settings.table_prefix}generated_questions"
 
     def save_question(
         self, question: Question, origin: QuestionOrigin = QuestionOrigin.GENERATED
@@ -209,7 +211,8 @@ class GenerationSessionRepository:
     def __init__(self, supabase_client: Client):
         """Initialize with Supabase client."""
         self.supabase = supabase_client
-        self.table_name = "generation_sessions"
+        settings = get_settings()
+        self.table_name = f"{settings.table_prefix}generation_sessions"
 
     def save_session(self, session: GenerationSession) -> str:
         """

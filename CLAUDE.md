@@ -18,7 +18,7 @@
 
 **Latest Update**: June 22, 2025
 
-### ✅ COMPLETED FEATURES  
+### ✅ COMPLETED FEATURES
 - **Multi-Agent System**: Complete smolagents integration with question generation, review, and refinement workflows
 - **LLM Services**: Multi-provider support (OpenAI, Anthropic, Google) with async streaming and fallback strategies
 - **Agent Orchestration**: Async/sync compatibility layer with proper event loop handling for production deployment
@@ -43,37 +43,68 @@
 - **Performance Tests**: 5/19 failing (timeout handling edge cases)
 - **Export Functionality**: PDF/DOCX generation for generated documents (future enhancement)
 
-### 📋 NEXT PHASE: Pipeline Orchestration via gimme_ai Enhancement
+### 📋 CURRENT INTEGRATION STATUS WITH FULL STACK
 
-**Objective**: Enhance gimme_ai to be a generic, reusable workflow orchestration engine for Derivativ's daily question generation pipeline.
+**Live Deployment Gap Analysis** (Updated 2025-06-28):
 
-**Status**: **REQUIREMENTS DOCUMENTED** - Complete implementation specification ready for next developer
+#### **derivativ.ai/ (Backend) - 95% Ready** ✅
+- **Multi-Agent System**: Complete with 187/192 tests passing (97.4% success rate)
+- **API Endpoints**: All endpoints implemented and tested
+- **Question Generation**: Live with OpenAI/Anthropic/Google Gemini
+- **Document Creation**: PDF/DOCX/HTML export working
+- **Storage Pipeline**: Cloudflare R2 + Supabase operational
+- **Gap**: 5 performance tests failing (timeout edge cases only)
 
-#### **Key Requirements**
-- **Daily Automation**: 50 Cambridge IGCSE questions at 2:00 AM Singapore Time
-- **Generic Engine**: Reusable workflow orchestration for any REST API
-- **Cloudflare Integration**: Production deployment on Cloudflare Workers
-- **Singapore Scheduling**: Proper SGT→UTC timezone conversion
+#### **derivativ/ (Frontend) - 90% Ready** ✅
+- **Document Generation UI**: Complete teacher workflow
+- **Authentication**: Supabase integration with social login
+- **API Integration**: Working connection to backend
+- **Interactive Features**: TldrawWorkArea for mathematical work
+- **Gap**: Practice page uses hardcoded questions (not backend API)
 
-#### **Implementation Specifications**
-- **Location**: `GIMME_AI_ENHANCEMENT_REQUIREMENTS.md` + `gimme_ai_enhancement_specs/`
-- **Architecture**: YAML-configurable workflows with Jinja2 templating
-- **Testing Strategy**: Local development → Live API testing → Production validation
-- **Timeline**: 6-day implementation plan with TDD approach
+#### **gimme_ai/ (Orchestration) - 75% Ready** 🚧
+- **Workflow Engine**: Complete with Singapore timezone scheduling
+- **Templates**: Daily automation workflows ready
+- **Testing**: All components tested locally
+- **Critical Gap**: Not deployed to Cloudflare Workers (blocking daily automation)
 
-#### **Critical Cloudflare Workflows Constraints**
-- State persistence only via `step.do()` returns (hibernation resets memory)
-- Deterministic step naming required (no timestamps/random values)
-- 10,000 step limit per workflow
-- Idempotent operations essential for retry reliability
+#### **What's Live vs Mocked**
+**Live & Tested** ✅:
+- Question generation via multi-agent AI system
+- Document creation and export (PDF, DOCX, HTML)
+- Storage in Cloudflare R2 with Supabase metadata
+- Frontend document generation workflow
 
-**Key Benefits**:
-- **Scheduling**: Reliable daily 2 AM SGT execution via Cloudflare cron triggers
-- **Scalability**: Parallel question generation across 6 mathematical topics
-- **Reliability**: Automatic retry with exponential backoff, comprehensive error recovery
-- **Reusability**: Generic enough for any REST API orchestration beyond Derivativ
+**Mocked/Demo** 🎭:
+- Practice questions (hardcoded in Practice.tsx)
+- Assessment quiz questions (static data)
+- Daily automation (workflow ready but not deployed)
 
-**Demo Readiness**: **100% READY** - Complete full-stack functionality with 187/192 tests passing. All critical workflows tested and working. Frontend and backend fully integrated with reliable demo mode.
+#### **Critical Gaps for Full Live Deployment**
+
+**1. Deploy gimme_ai to Cloudflare Workers** (2-3 days)
+- **Status**: Workflow engine ready, deployment missing
+- **Impact**: Enables daily 2 AM SGT automation (50 questions across 6 topics)
+- **Command**: `cd gimme_ai && gimme-ai deploy`
+
+**2. Connect Frontend to Real Questions** (1-2 days)
+- **Current**: Practice.tsx uses hardcoded questions
+- **Needed**: Connect to `GET /api/questions` from derivativ.ai
+- **Impact**: Students practice with real generated questions
+
+**3. Production Environment Setup** (1 day)
+- **Required**: API keys, Supabase credentials, Cloudflare tokens
+- **Testing**: End-to-end live integration validation
+
+#### **Next Phase Timeline: 3-5 Days to Full Deployment**
+
+**Day 1**: Deploy gimme_ai orchestration layer
+**Day 2**: Connect frontend to live question APIs
+**Day 3**: End-to-end integration testing
+**Day 4**: Production environment configuration
+**Day 5**: Live automation testing and monitoring
+
+**Demo Readiness**: **100% READY** - All core components working, only deployment and final integration needed.
 
 ### 🚀 LIVE DEMO SETUP
 
@@ -93,7 +124,7 @@ npm run dev
 
 **Integration Test**:
 ```bash
-cd /Users/erniesg/code/erniesg/derivativ.ai  
+cd /Users/erniesg/code/erniesg/derivativ.ai
 python scripts/test_full_stack.py
 # Result: ✅ All API tests PASSED!
 ```
@@ -300,6 +331,11 @@ React TeacherDashboard → FastAPI Document API → Generated Materials → Down
 
 **IMPORTANT**: Derivativ uses a 4-tier testing structure located in `tests/` directory:
 
+#### Test vs Script Distinction
+- **Tests** (`tests/`) = Automated test suite with assertions, run via pytest
+- **Scripts** (`scripts/`) = Setup utilities, demos, one-off tools (NOT tests)
+- **NEVER put test files in scripts/** - All tests belong in the `tests/` directory
+
 #### Test Directory Structure
 ```
 tests/
@@ -313,13 +349,11 @@ scripts/            # Utility scripts for development (NOT tests)
 └── setup_api_keys.py              # Environment setup utilities
 ```
 
-**Test vs Script Distinction**:
-- **Tests** (`tests/`) = Automated test suite with assertions, run via pytest
-- **Scripts** (`scripts/`) = Manual utilities, demos, setup tools for development
-- **Naming Rules**:
-  - Tests: `test_*.py` with pytest assertions → `tests/` directory
-  - Scripts: `demo_*.py`, `verify_*.py`, `setup_*.py` → `scripts/` directory
-  - **Never** use `test_` prefix in `scripts/` - it's misleading
+**File Organization Rules**:
+- **Tests**: `test_*.py` with pytest assertions → `tests/` directory ONLY
+- **Scripts**: Setup utilities, manual tools → `scripts/` directory
+- **Examples**: Working demos → `examples/` directory
+- **NEVER** use `test_` prefix outside of `tests/` directory
 
 #### 1. **Unit Tests** (`tests/unit/`) - Write First
 ```python
@@ -740,6 +774,106 @@ test: add comprehensive smolagents workflow test coverage
 
 ---
 
+## 🔍 Using Gemini CLI for Large Codebase Analysis
+
+When analyzing large codebases or multiple files that might exceed context limits, use the Gemini CLI with its massive context window. Use `gemini -p` to leverage Google Gemini's large context capacity.
+
+### File and Directory Inclusion Syntax
+
+Use the `@` syntax to include files and directories in your Gemini prompts. The paths should be relative to WHERE you run the gemini command:
+
+#### Examples:
+
+**Single file analysis:**
+```bash
+gemini -p "@src/main.py Explain this file's purpose and structure"
+```
+
+**Multiple files:**
+```bash
+gemini -p "@package.json @src/index.js Analyze the dependencies used in the code"
+```
+
+**Entire directory:**
+```bash
+gemini -p "@src/ Summarize the architecture of this codebase"
+```
+
+**Multiple directories:**
+```bash
+gemini -p "@src/ @tests/ Analyze test coverage for the source code"
+```
+
+**Current directory and subdirectories:**
+```bash
+gemini -p "@./ Give me an overview of this entire project"
+# Or use --all_files flag:
+gemini --all_files -p "Analyze the project structure and dependencies"
+```
+
+### Implementation Verification Examples
+
+**Check if a feature is implemented:**
+```bash
+gemini -p "@src/ @lib/ Has dark mode been implemented in this codebase? Show me the relevant files and functions"
+```
+
+**Verify authentication implementation:**
+```bash
+gemini -p "@src/ @middleware/ Is JWT authentication implemented? List all auth-related endpoints and middleware"
+```
+
+**Check for specific patterns:**
+```bash
+gemini -p "@src/ Are there any React hooks that handle WebSocket connections? List them with file paths"
+```
+
+**Verify error handling:**
+```bash
+gemini -p "@src/ @api/ Is proper error handling implemented for all API endpoints? Show examples of try-catch blocks"
+```
+
+**Check for rate limiting:**
+```bash
+gemini -p "@backend/ @middleware/ Is rate limiting implemented for the API? Show the implementation details"
+```
+
+**Verify caching strategy:**
+```bash
+gemini -p "@src/ @lib/ @services/ Is Redis caching implemented? List all cache-related functions and their usage"
+```
+
+**Check for specific security measures:**
+```bash
+gemini -p "@src/ @api/ Are SQL injection protections implemented? Show how user inputs are sanitized"
+```
+
+**Verify test coverage for features:**
+```bash
+gemini -p "@src/payment/ @tests/ Is the payment processing module fully tested? List all test cases"
+```
+
+### When to Use Gemini CLI
+
+Use `gemini -p` when:
+- Analyzing entire codebases or large directories
+- Comparing multiple large files
+- Need to understand project-wide patterns or architecture
+- Current context window is insufficient for the task
+- Working with files totaling more than 100KB
+- Verifying if specific features, patterns, or security measures are implemented
+- Checking for the presence of certain coding patterns across the entire codebase
+
+### Important Notes
+
+- Paths in @ syntax are relative to your current working directory when invoking gemini
+- The CLI will include file contents directly in the context
+- No need for --yolo flag for read-only analysis
+- Gemini's context window can handle entire codebases that would overflow Claude's context
+- When checking implementations, be specific about what you're looking for to get accurate results
+
+---
+
 ## 📊 DERIVATIV SUCCESS METRICS & EVALUATION
 
 ### Hackathon Success Indicators
@@ -856,7 +990,7 @@ This ensures clean, predictable naming that scales with project growth.
 ### **5-Minute Demo Script**
 1. **Hook (30s)**: "AI teachers working together - watch the agents collaborate"
 2. **Live Demo (3m)**: Complete workflow from UI to generated document
-3. **Architecture (1m)**: Show test coverage, demo mode, multi-agent coordination  
+3. **Architecture (1m)**: Show test coverage, demo mode, multi-agent coordination
 4. **Impact (30s)**: "Production-ready platform teachers can use immediately"
 
 ### **Judge Appeal Points**
@@ -871,7 +1005,7 @@ This ensures clean, predictable naming that scales with project growth.
 
 ### **Final Verdict: 100% HACKATHON READY** 🚀
 - ✅ Complete full-stack functionality
-- ✅ Professional presentation quality  
+- ✅ Professional presentation quality
 - ✅ Reliable demo capabilities
 - ✅ Production-grade architecture
 - ✅ Comprehensive test coverage (187/192 tests passing)

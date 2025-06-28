@@ -9,6 +9,7 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
+from src.core.config import get_settings
 from src.models.stored_document_models import (
     DocumentFile,
     DocumentSearchFilters,
@@ -37,6 +38,8 @@ class DocumentStorageRepository:
             supabase_client: Supabase client instance
         """
         self.client = supabase_client
+        settings = get_settings()
+        self.table_prefix = settings.table_prefix
 
     async def save_document_metadata(self, metadata: StoredDocumentMetadata) -> UUID:
         """
@@ -69,7 +72,9 @@ class DocumentStorageRepository:
                 data["deleted_at"] = data["deleted_at"].isoformat()
 
             # Insert into stored_documents table
-            response = self.client.table("stored_documents").insert(data).execute()
+            response = (
+                self.client.table(f"{self.table_prefix}stored_documents").insert(data).execute()
+            )
 
             if not response.data:
                 raise DocumentStorageError("Failed to save document metadata - no data returned")
@@ -97,7 +102,7 @@ class DocumentStorageRepository:
         try:
             # Get document metadata
             metadata_response = (
-                self.client.table("stored_documents")
+                self.client.table(f"{self.table_prefix}stored_documents")
                 .select("*")
                 .eq("id", str(document_id))
                 .execute()
@@ -162,7 +167,7 @@ class DocumentStorageRepository:
                 update_data.update(metadata)
 
             response = (
-                self.client.table("stored_documents")
+                self.client.table(f"{self.table_prefix}stored_documents")
                 .update(update_data)
                 .eq("id", str(document_id))
                 .execute()
@@ -199,7 +204,7 @@ class DocumentStorageRepository:
             }
 
             response = (
-                self.client.table("stored_documents")
+                self.client.table(f"{self.table_prefix}stored_documents")
                 .update(update_data)
                 .eq("id", str(document_id))
                 .execute()
@@ -230,7 +235,9 @@ class DocumentStorageRepository:
         """
         try:
             # Build query
-            query = self.client.table("stored_documents").select("*", count="exact")
+            query = self.client.table(f"{self.table_prefix}stored_documents").select(
+                "*", count="exact"
+            )
 
             # Apply filters
             query = query.neq("status", "deleted")  # Exclude deleted documents
@@ -320,7 +327,9 @@ class DocumentStorageRepository:
                 data["updated_at"] = data["updated_at"].isoformat()
 
             # Insert into document_files table
-            response = self.client.table("document_files").insert(data).execute()
+            response = (
+                self.client.table(f"{self.table_prefix}document_files").insert(data).execute()
+            )
 
             if not response.data:
                 raise DocumentStorageError("Failed to save document file - no data returned")
@@ -347,7 +356,7 @@ class DocumentStorageRepository:
         """
         try:
             response = (
-                self.client.table("document_files")
+                self.client.table(f"{self.table_prefix}document_files")
                 .select("*")
                 .eq("document_id", str(document_id))
                 .execute()
@@ -391,7 +400,7 @@ class DocumentStorageRepository:
                 update_data["file_size"] = storage_info["file_size"]
 
             response = (
-                self.client.table("document_files")
+                self.client.table(f"{self.table_prefix}document_files")
                 .update(update_data)
                 .eq("id", str(file_id))
                 .execute()
@@ -422,7 +431,7 @@ class DocumentStorageRepository:
         """
         try:
             response = (
-                self.client.table("stored_documents")
+                self.client.table(f"{self.table_prefix}stored_documents")
                 .select("*")
                 .eq("session_id", str(session_id))
                 .execute()
@@ -460,7 +469,7 @@ class DocumentStorageRepository:
 
             # Get total document count
             total_response = (
-                self.client.table("stored_documents")
+                self.client.table(f"{self.table_prefix}stored_documents")
                 .select("*", count="exact")
                 .neq("status", "deleted")
                 .execute()
@@ -469,7 +478,7 @@ class DocumentStorageRepository:
 
             # Get total file size
             size_response = (
-                self.client.table("stored_documents")
+                self.client.table(f"{self.table_prefix}stored_documents")
                 .select("total_file_size")
                 .neq("status", "deleted")
                 .execute()
@@ -478,7 +487,7 @@ class DocumentStorageRepository:
 
             # Get documents by type
             type_response = (
-                self.client.table("stored_documents")
+                self.client.table(f"{self.table_prefix}stored_documents")
                 .select("document_type")
                 .neq("status", "deleted")
                 .execute()
@@ -490,7 +499,7 @@ class DocumentStorageRepository:
 
             # Get documents by status
             status_response = (
-                self.client.table("stored_documents")
+                self.client.table(f"{self.table_prefix}stored_documents")
                 .select("status")
                 .neq("status", "deleted")
                 .execute()
@@ -535,7 +544,7 @@ class DocumentStorageRepository:
             }
 
             response = (
-                self.client.table("stored_documents")
+                self.client.table(f"{self.table_prefix}stored_documents")
                 .update(update_data)
                 .lt("created_at", cutoff_date.isoformat())
                 .execute()

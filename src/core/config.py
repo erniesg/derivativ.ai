@@ -417,6 +417,10 @@ class Settings(BaseSettings):
     demo_mode: bool = Field(False, description="Enable demo mode", alias="DEMO_MODE")
     use_mock_llm: bool = Field(False, description="Use mock LLM service", alias="USE_MOCK_LLM")
 
+    # Database mode settings
+    db_mode: str = Field("prod", description="Database mode: dev or prod", alias="DB_MODE")
+    db_table_prefix: str = Field("", description="Database table prefix", alias="DB_TABLE_PREFIX")
+
     # Diagram storage settings
     diagram_storage_type: str = Field(
         "local",
@@ -440,6 +444,13 @@ class Settings(BaseSettings):
         # Map field names to environment variable names
         env_ignore_empty=True,
     )
+
+    @property
+    def table_prefix(self) -> str:
+        """Get table prefix based on db_mode or explicit prefix."""
+        if self.db_table_prefix:
+            return self.db_table_prefix
+        return "dev_" if self.db_mode == "dev" else ""
 
 
 class _SettingsSingleton:
