@@ -113,10 +113,10 @@ class DocumentStorageRepository:
 
             metadata_data = metadata_response.data[0]
 
-            # Convert string UUIDs back to UUID objects
-            if metadata_data.get("id"):
+            # Convert string UUIDs back to UUID objects if they are strings
+            if metadata_data.get("id") and isinstance(metadata_data["id"], str):
                 metadata_data["id"] = UUID(metadata_data["id"])
-            if metadata_data.get("session_id"):
+            if metadata_data.get("session_id") and isinstance(metadata_data["session_id"], str):
                 metadata_data["session_id"] = UUID(metadata_data["session_id"])
 
             metadata = StoredDocumentMetadata(**metadata_data)
@@ -277,10 +277,10 @@ class DocumentStorageRepository:
             # Convert results to StoredDocumentMetadata objects
             documents = []
             for doc_data in response.data:
-                # Convert string UUIDs back to UUID objects
-                if doc_data.get("id"):
+                # Convert string UUIDs back to UUID objects if they are strings
+                if doc_data.get("id") and isinstance(doc_data["id"], str):
                     doc_data["id"] = UUID(doc_data["id"])
-                if doc_data.get("session_id"):
+                if doc_data.get("session_id") and isinstance(doc_data["session_id"], str):
                     doc_data["session_id"] = UUID(doc_data["session_id"])
 
                 documents.append(StoredDocumentMetadata(**doc_data))
@@ -364,10 +364,10 @@ class DocumentStorageRepository:
 
             files = []
             for file_data in response.data:
-                # Convert string UUIDs back to UUID objects
-                if file_data.get("id"):
+                # Convert string UUIDs back to UUID objects if they are strings
+                if file_data.get("id") and isinstance(file_data["id"], str):
                     file_data["id"] = UUID(file_data["id"])
-                if file_data.get("document_id"):
+                if file_data.get("document_id") and isinstance(file_data["document_id"], str):
                     file_data["document_id"] = UUID(file_data["document_id"])
 
                 files.append(DocumentFile(**file_data))
@@ -439,10 +439,10 @@ class DocumentStorageRepository:
 
             documents = []
             for doc_data in response.data:
-                # Convert string UUIDs back to UUID objects
-                if doc_data.get("id"):
+                # Convert string UUIDs back to UUID objects if they are strings
+                if doc_data.get("id") and isinstance(doc_data["id"], str):
                     doc_data["id"] = UUID(doc_data["id"])
-                if doc_data.get("session_id"):
+                if doc_data.get("session_id") and isinstance(doc_data["session_id"], str):
                     doc_data["session_id"] = UUID(doc_data["session_id"])
 
                 documents.append(StoredDocumentMetadata(**doc_data))

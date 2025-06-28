@@ -17,7 +17,6 @@ from src.models.question_models import GenerationSession, GenerationStatus, Ques
 class TestQuestionRepository:
     """Unit tests for QuestionRepository with mocked Supabase client."""
 
-
     @pytest.fixture
     def sample_question(self):
         """Sample question for testing."""
@@ -232,7 +231,6 @@ class TestQuestionRepository:
 class TestGenerationSessionRepository:
     """Unit tests for GenerationSessionRepository."""
 
-
     @pytest.fixture
     def sample_session(self):
         """Sample generation session for testing."""
@@ -240,7 +238,9 @@ class TestGenerationSessionRepository:
 
         return GenerationSession(
             session_id=uuid4(),
-            request=GenerationRequest(topic="algebra", tier=Tier.CORE, marks=3),
+            request=GenerationRequest(
+                topic="algebra", tier=Tier.CORE, marks=3, command_word=CommandWord.CALCULATE
+            ),
             questions=[],
             quality_decisions=[],
             agent_results=[],
@@ -249,6 +249,8 @@ class TestGenerationSessionRepository:
 
     def test_save_session_success(self, mock_supabase_client, sample_session):
         """Test successful session save."""
+        from unittest.mock import patch
+
         client, mock_table = mock_supabase_client
 
         # Mock successful insert
@@ -256,8 +258,10 @@ class TestGenerationSessionRepository:
         mock_response.data = [{"id": "session-123", "session_id": str(sample_session.session_id)}]
         mock_table.insert.return_value.execute.return_value = mock_response
 
-        repo = GenerationSessionRepository(client)
-        result_id = repo.save_session(sample_session)
+        with patch("src.database.supabase_repository.get_settings") as mock_settings:
+            mock_settings.return_value.table_prefix = ""
+            repo = GenerationSessionRepository(client)
+            result_id = repo.save_session(sample_session)
 
         # Verify insert was called
         mock_table.insert.assert_called_once()
@@ -265,12 +269,17 @@ class TestGenerationSessionRepository:
 
         assert call_args["session_id"] == str(sample_session.session_id)
         assert call_args["status"] == sample_session.status.value
-        assert "content_json" in call_args
+        assert "request_json" in call_args
+        assert "questions_json" in call_args
+        assert "quality_decisions_json" in call_args
+        assert "agent_results_json" in call_args
 
         assert result_id == "session-123"
 
     def test_get_session_success(self, mock_supabase_client, sample_session):
         """Test successful session retrieval."""
+        from unittest.mock import patch
+
         client, mock_table = mock_supabase_client
 
         # Mock successful select
@@ -279,15 +288,22 @@ class TestGenerationSessionRepository:
             {
                 "id": "session-123",
                 "session_id": str(sample_session.session_id),
-                "content_json": sample_session.model_dump(),
+                "request_json": sample_session.request.model_dump(),
+                "questions_json": [q.model_dump() for q in sample_session.questions],
+                "quality_decisions_json": [
+                    qd.model_dump() for qd in sample_session.quality_decisions
+                ],
+                "agent_results_json": [ar.model_dump() for ar in sample_session.agent_results],
                 "status": sample_session.status.value,
                 "created_at": datetime.utcnow().isoformat(),
             }
         ]
         mock_table.select.return_value.eq.return_value.execute.return_value = mock_response
 
-        repo = GenerationSessionRepository(client)
-        result = repo.get_session(str(sample_session.session_id))
+        with patch("src.database.supabase_repository.get_settings") as mock_settings:
+            mock_settings.return_value.table_prefix = ""
+            repo = GenerationSessionRepository(client)
+            result = repo.get_session(str(sample_session.session_id))
 
         # Verify correct query
         mock_table.select.assert_called_once_with("*")

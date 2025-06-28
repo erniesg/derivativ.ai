@@ -5,7 +5,7 @@
 DROP TABLE IF EXISTS dev_generated_questions CASCADE;
 DROP TABLE IF EXISTS dev_generation_sessions CASCADE;
 
--- Create dev_generation_sessions table (copy of production structure)
+-- Create dev_generation_sessions table (exact copy of production structure)
 CREATE TABLE IF NOT EXISTS public.dev_generation_sessions (
     -- Primary key
     id uuid default gen_random_uuid() primary key,
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS public.dev_generation_sessions (
     total_processing_time numeric(8,3),
     questions_generated integer not null default 0,
 
-    -- Complete session data as JSONB
+    -- Complete session data as JSONB (matching production exactly)
     request_json jsonb not null,
     questions_json jsonb not null default '[]'::jsonb,
     quality_decisions_json jsonb not null default '[]'::jsonb,
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS public.dev_generation_sessions (
     completed_at timestamptz
 );
 
--- Create dev_generated_questions table (copy of production structure)
+-- Create dev_generated_questions table (exact copy of production structure)
 CREATE TABLE IF NOT EXISTS public.dev_generated_questions (
     -- Primary key
     id uuid default gen_random_uuid() primary key,

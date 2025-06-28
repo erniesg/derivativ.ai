@@ -86,7 +86,7 @@ class TestR2StorageService:
         call_args = mock_boto3_client.upload_fileobj.call_args
         assert call_args[1]["Bucket"] == "test-bucket"
         assert call_args[1]["Key"] == file_key
-        assert call_args[1]["ExtraArgs"]["Metadata"] == metadata
+        assert call_args[1]["Metadata"] == metadata
 
     async def test_upload_document_file_failure(self, r2_service, mock_boto3_client):
         """Test file upload failure handling."""
@@ -99,7 +99,7 @@ class TestR2StorageService:
         )
 
         # Act & Assert
-        with pytest.raises(R2StorageError, match="Failed to upload file"):
+        with pytest.raises(R2StorageError, match="Bucket not found"):
             await r2_service.upload_file(file_content, file_key)
 
     async def test_download_document_file_success(self, r2_service, mock_boto3_client):
@@ -108,10 +108,9 @@ class TestR2StorageService:
         file_key = "documents/test-document.pdf"
         expected_content = b"test document content"
 
-        def mock_download(bucket, key, fileobj):
-            fileobj.write(expected_content)
-
-        mock_boto3_client.download_fileobj.side_effect = mock_download
+        # Mock get_object response
+        mock_response = {"Body": type("MockBody", (), {"read": lambda: expected_content})()}
+        mock_boto3_client.get_object.return_value = mock_response
 
         # Act
         result = await r2_service.download_file(file_key)
@@ -121,17 +120,15 @@ class TestR2StorageService:
         assert result["content"] == expected_content
         assert result["file_key"] == file_key
 
-        mock_boto3_client.download_fileobj.assert_called_once_with(
-            "test-bucket", file_key, pytest.any_object
-        )
+        mock_boto3_client.get_object.assert_called_once_with(Bucket="test-bucket", Key=file_key)
 
     async def test_download_document_file_not_found(self, r2_service, mock_boto3_client):
         """Test file download with file not found."""
         # Arrange
         file_key = "documents/nonexistent.pdf"
 
-        mock_boto3_client.download_fileobj.side_effect = ClientError(
-            {"Error": {"Code": "NoSuchKey", "Message": "Key not found"}}, "download_fileobj"
+        mock_boto3_client.get_object.side_effect = ClientError(
+            {"Error": {"Code": "NoSuchKey", "Message": "Key not found"}}, "get_object"
         )
 
         # Act & Assert
@@ -239,10 +236,20 @@ class TestR2StorageService:
         """Test listing files with specific prefix."""
         # Arrange
         prefix = "documents/worksheets/"
+        from datetime import datetime
+
         mock_response = {
             "Contents": [
-                {"Key": "documents/worksheets/algebra.pdf", "Size": 1024},
-                {"Key": "documents/worksheets/geometry.pdf", "Size": 2048},
+                {
+                    "Key": "documents/worksheets/algebra.pdf",
+                    "Size": 1024,
+                    "LastModified": datetime.now(),
+                },
+                {
+                    "Key": "documents/worksheets/geometry.pdf",
+                    "Size": 2048,
+                    "LastModified": datetime.now(),
+                },
             ]
         }
         mock_boto3_client.list_objects_v2.return_value = mock_response

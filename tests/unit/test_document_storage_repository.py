@@ -4,7 +4,7 @@ Tests document metadata storage operations with mocked Supabase client.
 """
 
 from datetime import datetime
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -35,7 +35,11 @@ class TestDocumentStorageRepository:
     @pytest.fixture
     def repository(self, mock_supabase_client):
         """Create DocumentStorageRepository with mocked client."""
-        return DocumentStorageRepository(mock_supabase_client)
+        with patch("src.repositories.document_storage_repository.get_settings") as mock_settings:
+            # Mock settings to return no table prefix for unit tests
+            settings_mock = mock_settings.return_value
+            settings_mock.table_prefix = ""
+            return DocumentStorageRepository(mock_supabase_client)
 
     @pytest.fixture
     def sample_document_metadata(self):
@@ -111,7 +115,8 @@ class TestDocumentStorageRepository:
         # Assert
         assert result == sample_document_metadata.id
         mock_supabase_client.table.assert_called_with("stored_documents")
-        mock_supabase_client.table().insert.assert_called_once()
+        # Note: insert() is called twice - once for the method call, once with data
+        assert mock_supabase_client.table().insert.call_count == 2
 
     async def test_save_document_metadata_failure(
         self, repository, mock_supabase_client, sample_document_metadata
@@ -135,9 +140,14 @@ class TestDocumentStorageRepository:
         mock_files_response = MagicMock()
         mock_files_response.data = [f.model_dump() for f in sample_stored_document.files]
 
+        # Mock session response
+        mock_session_response = MagicMock()
+        mock_session_response.data = []
+
         mock_supabase_client.table().select().eq().execute.side_effect = [
             mock_metadata_response,
             mock_files_response,
+            mock_session_response,
         ]
 
         # Act
@@ -178,7 +188,7 @@ class TestDocumentStorageRepository:
         # Assert
         assert success is True
         mock_supabase_client.table().update.assert_called_with(
-            {"status": new_status, "updated_at": pytest.any_object}
+            {"status": new_status, "updated_at": pytest.ANY}
         )
 
     async def test_update_document_status_failure(self, repository, mock_supabase_client):
@@ -206,7 +216,7 @@ class TestDocumentStorageRepository:
         # Assert
         assert success is True
         mock_supabase_client.table().update.assert_called_with(
-            {"status": "deleted", "deleted_at": pytest.any_object, "updated_at": pytest.any_object}
+            {"status": "deleted", "deleted_at": pytest.ANY, "updated_at": pytest.ANY}
         )
 
     async def test_search_documents_by_filters_basic(
@@ -221,9 +231,11 @@ class TestDocumentStorageRepository:
         mock_response = MagicMock()
         mock_response.data = [sample_stored_document.metadata.model_dump()]
         mock_response.count = 1
-        mock_supabase_client.table().select().neq().eq().eq().eq().limit().execute.return_value = (
-            mock_response
-        )
+
+        # Set up the complete chain
+        mock_table = MagicMock()
+        mock_table.select.return_value.neq.return_value.eq.return_value.eq.return_value.eq.return_value.limit.return_value.execute.return_value = mock_response
+        mock_supabase_client.table.return_value = mock_table
 
         # Act
         results = await repository.search_documents(filters)
@@ -354,7 +366,7 @@ class TestDocumentStorageRepository:
             {
                 "r2_metadata": storage_info,
                 "file_size": storage_info["file_size"],
-                "updated_at": pytest.any_object,
+                "updated_at": pytest.ANY,
             }
         )
 
@@ -414,7 +426,7 @@ class TestDocumentStorageRepository:
         # Assert
         assert deleted_count == 5
         mock_supabase_client.table().update.assert_called_with(
-            {"status": "deleted", "deleted_at": pytest.any_object, "updated_at": pytest.any_object}
+            {"status": "deleted", "deleted_at": pytest.ANY, "updated_at": pytest.ANY}
         )
 
     def test_build_search_query_basic_filters(self, repository):

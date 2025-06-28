@@ -225,12 +225,27 @@ class GenerationSessionRepository:
             Database ID of saved session
         """
         try:
-            # Prepare session data
+            # Prepare session data according to production table structure
             data = {
                 "session_id": str(session.session_id),
+                "topic": session.request.topic,
+                "tier": session.request.tier.value,
+                "grade_level": getattr(session.request, "grade_level", 8),
+                "marks": session.request.marks,
+                "count": getattr(session.request, "count", 1),
+                "calculator_policy": getattr(session.request, "calculator_policy", "allowed").value
+                if hasattr(getattr(session.request, "calculator_policy", None), "value")
+                else "allowed",
+                "command_word": session.request.command_word.value,
                 "status": session.status.value,
                 "total_processing_time": session.total_processing_time,
-                "content_json": session.model_dump(),
+                "questions_generated": len(session.questions),
+                "request_json": session.request.model_dump(mode="json"),
+                "questions_json": [q.model_dump(mode="json") for q in session.questions],
+                "quality_decisions_json": [
+                    qd.model_dump(mode="json") for qd in session.quality_decisions
+                ],
+                "agent_results_json": [ar.model_dump(mode="json") for ar in session.agent_results],
                 "created_at": session.created_at.isoformat(),
                 "updated_at": datetime.utcnow().isoformat(),
             }
@@ -266,7 +281,22 @@ class GenerationSessionRepository:
             )
 
             if response.data and len(response.data) > 0:
-                session_data = response.data[0]["content_json"]
+                # Reconstruct session from production table structure
+                row = response.data[0]
+
+                # Build the full session from separate JSON columns
+                session_data = {
+                    "session_id": row["session_id"],
+                    "request": row["request_json"],
+                    "questions": row.get("questions_json", []),
+                    "quality_decisions": row.get("quality_decisions_json", []),
+                    "agent_results": row.get("agent_results_json", []),
+                    "status": row.get("status", "pending"),
+                    "total_processing_time": row.get("total_processing_time", 0.0),
+                    "created_at": row.get("created_at"),
+                    "updated_at": row.get("updated_at"),
+                }
+
                 return GenerationSession.model_validate(session_data)
             else:
                 return None
