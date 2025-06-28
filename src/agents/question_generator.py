@@ -225,6 +225,11 @@ class QuestionGeneratorAgent(BaseAgent):
                     ]
                     if request.subject_content_refs
                     else None,
+                    "include_diagrams": request.include_diagrams,
+                    "cognitive_level": request.cognitive_level.value
+                    if request.cognitive_level
+                    else None,
+                    "tier": request.tier.value,
                 },
             )
 

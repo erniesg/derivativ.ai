@@ -21,8 +21,13 @@ from src.database.supabase_repository import (
     QuestionRepository,
     get_supabase_client,
 )
-from src.models.enums import CalculatorPolicy, CommandWord, Tier
-from src.models.question_models import GenerationRequest, GenerationSession, GenerationStatus
+from src.models.enums import CalculatorPolicy, CognitiveLevel, CommandWord, Tier
+from src.models.question_models import (
+    GenerationRequest,
+    GenerationSession,
+    GenerationStatus,
+    Question,
+)
 from src.services.llm_factory import LLMFactory
 
 # Add project root to path
@@ -55,14 +60,14 @@ def generate_random_params():
     """Generate randomized parameters for question generation."""
     return {
         "tier": random.choice([Tier.CORE, Tier.EXTENDED]),
-        "grade_level": random.randint(7, 11),
+        "grade_level": random.randint(7, 9),
         "marks": random.choice([2, 3, 4, 5, 6]),
         "command_word": random.choice(
             [
                 CommandWord.CALCULATE,
                 CommandWord.SOLVE,
                 CommandWord.FIND,
-                CommandWord.SHOW,
+                CommandWord.SHOW_THAT,
                 CommandWord.EXPLAIN,
                 CommandWord.DETERMINE,
             ]
@@ -71,10 +76,18 @@ def generate_random_params():
             [
                 CalculatorPolicy.ALLOWED,
                 CalculatorPolicy.NOT_ALLOWED,
-                CalculatorPolicy.REQUIRED,
+                CalculatorPolicy.VARIES_BY_QUESTION,
             ]
         ),
         "include_diagrams": False,  # No diagrams as requested
+        "cognitive_level": random.choice(
+            [
+                CognitiveLevel.RECALL,
+                CognitiveLevel.PROCEDURAL_FLUENCY,
+                CognitiveLevel.CONCEPTUAL_UNDERSTANDING,
+                CognitiveLevel.APPLICATION,
+            ]
+        ),
     }
 
 
@@ -187,7 +200,9 @@ async def main():  # noqa: PLR0915
         # Save successful questions
         if success and question:
             try:
-                question_id = question_repo.save_question(question)
+                # Convert the question dict back to a Question object
+                question_obj = Question(**question)
+                question_id = question_repo.save_question(question_obj)
                 generated_questions.append((question_id, topic_name))
                 print(f"  💾 Saved to dev table: {question_id}")
             except Exception as e:
@@ -270,6 +285,11 @@ async def main():  # noqa: PLR0915
         print("\nNo questions to clean up.")
 
     print("\n✨ Test complete!")
+
+
+async def test_live_generation_all_topics():
+    """Pytest wrapper for the live generation test."""
+    await main()
 
 
 if __name__ == "__main__":

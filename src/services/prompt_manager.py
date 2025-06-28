@@ -389,6 +389,20 @@ class PromptManager:
 - Ensure question complexity matches target grade level
 - Follow Cambridge marking principles
 - Include clear, unambiguous wording
+{% if not include_diagrams -%}
+
+**CRITICAL CONSTRAINT - NO DIAGRAMS:**
+- Do NOT reference any diagrams, figures, charts, or visual elements
+- Questions must be answerable using only the text provided
+- Avoid phrases like "in the diagram," "from the figure," "the chart shows," etc.
+- All necessary information must be stated in the question text
+{% endif -%}
+{% if cognitive_level -%}
+- Cognitive Level: {{ cognitive_level }}
+{% endif -%}
+{% if tier -%}
+- Tier: {{ tier }}
+{% endif %}
 
 **Output Format:**
 Return a JSON object with the following structure:
@@ -419,7 +433,13 @@ Generate a mathematically accurate, age-appropriate question that tests the spec
             content=content,
             description="Generate Cambridge IGCSE Mathematics questions",
             required_variables=["topic", "target_grade", "marks", "calculator_policy"],
-            optional_variables=["command_word", "subject_content_references"],
+            optional_variables=[
+                "command_word",
+                "subject_content_references",
+                "include_diagrams",
+                "cognitive_level",
+                "tier",
+            ],
             tags=["generation", "cambridge", "igcse", "mathematics"],
         )
 
