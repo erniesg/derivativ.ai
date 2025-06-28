@@ -4,7 +4,7 @@ Tests document metadata storage operations with mocked Supabase client.
 """
 
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 from uuid import uuid4
 
 import pytest
@@ -188,7 +188,7 @@ class TestDocumentStorageRepository:
         # Assert
         assert success is True
         mock_supabase_client.table().update.assert_called_with(
-            {"status": new_status, "updated_at": pytest.ANY}
+            {"status": new_status, "updated_at": ANY}
         )
 
     async def test_update_document_status_failure(self, repository, mock_supabase_client):
@@ -216,7 +216,7 @@ class TestDocumentStorageRepository:
         # Assert
         assert success is True
         mock_supabase_client.table().update.assert_called_with(
-            {"status": "deleted", "deleted_at": pytest.ANY, "updated_at": pytest.ANY}
+            {"status": "deleted", "deleted_at": ANY, "updated_at": ANY}
         )
 
     async def test_search_documents_by_filters_basic(
@@ -366,7 +366,7 @@ class TestDocumentStorageRepository:
             {
                 "r2_metadata": storage_info,
                 "file_size": storage_info["file_size"],
-                "updated_at": pytest.ANY,
+                "updated_at": ANY,
             }
         )
 
@@ -426,7 +426,7 @@ class TestDocumentStorageRepository:
         # Assert
         assert deleted_count == 5
         mock_supabase_client.table().update.assert_called_with(
-            {"status": "deleted", "deleted_at": pytest.ANY, "updated_at": pytest.ANY}
+            {"status": "deleted", "deleted_at": ANY, "updated_at": ANY}
         )
 
     def test_build_search_query_basic_filters(self, repository):
