@@ -279,11 +279,13 @@ class DocumentGenerationServiceV2:
         prompt_manager: PromptManager,
         question_generation_service=None,
         question_repository=None,
+        document_storage_repository=None,
     ):
         self.llm_factory = llm_factory
         self.prompt_manager = prompt_manager
         self.question_generation_service = question_generation_service
         self.question_repository = question_repository
+        self.document_storage_repository = document_storage_repository
         self.block_selector = BlockSelector(llm_factory, prompt_manager)
 
     async def generate_document(
@@ -337,6 +339,9 @@ class DocumentGenerationServiceV2:
 
             logger.info(f"Document generation completed in {processing_time:.2f}s")
 
+            # Save document to storage if repository is available
+            document_id = await self._save_document_to_storage(request, document)
+
             return DocumentGenerationResultV2(
                 success=True,
                 document=document,
@@ -345,6 +350,7 @@ class DocumentGenerationServiceV2:
                     "blocks_selected": len(selection_result.selected_blocks),
                     "selection_reasoning": selection_result.selection_reasoning,
                     "llm_reasoning": content_structure.generation_reasoning,
+                    "document_id": document_id,
                 },
             )
 
@@ -352,8 +358,17 @@ class DocumentGenerationServiceV2:
             processing_time = (datetime.now() - start_time).total_seconds()
             logger.error(f"Document generation failed: {e}")
 
+            # Save failed document metadata
+            document_id = await self._save_failed_document_to_storage(request, str(e))
+
             return DocumentGenerationResultV2(
-                success=False, error_message=str(e), processing_time=processing_time
+                success=False,
+                error_message=str(e),
+                processing_time=processing_time,
+                generation_insights={
+                    "document_id": document_id,
+                    "error": str(e),
+                },
             )
 
     async def _generate_content_structure(
@@ -730,3 +745,133 @@ class DocumentGenerationServiceV2:
             # Simple word count (split by whitespace)
             total_words += len(content.split())
         return total_words
+
+    def _map_detail_level_to_description(self, detail_level: int) -> str:
+        """Map numeric detail level to descriptive string."""
+        if detail_level <= 3:
+            return "minimal"
+        elif detail_level <= 6:
+            return "medium"
+        else:
+            return "comprehensive"
+
+    def _generate_document_tags(self, request: DocumentGenerationRequestV2) -> list[str]:
+        """Generate tags from document request for categorization."""
+        tags = []
+
+        # Add document type
+        tags.append(request.document_type.value)
+
+        # Add topic (convert to kebab-case)
+        topic_tag = request.topic.value.lower().replace(" ", "-").replace("&", "and")
+        tags.append(topic_tag)
+
+        # Add tier
+        tags.append(request.tier.value.lower())
+
+        # Add subtopics if provided
+        if request.subtopics:
+            tags.extend([subtopic.lower().replace(" ", "-") for subtopic in request.subtopics])
+
+        return tags
+
+    async def _create_document_metadata(
+        self,
+        request: DocumentGenerationRequestV2,
+        document: GeneratedDocumentV2,
+        session_id: str = None,
+        status: str = "generated",
+    ):
+        """Create document metadata for storage."""
+        from src.models.stored_document_models import StoredDocumentMetadata
+
+        detail_description = self._map_detail_level_to_description(
+            request.get_effective_detail_level()
+        )
+        tags = self._generate_document_tags(request)
+
+        metadata = StoredDocumentMetadata(
+            session_id=session_id,
+            title=document.title,
+            document_type=request.document_type.value,
+            detail_level=detail_description,
+            topic=request.topic.value,
+            grade_level=request.grade_level,
+            estimated_duration=document.total_estimated_minutes,
+            total_questions=self._count_questions_in_document(document),
+            status=status,
+            tags=tags,
+        )
+
+        return metadata
+
+    def _count_questions_in_document(self, document: GeneratedDocumentV2) -> int:
+        """Count total questions in the document."""
+        total_questions = 0
+
+        for block_result in document.content_structure.blocks:
+            if block_result.block_type == "practice_questions":
+                questions = block_result.content.get("questions", [])
+                total_questions += len(questions)
+
+        return total_questions
+
+    async def _save_document_to_storage(
+        self,
+        request: DocumentGenerationRequestV2,
+        document: GeneratedDocumentV2,
+        session_id: str = None,
+    ) -> str:
+        """Save generated document to storage repository."""
+        if not self.document_storage_repository:
+            logger.debug("No document storage repository configured, skipping save")
+            return None
+
+        try:
+            # Create metadata
+            metadata = await self._create_document_metadata(
+                request, document, session_id, status="generated"
+            )
+
+            # Save to repository
+            document_id = await self.document_storage_repository.save_document_metadata(metadata)
+
+            logger.info(f"Successfully saved document metadata with ID: {document_id}")
+            return str(document_id)
+
+        except Exception as e:
+            logger.error(f"Failed to save document to storage: {e}")
+            # Don't fail the whole generation, just log the error
+            return None
+
+    async def _save_failed_document_to_storage(
+        self, request: DocumentGenerationRequestV2, error_message: str
+    ) -> str:
+        """Save failed document metadata to storage."""
+        if not self.document_storage_repository:
+            return None
+
+        try:
+            from src.models.stored_document_models import StoredDocumentMetadata
+
+            tags = self._generate_document_tags(request)
+
+            metadata = StoredDocumentMetadata(
+                title=request.title,
+                document_type=request.document_type.value,
+                detail_level=self._map_detail_level_to_description(
+                    request.get_effective_detail_level()
+                ),
+                topic=request.topic.value,
+                grade_level=request.grade_level,
+                status="failed",
+                tags=tags,
+            )
+
+            document_id = await self.document_storage_repository.save_document_metadata(metadata)
+            logger.info(f"Saved failed document metadata with ID: {document_id}")
+            return str(document_id)
+
+        except Exception as e:
+            logger.error(f"Failed to save failed document metadata: {e}")
+            return None
