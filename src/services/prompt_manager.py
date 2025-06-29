@@ -1077,8 +1077,8 @@ Select blocks that create an effective learning progression and match the specif
 {% endfor -%}
 
 **Detailed Syllabus Content:**
-{% for content_detail in detailed_syllabus_content -%}
-**{{ content_detail.title }}:**
+{% for ref, content_detail in detailed_syllabus_content.items() -%}
+**{{ ref }} - {{ content_detail.title }}:**
 {{ content_detail.description }}
 
 Key Learning Objectives:
