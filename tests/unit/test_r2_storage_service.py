@@ -86,7 +86,10 @@ class TestR2StorageService:
         call_args = mock_boto3_client.upload_fileobj.call_args
         assert call_args[1]["Bucket"] == "test-bucket"
         assert call_args[1]["Key"] == file_key
-        assert call_args[1]["Metadata"] == metadata
+        # Check metadata is in ExtraArgs
+        extra_args = call_args[1]["ExtraArgs"]
+        assert extra_args is not None
+        assert extra_args["Metadata"] == metadata
 
     async def test_upload_document_file_failure(self, r2_service, mock_boto3_client):
         """Test file upload failure handling."""

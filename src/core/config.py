@@ -436,6 +436,26 @@ class Settings(BaseSettings):
         True, description="Auto-detect when diagrams are needed", alias="DIAGRAM_AUTO_DETECT"
     )
 
+    # Cloudflare R2 settings
+    cloudflare_account_id: Optional[str] = Field(
+        None, description="Cloudflare Account ID", alias="CLOUDFLARE_ACCOUNT_ID"
+    )
+    cloudflare_r2_access_key_id: Optional[str] = Field(
+        None, description="Cloudflare R2 Access Key ID", alias="CLOUDFLARE_R2_ACCESS_KEY_ID"
+    )
+    cloudflare_r2_secret_access_key: Optional[str] = Field(
+        None, description="Cloudflare R2 Secret Access Key", alias="CLOUDFLARE_R2_SECRET_ACCESS_KEY"
+    )
+    cloudflare_r2_bucket_name: Optional[str] = Field(
+        None, description="Cloudflare R2 Bucket Name", alias="CLOUDFLARE_R2_BUCKET_NAME"
+    )
+    cloudflare_r2_region: str = Field(
+        "auto", description="Cloudflare R2 Region", alias="CLOUDFLARE_R2_REGION"
+    )
+    cloudflare_api_token: Optional[str] = Field(
+        None, description="Cloudflare API Token", alias="CLOUDFLARE_API_TOKEN"
+    )
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

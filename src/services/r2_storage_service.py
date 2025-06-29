@@ -97,25 +97,32 @@ class R2StorageService:
             if not self.validate_file_key(file_key):
                 raise R2StorageError(f"Invalid file key: {file_key}")
 
-            # Prepare upload arguments
-            upload_args = {
-                "Bucket": self.config["bucket_name"],
-                "Key": file_key,
-                "Body": io.BytesIO(file_content),
-            }
+            # Prepare upload arguments for upload_fileobj
+            fileobj = io.BytesIO(file_content)
+
+            # Prepare extra arguments
+            extra_args = {}
 
             # Add metadata if provided
             if metadata:
-                upload_args["Metadata"] = metadata
+                extra_args["Metadata"] = metadata
 
             # Detect and set content type
             content_type = self._detect_content_type(file_key, file_content)
             if content_type:
-                upload_args["ContentType"] = content_type
+                extra_args["ContentType"] = content_type
 
             # Perform upload using executor to avoid blocking
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, lambda: self.client.upload_fileobj(**upload_args))
+            await loop.run_in_executor(
+                None,
+                lambda: self.client.upload_fileobj(
+                    Fileobj=fileobj,
+                    Bucket=self.config["bucket_name"],
+                    Key=file_key,
+                    ExtraArgs=extra_args if extra_args else None,
+                ),
+            )
 
             # Generate upload ID for tracking
             upload_id = f"upload_{file_key.replace('/', '_')}_{len(file_content)}"
@@ -463,8 +470,10 @@ class R2StorageService:
         # Fallback: detect from content signatures
         content_detectors = [
             (lambda c: c.startswith(b"%PDF"), "application/pdf"),
-            (lambda c: c.startswith(b"PK\x03\x04") and file_key.endswith(".docx"),
-             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+            (
+                lambda c: c.startswith(b"PK\x03\x04") and file_key.endswith(".docx"),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ),
             (lambda c: c.startswith(b"PK\x03\x04"), "application/zip"),
             (lambda c: c.startswith(b"<!DOCTYPE html>") or c.startswith(b"<html"), "text/html"),
             (lambda c: c.startswith(b"{") or c.startswith(b"["), "application/json"),
