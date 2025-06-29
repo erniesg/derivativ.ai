@@ -5,7 +5,6 @@ Uses PromptManager with Jinja2 templates and LLM services to generate
 structured educational documents following Cambridge IGCSE standards.
 """
 
-import json
 import logging
 from datetime import datetime
 from typing import Any
@@ -20,6 +19,7 @@ from src.models.document_models import (
     GeneratedDocument,
 )
 from src.models.question_models import Question
+from src.services.json_parser import JSONParser
 from src.services.llm_factory import LLMFactory
 from src.services.prompt_manager import PromptConfig, PromptManager
 
@@ -45,6 +45,7 @@ class DocumentGenerationService:
         self.question_repository = question_repository
         self.llm_factory = llm_factory
         self.prompt_manager = prompt_manager
+        self.json_parser = JSONParser(enable_cache=True)
 
         # Template mappings for different document types
         self.template_mappings = {
@@ -241,11 +242,27 @@ class DocumentGenerationService:
 
             response = await llm_service.generate_non_stream(llm_request)
 
-            # 6. Parse LLM response
-            try:
-                document_data = json.loads(response.content)
-            except json.JSONDecodeError as e:
-                logger.error(f"Failed to parse LLM response as JSON: {e}")
+            # 6. Parse LLM response using enhanced JSON parser
+            logger.info(f"Parsing LLM response (length: {len(response.content)} chars)")
+
+            # Log first 200 chars of response for debugging
+            logger.debug(f"LLM response preview: {response.content[:200]}")
+
+            extraction_result = await self.json_parser.extract_json(
+                response.content,
+                model_name=llm_request.model,
+            )
+
+            if extraction_result.success:
+                document_data = extraction_result.data
+                logger.info(
+                    f"JSON parsed successfully using method: {extraction_result.extraction_method}"
+                )
+                if extraction_result.thinking_tokens_removed:
+                    logger.info("Thinking tokens were removed from response")
+            else:
+                logger.error(f"Enhanced JSON parsing failed: {extraction_result.error}")
+                logger.error(f"Raw response: {response.content}")
                 # Fallback: create basic document structure
                 document_data = self._create_fallback_document_data(request, questions)
 
@@ -518,7 +535,9 @@ class DocumentGenerationService:
                 name=template_name,
                 document_type=doc_type,
                 supported_detail_levels=[level for level in self.structure_patterns[doc_type]],
-                structure_patterns={level: pattern for level, pattern in self.structure_patterns[doc_type].items()},
+                structure_patterns={
+                    level: pattern for level, pattern in self.structure_patterns[doc_type].items()
+                },
                 content_rules=content_rules,
             )
 
@@ -529,6 +548,7 @@ class DocumentGenerationService:
         # For now, return a placeholder ID
         # In a full implementation, this would save to database
         import uuid
+
         template_id = str(uuid.uuid4())
         logger.info(f"Custom template saved with ID: {template_id}")
         return template_id
