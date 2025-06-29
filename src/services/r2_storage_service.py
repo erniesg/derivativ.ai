@@ -411,7 +411,7 @@ class R2StorageService:
         document_type = re.sub(r"[^a-zA-Z0-9_-]", "_", str(document_type))
         version = re.sub(r"[^a-zA-Z0-9_-]", "_", str(version))
 
-        return f"documents/{document_type}/{document_id}/{version}.{file_format}"
+        return f"documents/{document_id}/{version}.{file_format}"
 
     def validate_file_key(self, file_key: str) -> bool:
         """

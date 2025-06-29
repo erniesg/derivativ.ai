@@ -316,15 +316,15 @@ class TestR2StorageService:
         # Act
         file_key = r2_service.generate_file_key(document_id, document_type, file_format, version)
 
-        # Assert
-        expected_key = f"documents/{document_type}/{document_id}/{version}.{file_format}"
+        # Assert - updated for simplified path structure
+        expected_key = f"documents/{document_id}/{version}.{file_format}"
         assert file_key == expected_key
 
     def test_validate_file_key(self, r2_service):
         """Test file key validation."""
-        # Valid keys
-        assert r2_service.validate_file_key("documents/worksheet/123/student.pdf") is True
-        assert r2_service.validate_file_key("documents/notes/abc/teacher.docx") is True
+        # Valid keys - updated for simplified path structure
+        assert r2_service.validate_file_key("documents/123/student.pdf") is True
+        assert r2_service.validate_file_key("documents/abc/teacher.docx") is True
 
         # Invalid keys
         assert r2_service.validate_file_key("") is False

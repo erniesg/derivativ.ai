@@ -235,6 +235,7 @@ class QuestionRepository:
         tier: Optional[Tier] = None,
         min_quality_score: Optional[float] = None,
         command_word: Optional[CommandWord] = None,
+        topic: Optional[str] = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[dict[str, Any]]:
@@ -245,6 +246,7 @@ class QuestionRepository:
             tier: Filter by tier
             min_quality_score: Minimum quality score
             command_word: Filter by command word
+            topic: Filter by topic (currently ignored)
             limit: Maximum number of results
             offset: Number of results to skip
 
@@ -359,7 +361,9 @@ class GenerationSessionRepository:
                 "calculator_policy": getattr(session.request, "calculator_policy", "allowed").value
                 if hasattr(getattr(session.request, "calculator_policy", None), "value")
                 else "allowed",
-                "command_word": session.request.command_word.value if session.request.command_word else "Calculate",
+                "command_word": session.request.command_word.value
+                if session.request.command_word
+                else "Calculate",
                 "status": session.status.value,
                 "total_processing_time": session.total_processing_time,
                 "questions_generated": len(session.questions),
