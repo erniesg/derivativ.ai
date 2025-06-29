@@ -62,8 +62,7 @@ async def test_worksheet_generation_and_export():
         llm_factory = LLMFactory()
         prompt_manager = PromptManager()
         doc_gen_service = DocumentGenerationServiceV2(
-            llm_factory=llm_factory,
-            prompt_manager=prompt_manager
+            llm_factory=llm_factory, prompt_manager=prompt_manager
         )
 
         # 3. Generate document
@@ -103,28 +102,28 @@ async def test_worksheet_generation_and_export():
 
         # Convert document to dictionary for export
         document_dict = {
-            'title': document.title,
-            'content_structure': {
-                'blocks': [
+            "title": document.title,
+            "content_structure": {
+                "blocks": [
                     {
-                        'block_type': block.block_type,
-                        'content': block.content,
-                        'estimated_minutes': block.estimated_minutes
+                        "block_type": block.block_type,
+                        "content": block.content,
+                        "estimated_minutes": block.estimated_minutes,
                     }
                     for block in document.content_structure.blocks
                 ]
             },
-            'total_estimated_minutes': document.total_estimated_minutes,
-            'actual_detail_level': document.actual_detail_level,
-            'generation_request': request
+            "total_estimated_minutes": document.total_estimated_minutes,
+            "actual_detail_level": document.actual_detail_level,
+            "generation_request": request,
         }
 
-        # Export to PDF (both student and teacher versions)
+        # Export to both PDF and DOCX (both student and teacher versions)
         exported_files = await export_service.export_document(
             document=document_dict,
-            formats=['pdf'],
+            formats=["pdf", "docx"],
             create_versions=True,
-            output_prefix=f"algebra_worksheet_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            output_prefix=f"algebra_worksheet_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
         )
 
         # 6. Show export results
@@ -152,6 +151,7 @@ async def test_worksheet_generation_and_export():
     except Exception as e:
         print(f"❌ Test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 

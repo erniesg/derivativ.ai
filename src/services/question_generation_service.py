@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from src.agents.smolagents_integration import create_derivativ_agent
 from src.database.supabase_repository import GenerationSessionRepository, QuestionRepository
+from src.models.enums import CommandWord
 from src.models.question_models import (
     AgentResult,
     GenerationRequest,
@@ -212,7 +213,7 @@ Ensure the question follows Cambridge standards and includes proper marking sche
             question_id_global=str(uuid4()),
             question_number_display="1",
             marks=request.marks,
-            command_word=request.command_word or request.command_word.CALCULATE,
+            command_word=request.command_word or CommandWord.CALCULATE,
             raw_text_content=result["question_text"],
             taxonomy=QuestionTaxonomy(
                 topic_path=[request.topic],

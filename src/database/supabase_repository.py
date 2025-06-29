@@ -359,7 +359,7 @@ class GenerationSessionRepository:
                 "calculator_policy": getattr(session.request, "calculator_policy", "allowed").value
                 if hasattr(getattr(session.request, "calculator_policy", None), "value")
                 else "allowed",
-                "command_word": session.request.command_word.value,
+                "command_word": session.request.command_word.value if session.request.command_word else "Calculate",
                 "status": session.status.value,
                 "total_processing_time": session.total_processing_time,
                 "questions_generated": len(session.questions),

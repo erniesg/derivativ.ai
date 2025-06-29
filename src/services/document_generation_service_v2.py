@@ -836,7 +836,9 @@ class DocumentGenerationServiceV2:
         tags = self._generate_document_tags(request)
 
         # Ensure estimated_duration is at least 1 (database constraint)
-        estimated_duration = document.total_estimated_minutes or request.target_duration_minutes or 30
+        estimated_duration = (
+            document.total_estimated_minutes or request.target_duration_minutes or 30
+        )
         estimated_duration = max(1, estimated_duration)  # Ensure it's at least 1
 
         metadata = StoredDocumentMetadata(
