@@ -248,8 +248,7 @@ async def list_available_documents(
                     doc["file_count"] += 1
 
                     # Update last modified to latest
-                    if file_info["last_modified"] > doc["last_modified"]:
-                        doc["last_modified"] = file_info["last_modified"]
+                    doc["last_modified"] = max(doc["last_modified"], file_info["last_modified"])
 
             except Exception as e:
                 logger.warning(f"⚠️ Failed to parse file key {file_key}: {e}")

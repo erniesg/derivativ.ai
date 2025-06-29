@@ -79,15 +79,15 @@ class TestDocumentGenerationService:
         patterns = await document_service.get_structure_patterns()
 
         worksheet_patterns = patterns["worksheet"]
-        assert "minimal" in worksheet_patterns
-        assert "medium" in worksheet_patterns
-        assert "comprehensive" in worksheet_patterns
-        assert "guided" in worksheet_patterns
+        assert 1 in worksheet_patterns  # MINIMAL
+        assert 5 in worksheet_patterns  # MEDIUM
+        assert 9 in worksheet_patterns  # COMPREHENSIVE
+        assert 10 in worksheet_patterns  # GUIDED
 
         # Check specific patterns
-        assert worksheet_patterns["minimal"] == ["practice_questions", "answers"]
-        assert "learning_objectives" in worksheet_patterns["medium"]
-        assert "worked_examples" in worksheet_patterns["medium"]
+        assert worksheet_patterns[1] == ["practice_questions", "answers"]  # MINIMAL
+        assert "learning_objectives" in worksheet_patterns[5]  # MEDIUM
+        assert "worked_examples" in worksheet_patterns[5]  # MEDIUM
 
     @pytest.mark.asyncio
     async def test_successful_document_generation(
@@ -282,18 +282,18 @@ class TestDocumentGenerationService:
         worksheet = patterns["worksheet"]
 
         # Minimal should be simplest
-        minimal = worksheet["minimal"]
+        minimal = worksheet[1]  # MINIMAL
         assert len(minimal) <= 3
         assert "practice_questions" in minimal
 
         # Comprehensive should be most detailed
-        comprehensive = worksheet["comprehensive"]
+        comprehensive = worksheet[9]  # COMPREHENSIVE
         assert len(comprehensive) >= len(minimal)
         assert "learning_objectives" in comprehensive
         assert "detailed_solutions" in comprehensive
 
         # Medium should be between minimal and comprehensive
-        medium = worksheet["medium"]
+        medium = worksheet[5]  # MEDIUM
         assert len(minimal) < len(medium) < len(comprehensive)
 
     @pytest.mark.asyncio

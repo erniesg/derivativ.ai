@@ -241,7 +241,7 @@ class YAMLConfigParser:
                 self.validation_errors.append("api_base must be a valid HTTP/HTTPS URL")
 
         # Validate schedule (cron format)
-        if "schedule" in data and data["schedule"]:
+        if data.get("schedule"):
             self._validate_cron_schedule(data["schedule"])
 
         # Validate timezone
@@ -249,7 +249,7 @@ class YAMLConfigParser:
             self._validate_timezone(data["timezone"])
 
         # Validate authentication
-        if "auth" in data and data["auth"]:
+        if data.get("auth"):
             self._validate_auth_config(data["auth"])
 
         # Validate steps
@@ -257,7 +257,7 @@ class YAMLConfigParser:
             self._validate_steps_config(data["steps"])
 
         # Validate monitoring
-        if "monitoring" in data and data["monitoring"]:
+        if data.get("monitoring"):
             self._validate_monitoring_config(data["monitoring"])
 
     def _validate_cron_schedule(self, schedule: str) -> None:

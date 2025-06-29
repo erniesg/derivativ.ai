@@ -845,7 +845,7 @@ class DocumentGenerationServiceV2:
             session_id=session_id,
             title=document.title,
             document_type=request.document_type.value,
-            detail_level=detail_description,
+            detail_level=request.get_effective_detail_level(),
             topic=request.topic.value,
             grade_level=request.grade_level,
             estimated_duration=estimated_duration,
@@ -910,9 +910,7 @@ class DocumentGenerationServiceV2:
             metadata = StoredDocumentMetadata(
                 title=request.title,
                 document_type=request.document_type.value,
-                detail_level=self._map_detail_level_to_description(
-                    request.get_effective_detail_level()
-                ),
+                detail_level=request.get_effective_detail_level(),
                 topic=request.topic.value,
                 grade_level=request.grade_level,
                 status="failed",

@@ -71,7 +71,7 @@ class TestDocumentStorageRepository:
             session_id=uuid4(),
             title="Algebra Practice Worksheet",
             document_type="worksheet",
-            detail_level="medium",
+            detail_level=5,  # MEDIUM level
             topic="quadratic_equations",
             grade_level=9,
             estimated_duration=45,

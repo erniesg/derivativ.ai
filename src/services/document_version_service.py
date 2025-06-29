@@ -6,6 +6,7 @@ Handles content filtering and section customization based on target audience.
 import logging
 
 from src.models.document_models import (
+    DetailLevel,
     DocumentSection,
     DocumentStructure,
     DocumentType,
@@ -17,6 +18,18 @@ logger = logging.getLogger(__name__)
 
 class DocumentVersionService:
     """Service for creating different versions of documents for students and teachers."""
+
+    def _get_detail_level_display(self, detail_level: DetailLevel) -> str:
+        """Convert DetailLevel integer to display string."""
+        level_names = {
+            DetailLevel.MINIMAL: "minimal",
+            DetailLevel.BASIC: "basic",
+            DetailLevel.MEDIUM: "medium",
+            DetailLevel.DETAILED: "detailed",
+            DetailLevel.COMPREHENSIVE: "comprehensive",
+            DetailLevel.GUIDED: "guided"
+        }
+        return level_names.get(detail_level, f"level {detail_level.value}")
 
     def __init__(self):
         """Initialize document version service."""
@@ -159,7 +172,7 @@ class DocumentVersionService:
             f"• Estimated completion time: {document.estimated_duration or 'Not specified'} minutes"
         )
         notes.append(f"• Total questions: {document.total_questions}")
-        notes.append(f"• Detail level: {document.detail_level.value}")
+        notes.append(f"• Detail level: {self._get_detail_level_display(document.detail_level)}")
 
         # Question-specific notes
         practice_sections = [s for s in document.sections if s.content_type == "practice_questions"]

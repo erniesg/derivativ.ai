@@ -34,10 +34,12 @@ class TestDocumentModels:
 
     def test_detail_level_enum_values(self):
         """Test DetailLevel enum has correct values."""
-        assert DetailLevel.MINIMAL == "minimal"
-        assert DetailLevel.MEDIUM == "medium"
-        assert DetailLevel.COMPREHENSIVE == "comprehensive"
-        assert DetailLevel.GUIDED == "guided"
+        assert DetailLevel.MINIMAL == 1
+        assert DetailLevel.BASIC == 3
+        assert DetailLevel.MEDIUM == 5
+        assert DetailLevel.DETAILED == 7
+        assert DetailLevel.COMPREHENSIVE == 9
+        assert DetailLevel.GUIDED == 10
 
     def test_export_format_enum_values(self):
         """Test ExportFormat enum has correct values."""

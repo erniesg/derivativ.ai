@@ -29,7 +29,7 @@ class TestStoredDocumentModels:
             session_id=uuid4(),
             title="Test Worksheet",
             document_type="worksheet",
-            detail_level="medium",
+            detail_level=5,  # MEDIUM level
             topic="algebra",
             grade_level=9,
             estimated_duration=30,
@@ -394,7 +394,7 @@ class TestStoredDocumentModels:
             "id": str(uuid4()),
             "title": "Test Document",
             "document_type": "worksheet",
-            "detail_level": "medium",
+            "detail_level": 5,  # MEDIUM level
             "status": "generated",
             "file_count": 1,
             "total_file_size": 1024,

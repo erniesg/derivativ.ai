@@ -14,14 +14,14 @@ from datetime import datetime
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from src.api.dependencies import get_dependencies  # noqa: E402
-from src.core.config import get_settings  # noqa: E402
-from src.models.document_models import (  # noqa: E402
+from src.api.dependencies import get_dependencies
+from src.core.config import get_settings
+from src.models.document_models import (
     DetailLevel,
     DocumentGenerationRequest,
     DocumentType,
 )
-from src.models.enums import Tier  # noqa: E402
+from src.models.enums import Tier
 
 # Configure detailed logging
 logging.basicConfig(

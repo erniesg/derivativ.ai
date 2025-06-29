@@ -130,7 +130,7 @@ class TestDocumentPersistence:
         assert call_args.document_type == "notes"
         assert call_args.topic == "Geometry"
         assert call_args.grade_level == 9
-        assert call_args.detail_level == "comprehensive"  # Level 7 maps to comprehensive
+        assert call_args.detail_level == 7  # Detail level is now stored as integer
         assert call_args.estimated_duration == 15  # From mock response
         assert call_args.status == "generated"
         assert call_args.file_count == 0  # No files saved yet

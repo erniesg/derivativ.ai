@@ -11,6 +11,7 @@ from typing import Any
 from src.agents.base_agent import BaseAgent
 from src.models.document_models import (
     ContentSection,
+    DetailLevel,
     ExportFormat,
     GeneratedDocument,
 )
@@ -30,6 +31,18 @@ class DocumentFormatterAgent(BaseAgent):
     def __init__(self, llm_service: LLMService, name: str = "DocumentFormatter"):
         super().__init__(llm_service, name)
         self.formatting_templates = self._load_formatting_templates()
+
+    def _get_detail_level_display(self, detail_level: DetailLevel) -> str:
+        """Convert DetailLevel integer to display string."""
+        level_names = {
+            DetailLevel.MINIMAL: "Minimal",
+            DetailLevel.BASIC: "Basic",
+            DetailLevel.MEDIUM: "Medium",
+            DetailLevel.DETAILED: "Detailed",
+            DetailLevel.COMPREHENSIVE: "Comprehensive",
+            DetailLevel.GUIDED: "Guided"
+        }
+        return level_names.get(detail_level, f"Level {detail_level.value}")
 
     def _load_formatting_templates(self) -> dict[str, dict[str, str]]:
         """Load formatting templates for different output formats."""
@@ -256,7 +269,7 @@ class DocumentFormatterAgent(BaseAgent):
         html += f"""
         <div class="document-header">
             <h1>{document.title}</h1>
-            <p><em>{document.document_type.value.title()} - {document.detail_level.value.title()} Level</em></p>
+            <p><em>{document.document_type.value.title()} - {self._get_detail_level_display(document.detail_level)} Level</em></p>
             <p>Total Questions: {document.total_questions} | Estimated Time: {document.estimated_duration} minutes</p>
         """
 
@@ -413,7 +426,7 @@ class DocumentFormatterAgent(BaseAgent):
 
         markdown = templates["document_header"].format(title=document.title)
         markdown += f"**Document Type:** {document.document_type.value}  \n"
-        markdown += f"**Detail Level:** {document.detail_level.value}  \n"
+        markdown += f"**Detail Level:** {self._get_detail_level_display(document.detail_level)}  \n"
         markdown += f"**Total Questions:** {document.total_questions}  \n"
 
         # Add personalization info if available
@@ -470,13 +483,13 @@ class DocumentFormatterAgent(BaseAgent):
         personalization = personalization or {}
 
         markdown = f"# {document.title}\n\n"
-        markdown += f"*{document.document_type.value.title()} - {document.detail_level.value.title()} Level*\n\n"
+        markdown += f"*{document.document_type.value.title()} - {self._get_detail_level_display(document.detail_level)} Level*\n\n"
 
         # Add metadata slide
         markdown += "---\n\n"
         markdown += "## Document Information\n\n"
         markdown += f"- **Document Type:** {document.document_type.value}\n"
-        markdown += f"- **Detail Level:** {document.detail_level.value}\n"
+        markdown += f"- **Detail Level:** {self._get_detail_level_display(document.detail_level)}\n"
         markdown += f"- **Total Questions:** {document.total_questions}\n"
         markdown += f"- **Estimated Duration:** {document.estimated_duration} minutes\n\n"
 
