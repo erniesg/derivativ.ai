@@ -233,7 +233,7 @@ async def export_document(
         export_result = await export_service.export_document(
             document=mock_document,
             format_type=export_request.format.value,
-            version=getattr(export_request, "version", "student"),
+            version=export_request.version,
             store_in_r2=True,
             r2_service=r2_service,
         )

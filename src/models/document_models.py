@@ -271,6 +271,7 @@ class ExportRequest(BaseModel):
 
     document_id: str = Field(..., description="Document to export")
     format: ExportFormat = Field(..., description="Export format")
+    version: str = Field(default="student", description="Document version (student/teacher)")
     include_metadata: bool = Field(default=True, description="Include generation metadata")
     custom_styling: Optional[dict[str, Any]] = Field(None, description="Custom styling options")
     export_personalization: Optional[dict[str, Any]] = Field(
