@@ -30,11 +30,9 @@ from src.services.prompt_manager import PromptManager  # noqa: E402
 from src.services.r2_storage_service import R2StorageService  # noqa: E402
 
 # Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)8s] %(name)s: %(message)s'
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)8s] %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
+
 
 class ComprehensivePipelineTest:
     """Comprehensive test suite for document generation pipeline."""
@@ -47,6 +45,7 @@ class ComprehensivePipelineTest:
 
     def setup_services(self):
         """Initialize all required services."""
+
         # Mock supabase client for demo mode
         class MockSupabaseClient:
             def __init__(self):
@@ -59,7 +58,7 @@ class ComprehensivePipelineTest:
         self.doc_service = DocumentGenerationService(
             question_repository=self.question_repo,
             llm_factory=self.llm_factory,
-            prompt_manager=self.prompt_manager
+            prompt_manager=self.prompt_manager,
         )
 
         # Initialize R2 storage service
@@ -87,13 +86,17 @@ class ComprehensivePipelineTest:
             # Check if R2 is properly configured
             missing_keys = [k for k, v in r2_config.items() if not v]
             if missing_keys:
-                logger.warning(f"R2 not configured (missing: {missing_keys}). Documents will be stored locally only.")
+                logger.warning(
+                    f"R2 not configured (missing: {missing_keys}). Documents will be stored locally only."
+                )
                 return None
 
             return R2StorageService(r2_config)
 
         except Exception as e:
-            logger.warning(f"Failed to initialize R2 service: {e}. Documents will be stored locally only.")
+            logger.warning(
+                f"Failed to initialize R2 service: {e}. Documents will be stored locally only."
+            )
             return None
 
     async def run_comprehensive_test(self):
@@ -104,29 +107,73 @@ class ComprehensivePipelineTest:
         # Test combinations
         test_cases = [
             # Worksheets - all detail levels
-            (DocumentType.WORKSHEET, DetailLevel.MINIMAL, "Linear Equations", "Basic linear equation solving"),
-            (DocumentType.WORKSHEET, DetailLevel.MEDIUM, "Quadratic Functions", "Quadratic function analysis"),
-            (DocumentType.WORKSHEET, DetailLevel.COMPREHENSIVE, "Trigonometry", "Advanced trigonometric identities"),
-
+            (
+                DocumentType.WORKSHEET,
+                DetailLevel.MINIMAL,
+                "Linear Equations",
+                "Basic linear equation solving",
+            ),
+            (
+                DocumentType.WORKSHEET,
+                DetailLevel.MEDIUM,
+                "Quadratic Functions",
+                "Quadratic function analysis",
+            ),
+            (
+                DocumentType.WORKSHEET,
+                DetailLevel.COMPREHENSIVE,
+                "Trigonometry",
+                "Advanced trigonometric identities",
+            ),
             # Notes - different detail levels
-            (DocumentType.NOTES, DetailLevel.BASIC, "Algebra Basics", "Introduction to algebraic concepts"),
-            (DocumentType.NOTES, DetailLevel.MEDIUM, "Coordinate Geometry", "Points, lines, and circles"),
-            (DocumentType.NOTES, DetailLevel.COMPREHENSIVE, "Calculus Introduction", "Limits and derivatives"),
-
+            (
+                DocumentType.NOTES,
+                DetailLevel.BASIC,
+                "Algebra Basics",
+                "Introduction to algebraic concepts",
+            ),
+            (
+                DocumentType.NOTES,
+                DetailLevel.MEDIUM,
+                "Coordinate Geometry",
+                "Points, lines, and circles",
+            ),
+            (
+                DocumentType.NOTES,
+                DetailLevel.COMPREHENSIVE,
+                "Calculus Introduction",
+                "Limits and derivatives",
+            ),
             # Textbook - different detail levels
-            (DocumentType.TEXTBOOK, DetailLevel.MEDIUM, "Statistics", "Data analysis and probability"),
-            (DocumentType.TEXTBOOK, DetailLevel.COMPREHENSIVE, "Vectors", "Vector operations and applications"),
-
+            (
+                DocumentType.TEXTBOOK,
+                DetailLevel.MEDIUM,
+                "Statistics",
+                "Data analysis and probability",
+            ),
+            (
+                DocumentType.TEXTBOOK,
+                DetailLevel.COMPREHENSIVE,
+                "Vectors",
+                "Vector operations and applications",
+            ),
             # Slides - different detail levels
             (DocumentType.SLIDES, DetailLevel.BASIC, "Percentages", "Percentage calculations"),
-            (DocumentType.SLIDES, DetailLevel.MEDIUM, "Sequences", "Arithmetic and geometric sequences"),
+            (
+                DocumentType.SLIDES,
+                DetailLevel.MEDIUM,
+                "Sequences",
+                "Arithmetic and geometric sequences",
+            ),
         ]
 
         successful_tests = 0
         total_tests = len(test_cases)
 
         for i, (doc_type, detail_level, topic, description) in enumerate(test_cases, 1):
-            print(f"\n📄 Test {i}/{total_tests}: {doc_type.value.title()} - {detail_level.name} - {topic}")
+            print(
+                f"\n📄 Test {i}/{total_tests}: {doc_type.value.title()} - {detail_level.name} - {topic}"
+            )
             print("-" * 50)
 
             try:
@@ -139,7 +186,7 @@ class ComprehensivePipelineTest:
                     grade_level=8,
                     max_questions=3,
                     auto_include_questions=False,
-                    custom_instructions=f"Focus on {description}"
+                    custom_instructions=f"Focus on {description}",
                 )
 
                 # Generate document
@@ -178,18 +225,20 @@ class ComprehensivePipelineTest:
                         "r2_url": storage_info["r2_url"],
                         "local_path": str(storage_info["local_path"]),
                         "html_path": str(storage_info["html_path"]),
-                        "timestamp": datetime.now().isoformat()
+                        "timestamp": datetime.now().isoformat(),
                     }
 
                     self.test_results.append(test_result)
-                    self.stored_documents.append({
-                        "title": result.document.title,
-                        "r2_url": storage_info["r2_url"],
-                        "local_path": str(storage_info["local_path"]),
-                        "html_path": str(storage_info["html_path"]),
-                        "type": doc_type.value,
-                        "detail": detail_level.name
-                    })
+                    self.stored_documents.append(
+                        {
+                            "title": result.document.title,
+                            "r2_url": storage_info["r2_url"],
+                            "local_path": str(storage_info["local_path"]),
+                            "html_path": str(storage_info["html_path"]),
+                            "type": doc_type.value,
+                            "detail": detail_level.name,
+                        }
+                    )
 
                     successful_tests += 1
 
@@ -205,7 +254,7 @@ class ComprehensivePipelineTest:
                         "success": False,
                         "error": result.error_message,
                         "generation_time": generation_time,
-                        "timestamp": datetime.now().isoformat()
+                        "timestamp": datetime.now().isoformat(),
                     }
 
                     self.test_results.append(test_result)
@@ -234,27 +283,32 @@ class ComprehensivePipelineTest:
                 total_chars += section_chars
 
                 # Check for rich content indicators
-                is_rich = any(
-                    key in section.content_data
-                    for key in ["questions", "examples", "objectives", "steps", "solution"]
-                ) or section_chars > 200
+                is_rich = (
+                    any(
+                        key in section.content_data
+                        for key in ["questions", "examples", "objectives", "steps", "solution"]
+                    )
+                    or section_chars > 200
+                )
 
                 if is_rich:
                     rich_sections += 1
 
-                section_analysis.append({
-                    "title": section.title,
-                    "type": section.content_type,
-                    "chars": section_chars,
-                    "is_rich": is_rich
-                })
+                section_analysis.append(
+                    {
+                        "title": section.title,
+                        "type": section.content_type,
+                        "chars": section_chars,
+                        "is_rich": is_rich,
+                    }
+                )
 
         return {
             "total_chars": total_chars,
             "rich_sections": rich_sections,
             "total_sections": len(document.sections),
             "section_details": section_analysis,
-            "avg_chars_per_section": total_chars // max(len(document.sections), 1)
+            "avg_chars_per_section": total_chars // max(len(document.sections), 1),
         }
 
     async def store_document(self, document, doc_type, detail_level, topic):
@@ -269,7 +323,7 @@ class ComprehensivePipelineTest:
                 "topic": topic,
                 "generated_at": document.generated_at,
                 "estimated_duration": document.estimated_duration,
-                "sections": []
+                "sections": [],
             }
 
             # Add section content
@@ -278,7 +332,7 @@ class ComprehensivePipelineTest:
                     "title": section.title,
                     "content_type": section.content_type,
                     "order_index": section.order_index,
-                    "content_data": section.content_data
+                    "content_data": section.content_data,
                 }
                 document_content["sections"].append(section_data)
 
@@ -290,11 +344,11 @@ class ComprehensivePipelineTest:
             # Store locally
             file_path = self.output_dir / "documents" / filename
 
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 json.dump(document_content, f, indent=2, ensure_ascii=False)
 
             # Create readable HTML version
-            html_filename = filename.replace('.json', '.html')
+            html_filename = filename.replace(".json", ".html")
             html_path = self.output_dir / "documents" / html_filename
 
             self.create_html_version(document_content, html_path)
@@ -303,7 +357,9 @@ class ComprehensivePipelineTest:
             r2_url = None
             if self.r2_service:
                 try:
-                    content_bytes = json.dumps(document_content, indent=2, ensure_ascii=False).encode('utf-8')
+                    content_bytes = json.dumps(
+                        document_content, indent=2, ensure_ascii=False
+                    ).encode("utf-8")
 
                     r2_result = await self.r2_service.upload_file(
                         file_content=content_bytes,
@@ -313,8 +369,8 @@ class ComprehensivePipelineTest:
                             "document_type": doc_type.value,
                             "detail_level": detail_level.name,
                             "topic": topic,
-                            "generated_at": document.generated_at
-                        }
+                            "generated_at": document.generated_at,
+                        },
                     )
 
                     if r2_result.get("success"):
@@ -329,19 +385,11 @@ class ComprehensivePipelineTest:
                 except Exception as e:
                     logger.error(f"R2 upload error: {e}")
 
-            return {
-                "local_path": file_path,
-                "html_path": html_path,
-                "r2_url": r2_url
-            }
+            return {"local_path": file_path, "html_path": html_path, "r2_url": r2_url}
 
         except Exception as e:
             logger.exception(f"Error storing document: {e}")
-            return {
-                "local_path": None,
-                "html_path": None,
-                "r2_url": None
-            }
+            return {"local_path": None, "html_path": None, "r2_url": None}
 
     def create_html_version(self, document_content, html_path):
         """Create a readable HTML version of the document."""
@@ -378,7 +426,7 @@ class ComprehensivePipelineTest:
     </div>
 """
 
-            for section in document_content['sections']:
+            for section in document_content["sections"]:
                 html_content += f"""
     <div class="section">
         <div class="section-title">{section['title']}</div>
@@ -394,7 +442,7 @@ class ComprehensivePipelineTest:
 </html>
 """
 
-            with open(html_path, 'w', encoding='utf-8') as f:
+            with open(html_path, "w", encoding="utf-8") as f:
                 f.write(html_content)
 
         except Exception as e:
@@ -410,8 +458,10 @@ class ComprehensivePipelineTest:
         print(f"Success Rate: {(successful_tests/total_tests)*100:.1f}%")
 
         # Calculate statistics
-        generation_times = [r['generation_time'] for r in self.test_results if r['success']]
-        content_sizes = [r['content_analysis']['total_chars'] for r in self.test_results if r['success']]
+        generation_times = [r["generation_time"] for r in self.test_results if r["success"]]
+        content_sizes = [
+            r["content_analysis"]["total_chars"] for r in self.test_results if r["success"]
+        ]
 
         if generation_times:
             print("\n⏱️  PERFORMANCE METRICS:")
@@ -428,7 +478,7 @@ class ComprehensivePipelineTest:
         print(f"\n📁 STORED DOCUMENTS ({len(self.stored_documents)} files):")
         for doc in self.stored_documents:
             print(f"   • {doc['title']} ({doc['type']}, {doc['detail']})")
-            if doc.get('r2_url'):
+            if doc.get("r2_url"):
                 print(f"     R2: {doc['r2_url']}")
             print(f"     Local: {doc['local_path']}")
             print(f"     HTML: {doc['html_path']}")
@@ -439,20 +489,24 @@ class ComprehensivePipelineTest:
                 "timestamp": datetime.now().isoformat(),
                 "total_tests": total_tests,
                 "successful_tests": successful_tests,
-                "success_rate": (successful_tests/total_tests)*100,
+                "success_rate": (successful_tests / total_tests) * 100,
                 "performance_metrics": {
-                    "avg_generation_time": sum(generation_times)/len(generation_times) if generation_times else 0,
+                    "avg_generation_time": sum(generation_times) / len(generation_times)
+                    if generation_times
+                    else 0,
                     "min_generation_time": min(generation_times) if generation_times else 0,
                     "max_generation_time": max(generation_times) if generation_times else 0,
                 },
                 "content_metrics": {
-                    "avg_content_size": sum(content_sizes)/len(content_sizes) if content_sizes else 0,
+                    "avg_content_size": sum(content_sizes) / len(content_sizes)
+                    if content_sizes
+                    else 0,
                     "min_content_size": min(content_sizes) if content_sizes else 0,
                     "max_content_size": max(content_sizes) if content_sizes else 0,
-                }
+                },
             },
             "test_results": self.test_results,
-            "stored_documents": self.stored_documents
+            "stored_documents": self.stored_documents,
         }
 
         # Store summary in R2 if available
@@ -461,7 +515,9 @@ class ComprehensivePipelineTest:
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 summary_filename = f"test_summaries/comprehensive_test_{timestamp}.json"
 
-                summary_bytes = json.dumps(summary_data, indent=2, ensure_ascii=False).encode('utf-8')
+                summary_bytes = json.dumps(summary_data, indent=2, ensure_ascii=False).encode(
+                    "utf-8"
+                )
 
                 result = await self.r2_service.upload_file(
                     file_content=summary_bytes,
@@ -469,8 +525,8 @@ class ComprehensivePipelineTest:
                     metadata={
                         "test_type": "comprehensive_summary",
                         "total_tests": str(total_tests),
-                        "successful_tests": str(successful_tests)
-                    }
+                        "successful_tests": str(successful_tests),
+                    },
                 )
 
                 if result.get("success"):
@@ -484,8 +540,12 @@ class ComprehensivePipelineTest:
                 print(f"\n⚠️  Error storing summary in R2: {e}")
 
         # Also store summary locally
-        local_summary_path = self.output_dir / "summaries" / f"comprehensive_test_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        with open(local_summary_path, 'w', encoding='utf-8') as f:
+        local_summary_path = (
+            self.output_dir
+            / "summaries"
+            / f"comprehensive_test_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        )
+        with open(local_summary_path, "w", encoding="utf-8") as f:
             json.dump(summary_data, f, indent=2, ensure_ascii=False)
         print(f"📋 Local Summary: {local_summary_path}")
 

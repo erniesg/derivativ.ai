@@ -1,0 +1,78 @@
+{
+  "title": "Coordinate Geometry Study Notes for IGCSE",
+  "document_type": "notes",
+  "detail_level": "MEDIUM",
+  "detail_level_int": 5,
+  "topic": "Coordinate Geometry",
+  "generated_at": "2025-06-29T23:14:26.970766",
+  "estimated_duration": 30,
+  "sections": [
+    {
+      "title": "Learning Objectives",
+      "content_type": "learning_objectives",
+      "order_index": 0,
+      "content_data": {
+        "1": "Understand the Cartesian coordinate system.",
+        "2": "Identify and plot points on a coordinate plane.",
+        "3": "Calculate the distance between two points.",
+        "4": "Determine the midpoint of a line segment.",
+        "5": "Understand the equation of a straight line.",
+        "6": "Explore the properties of circles, including their equations."
+      }
+    },
+    {
+      "title": "Concept Explanations",
+      "content_type": "concept_explanations",
+      "order_index": 1,
+      "content_data": {
+        "Cartesian Coordinate System": "A two-dimensional system where each point is defined by an ordered pair (x, y). The x-coordinate indicates the horizontal position, while the y-coordinate indicates the vertical position.",
+        "Distance Formula": "The distance d between two points (x1, y1) and (x2, y2) is given by d = √((x2 - x1)² + (y2 - y1)²).",
+        "Midpoint Formula": "The midpoint M of a line segment connecting points (x1, y1) and (x2, y2) is M = ((x1 + x2)/2, (y1 + y2)/2).",
+        "Equation of a Line": "The equation of a line in slope-intercept form is y = mx + b, where m is the slope and b is the y-intercept.",
+        "Circle Equation": "The equation of a circle with center (h, k) and radius r is (x - h)² + (y - k)² = r²."
+      }
+    },
+    {
+      "title": "Worked Examples",
+      "content_type": "worked_examples",
+      "order_index": 2,
+      "content_data": {
+        "Example 1": {
+          "problem": "Find the distance between points A(2, 3) and B(5, 7).",
+          "solution": "Using the distance formula: d = √((5 - 2)² + (7 - 3)²) = √(3² + 4²) = √(9 + 16) = √25 = 5."
+        },
+        "Example 2": {
+          "problem": "Determine the midpoint of the segment connecting points C(-1, 4) and D(3, 2).",
+          "solution": "Using the midpoint formula: M = ((-1 + 3)/2, (4 + 2)/2) = (2/2, 6/2) = (1, 3)."
+        },
+        "Example 3": {
+          "problem": "Write the equation of a line with slope 2 that passes through the point (1, 1).",
+          "solution": "Using the point-slope form: y - 1 = 2(x - 1) => y = 2x - 1."
+        },
+        "Example 4": {
+          "problem": "Find the equation of a circle with center (2, -3) and radius 4.",
+          "solution": "Using the circle equation: (x - 2)² + (y + 3)² = 4² => (x - 2)² + (y + 3)² = 16."
+        }
+      }
+    },
+    {
+      "title": "Practice Exercises",
+      "content_type": "practice_exercises",
+      "order_index": 3,
+      "content_data": {
+        "Exercise 1": "Calculate the distance between points E(0, 0) and F(6, 8).",
+        "Exercise 2": "Find the midpoint of the segment connecting points G(4, 5) and H(10, 15).",
+        "Exercise 3": "Write the equation of a line with slope -3 that passes through the point (2, 4).",
+        "Exercise 4": "Determine the equation of a circle with center (-1, 2) and radius 5."
+      }
+    },
+    {
+      "title": "Summary",
+      "content_type": "summary",
+      "order_index": 4,
+      "content_data": {
+        "Key Points": "Coordinate geometry involves the study of points, lines, and circles using a coordinate system. Key formulas include the distance formula, midpoint formula, and equations of lines and circles. Mastery of these concepts is crucial for solving geometric problems."
+      }
+    }
+  ]
+}

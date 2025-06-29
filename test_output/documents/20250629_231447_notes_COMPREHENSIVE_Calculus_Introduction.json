@@ -1,0 +1,88 @@
+{
+  "title": "Comprehensive Introduction to Calculus: Limits and Derivatives",
+  "document_type": "notes",
+  "detail_level": "COMPREHENSIVE",
+  "detail_level_int": 9,
+  "topic": "Calculus Introduction",
+  "generated_at": "2025-06-29T23:14:47.760465",
+  "estimated_duration": 30,
+  "sections": [
+    {
+      "title": "Learning Objectives",
+      "content_type": "learning_objectives",
+      "order_index": 0,
+      "content_data": {
+        "1": "Understand the concept of a limit and its significance in calculus.",
+        "2": "Learn how to calculate limits using various methods.",
+        "3": "Define the derivative and understand its geometric interpretation.",
+        "4": "Apply the rules of differentiation to find derivatives of functions."
+      }
+    },
+    {
+      "title": "Detailed Theory",
+      "content_type": "detailed_theory",
+      "order_index": 1,
+      "content_data": {
+        "Limits": {
+          "definition": "A limit is the value that a function approaches as the input approaches a certain point.",
+          "notation": "lim (x → a) f(x) = L means as x approaches a, f(x) approaches L.",
+          "one_sided_limits": "Limits can be approached from the left (denoted as lim (x → a-) f(x)) or from the right (denoted as lim (x → a+) f(x)).",
+          "examples": [
+            "lim (x → 2) (3x + 1) = 7",
+            "lim (x → 0) (sin(x)/x) = 1"
+          ]
+        },
+        "Derivatives": {
+          "definition": "The derivative of a function at a point measures the rate at which the function value changes as its input changes.",
+          "notation": "f'(x) or dy/dx represents the derivative of f with respect to x.",
+          "geometric_interpretation": "The derivative represents the slope of the tangent line to the curve at a given point.",
+          "examples": [
+            "If f(x) = x^2, then f'(x) = 2x.",
+            "If f(x) = sin(x), then f'(x) = cos(x)."
+          ]
+        }
+      }
+    },
+    {
+      "title": "Multiple Examples",
+      "content_type": "multiple_examples",
+      "order_index": 2,
+      "content_data": {
+        "Limit Examples": {
+          "1": "Calculate lim (x → 3) (x^2 - 9)/(x - 3).",
+          "solution": "Using L'Hôpital's Rule: lim (x → 0) (e^x)/1 = 1.",
+          "2": "Calculate lim (x → 0) (e^x - 1)/x."
+        },
+        "Derivative Examples": {
+          "1": "Find the derivative of f(x) = 3x^3 - 5x + 2.",
+          "solution": "f'(x) = 1/x.",
+          "2": "Find the derivative of f(x) = ln(x)."
+        }
+      }
+    },
+    {
+      "title": "Extensive Practice",
+      "content_type": "extensive_practice",
+      "order_index": 3,
+      "content_data": {
+        "Limit Practice": {
+          "1": "Evaluate lim (x → 1) (x^2 - 1)/(x - 1).",
+          "2": "Evaluate lim (x → 2) (x^3 - 8)/(x - 2)."
+        },
+        "Derivative Practice": {
+          "1": "Differentiate f(x) = 4x^4 - 2x^2 + 7.",
+          "2": "Differentiate f(x) = tan(x)."
+        }
+      }
+    },
+    {
+      "title": "Comprehensive Summary",
+      "content_type": "comprehensive_summary",
+      "order_index": 4,
+      "content_data": {
+        "Limits": "Limits are foundational in calculus, allowing us to understand behavior of functions at specific points.",
+        "Derivatives": "Derivatives provide insight into the rate of change of functions, essential for graphing and optimization."
+      }
+    }
+  ]
+}

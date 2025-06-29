@@ -1,0 +1,51 @@
+{
+  "title": "Algebra Basics Study Notes for IGCSE",
+  "document_type": "notes",
+  "detail_level": "BASIC",
+  "detail_level_int": 3,
+  "topic": "Algebra Basics",
+  "generated_at": "2025-06-29T23:14:04.436766",
+  "estimated_duration": 30,
+  "sections": [
+    {
+      "title": "Key Concepts",
+      "content_type": "key_concepts",
+      "order_index": 0,
+      "content_data": {
+        "Variables": "Symbols (usually letters) that represent numbers. For example, in the expression x + 5, x is a variable.",
+        "Algebraic Expressions": "Combinations of numbers, variables, and operations (like addition and multiplication). Example: 3x + 2 is an algebraic expression.",
+        "Equations": "Statements that two expressions are equal. For example, 2x + 3 = 7 is an equation.",
+        "Solving Equations": "Finding the value of the variable that makes the equation true. This often involves isolating the variable on one side of the equation."
+      }
+    },
+    {
+      "title": "Examples",
+      "content_type": "examples",
+      "order_index": 1,
+      "content_data": {
+        "Example 1": {
+          "Problem": "Evaluate the expression 3x + 4 when x = 2.",
+          "Solution": "3(2) + 4 = 6 + 4 = 10."
+        },
+        "Example 2": {
+          "Problem": "Solve the equation 2x + 3 = 11.",
+          "Solution": "Subtract 3 from both sides: 2x = 8. Then divide by 2: x = 4."
+        },
+        "Example 3": {
+          "Problem": "Simplify the expression 4x + 3x - 2.",
+          "Solution": "Combine like terms: (4x + 3x) - 2 = 7x - 2."
+        }
+      }
+    },
+    {
+      "title": "Practice Questions",
+      "content_type": "practice_questions",
+      "order_index": 2,
+      "content_data": {
+        "Question 1": "If x = 5, what is the value of 2x + 7?",
+        "Question 2": "Solve the equation 5x - 2 = 3.",
+        "Question 3": "Simplify the expression 6y + 4y - 3y + 1."
+      }
+    }
+  ]
+}

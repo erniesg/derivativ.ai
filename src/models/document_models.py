@@ -155,6 +155,16 @@ class DocumentGenerationRequest(BaseModel):
     include_answers: bool = Field(default=True, description="Include answer sections")
     include_working: bool = Field(default=True, description="Include step-by-step working")
     include_mark_schemes: bool = Field(default=False, description="Include marking schemes")
+    
+    # Version generation
+    generate_versions: list["DocumentVersion"] = Field(
+        default_factory=lambda: [DocumentVersion.STUDENT, DocumentVersion.TEACHER],
+        description="Which document versions to generate"
+    )
+    export_formats: list["ExportFormat"] = Field(
+        default_factory=lambda: [ExportFormat.PDF, ExportFormat.DOCX],
+        description="Which export formats to generate"
+    )
 
     @field_validator("title")
     @classmethod

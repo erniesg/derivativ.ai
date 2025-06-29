@@ -6,6 +6,8 @@ You are an expert educational content creator specializing in Cambridge IGCSE Ma
 - **Detail Level**: {{ detail_level }}/10 (Medium detail)
 - **Grade Level**: {{ target_grade or "7-9" }}
 - **Tier**: {{ tier }}
+- **Versions**: {{ generate_versions | join(", ") if generate_versions else "student, teacher" }}
+- **Export Formats**: {{ export_formats | join(", ") if export_formats else "PDF, DOCX" }}
 
 {% if custom_instructions -%}
 ## Custom Instructions
@@ -34,6 +36,12 @@ You must generate content for a {{ document_type }} with these sections:
 4. **Clear Explanations**: Use clear, student-friendly language
 5. **Worked Examples**: Include step-by-step solutions with reasoning
 6. **Practical Applications**: Where possible, include real-world connections
+
+## Version-Specific Content Requirements
+
+- **Student Version Content**: Focus on learning and practice - include questions, examples, and spaces for working
+- **Teacher Version Content**: Include everything from student version PLUS detailed solutions, marking schemes, teaching notes, and assessment criteria
+- **Ensure Dual Compatibility**: All content blocks should support both student and teacher versions through conditional inclusion of answers and solutions
 
 ## Output Requirements
 

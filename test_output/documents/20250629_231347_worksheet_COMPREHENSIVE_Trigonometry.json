@@ -1,0 +1,77 @@
+{
+  "title": "Advanced Trigonometry Worksheet",
+  "document_type": "worksheet",
+  "detail_level": "COMPREHENSIVE",
+  "detail_level_int": 9,
+  "topic": "Trigonometry",
+  "generated_at": "2025-06-29T23:13:47.506987",
+  "estimated_duration": 30,
+  "sections": [
+    {
+      "title": "Learning Objectives",
+      "content_type": "learning_objectives",
+      "order_index": 0,
+      "content_data": {
+        "1": "Understand and apply advanced trigonometric identities.",
+        "2": "Solve problems involving trigonometric equations.",
+        "3": "Use trigonometric identities to simplify expressions."
+      }
+    },
+    {
+      "title": "Graded Practice",
+      "content_type": "graded_practice",
+      "order_index": 1,
+      "content_data": {
+        "questions": [
+          {
+            "question": "1. Prove the identity: sin²(x) + cos²(x) = 1.",
+            "marks": 2
+          },
+          {
+            "question": "2. Simplify the expression: (1 + tan²(x)) / (sec²(x)).",
+            "marks": 2
+          },
+          {
+            "question": "3. If sin(x) = 3/5, find cos(x) and tan(x).",
+            "marks": 3
+          },
+          {
+            "question": "4. Solve for x in the equation: 2sin(x)cos(x) = 1, where 0 ≤ x < 360°.",
+            "marks": 4
+          },
+          {
+            "question": "5. Prove that: 1 + cot²(x) = csc²(x).",
+            "marks": 2
+          },
+          {
+            "question": "6. If tan(x) = 4/3, find sin(x) and cos(x) using the Pythagorean identity.",
+            "marks": 3
+          },
+          {
+            "question": "7. Show that: sin(2x) = 2sin(x)cos(x).",
+            "marks": 2
+          },
+          {
+            "question": "8. Given that sin(x) = 0.6, find the exact value of cos(90° - x).",
+            "marks": 2
+          }
+        ]
+      }
+    },
+    {
+      "title": "Detailed Solutions",
+      "content_type": "detailed_solutions",
+      "order_index": 2,
+      "content_data": {
+        "1": "1. sin²(x) + cos²(x) = 1 is a fundamental identity in trigonometry. It can be proven using the Pythagorean theorem in a right triangle.",
+        "2": "2. (1 + tan²(x)) / (sec²(x)) = 1, since sec²(x) = 1 + tan²(x).",
+        "3": "3. If sin(x) = 3/5, then cos(x) = 4/5 and tan(x) = 3/4 using the Pythagorean theorem.",
+        "4": "4. 2sin(x)cos(x) = 1 implies sin(2x) = 1, so 2x = 90° or 270°, giving x = 45° or 135°.",
+        "5": "5. 1 + cot²(x) = csc²(x) can be proven using the definitions of cotangent and cosecant.",
+        "6": "6. If tan(x) = 4/3, then sin(x) = 4/5 and cos(x) = 3/5 using the Pythagorean identity.",
+        "7": "7. sin(2x) = 2sin(x)cos(x) is derived from the double angle formula for sine.",
+        "8": "8. cos(90° - x) = sin(x), thus cos(90° - x) = 0.6."
+      }
+    }
+  ]
+}
