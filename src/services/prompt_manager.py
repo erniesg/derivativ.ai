@@ -946,7 +946,7 @@ Generate slides that engage students and facilitate effective mathematics instru
 - Topic: {{ topic }}
 - Detail Level: {{ detail_level }}
 - Target Grade: {{ target_grade }}
-- Time Constraint: {{ target_time_minutes | default(30) }} minutes
+- Time Constraint: {{ target_duration_minutes | default(30) }} minutes
 {% if tier is defined and tier -%}
 - Tier: {{ tier }}
 {% endif -%}
@@ -1006,7 +1006,7 @@ Generate slides that engage students and facilitate effective mathematics instru
 {% endif %}
 
 **Time Constraint Considerations:**
-- {{ target_time_minutes }} minutes total time
+- {{ target_duration_minutes }} minutes total time
 - Select blocks that fit realistic completion time
 - Balance content depth with time availability
 
@@ -1029,7 +1029,7 @@ Return a JSON object with this structure:
       "content_focus": "Core theoretical concepts and definitions"
     }
   ],
-  "total_estimated_time": {{ target_time_minutes }},
+  "total_estimated_time": {{ target_duration_minutes }},
   "educational_rationale": "Why these blocks were selected for this specific document type and requirements",
   "content_progression": "How the blocks build understanding from introduction to mastery"
 }
@@ -1043,7 +1043,7 @@ Select blocks that create an effective learning progression and match the specif
             description="Select appropriate content blocks for V2 document generation",
             required_variables=["document_type", "topic", "detail_level", "target_grade"],
             optional_variables=[
-                "target_time_minutes",
+                "target_duration_minutes",
                 "tier",
                 "custom_instructions",
                 "syllabus_content",

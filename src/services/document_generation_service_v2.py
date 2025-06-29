@@ -135,9 +135,11 @@ class BlockSelector:
         # Create context for LLM
         context = {
             "document_type": request.document_type.value,
-            "topic": request.topic,
+            "topic": request.topic.value,  # Use enum value
             "target_duration_minutes": request.target_duration_minutes,
             "detail_level": detail_level,
+            "target_grade": request.grade_level or 8,  # Add missing required variable
+            "tier": request.tier.value if request.tier else "Core",  # Add tier
             "available_blocks": [
                 {
                     "block_type": block.block_type,
