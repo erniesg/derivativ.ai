@@ -7,8 +7,9 @@ structured educational documents following Cambridge IGCSE standards.
 
 import logging
 from datetime import datetime
-from typing import Any
+from typing import Any, List
 
+from pydantic import BaseModel
 from src.database.supabase_repository import QuestionRepository
 from src.models.document_models import (
     ContentSection,
@@ -22,6 +23,26 @@ from src.models.question_models import Question
 from src.services.json_parser import JSONParser
 from src.services.llm_factory import LLMFactory
 from src.services.prompt_manager import PromptConfig, PromptManager
+
+
+class DocumentBlock(BaseModel):
+    """A single content block in the document."""
+    block_type: str
+    content: dict[str, Any]
+    estimated_minutes: int
+    reasoning: str
+
+
+class DocumentGenerationSchema(BaseModel):
+    """Schema for LLM-generated document content."""
+    enhanced_title: str
+    introduction: str = ""
+    blocks: List[DocumentBlock]
+    total_estimated_minutes: int
+    actual_detail_level: int
+    generation_reasoning: str
+    coverage_notes: str = ""
+    personalization_applied: List[str] = []
 
 logger = logging.getLogger(__name__)
 
@@ -230,14 +251,30 @@ class DocumentGenerationService:
 
             logger.info(f"Generated prompt for {template_name}")
 
-            # Generate content using LLM
+            # Generate content using LLM with provider-specific structured output
             from src.models.llm_models import LLMRequest
+
+            # Configure structured output based on provider
+            provider = self.llm_factory.detect_provider("gpt-4o-mini")
+            extra_params = {}
+            
+            if provider == "openai":
+                # OpenAI: Use json_object format for reliable JSON
+                extra_params["response_format"] = {"type": "json_object"}
+            elif provider == "anthropic":
+                # Anthropic: Use strong prompt instructions (no special params needed)
+                pass
+            elif provider == "google":
+                # Google Gemini: Configure response schema
+                extra_params["response_mime_type"] = "application/json"
+                extra_params["response_schema"] = DocumentGenerationSchema
 
             llm_request = LLMRequest(
                 model="gpt-4o-mini",
                 prompt=rendered_prompt,
                 temperature=0.3,
                 max_tokens=4000,
+                extra_params=extra_params
             )
 
             response = await llm_service.generate_non_stream(llm_request)
@@ -254,10 +291,21 @@ class DocumentGenerationService:
             )
 
             if extraction_result.success:
-                document_data = extraction_result.data
+                raw_data = extraction_result.data
                 logger.info(
                     f"JSON parsed successfully using method: {extraction_result.extraction_method}"
                 )
+                logger.info(f"Raw data keys: {list(raw_data.keys())}")
+                
+                # Handle wrapped responses (e.g., {'worksheet': {...}})
+                if len(raw_data) == 1 and request.document_type.value in raw_data:
+                    document_data = raw_data[request.document_type.value]
+                    logger.info(f"Unwrapped {request.document_type.value} data")
+                else:
+                    document_data = raw_data
+                
+                logger.info(f"Final data keys: {list(document_data.keys())}")
+                logger.info(f"Blocks found: {len(document_data.get('blocks', []))}")
                 if extraction_result.thinking_tokens_removed:
                     logger.info("Thinking tokens were removed from response")
             else:
@@ -266,8 +314,9 @@ class DocumentGenerationService:
                 # Fallback: create basic document structure
                 document_data = self._create_fallback_document_data(request, questions)
 
-            # 7. Create structured document
-            sections = self._parse_sections_from_llm_data(document_data, questions)
+            # 7. Create structured document from blocks
+            sections = self._parse_sections_from_blocks(document_data, questions)
+            logger.info(f"Created {len(sections)} sections from blocks")
 
             # 8. Track applied customizations
             applied_customizations = {}
@@ -278,16 +327,16 @@ class DocumentGenerationService:
 
             # 9. Create final document
             document = GeneratedDocument(
-                title=document_data.get("title", request.title),
+                title=document_data.get("enhanced_title", request.title),
                 document_type=request.document_type,
                 detail_level=request.detail_level,
                 generated_at=datetime.now().isoformat(),
                 template_used=template_name,
                 generation_request=request,
                 sections=sections,
-                total_questions=document_data.get("total_questions", len(questions)),
+                total_questions=len(questions),
                 estimated_duration=document_data.get(
-                    "estimated_duration",
+                    "total_estimated_minutes",
                     self._estimate_duration(
                         request.document_type, request.detail_level, len(questions)
                     ),
@@ -364,10 +413,50 @@ class DocumentGenerationService:
         logger.info(f"Gathered {len(questions)} questions for document")
         return questions
 
-    def _parse_sections_from_llm_data(
+    def _parse_sections_from_blocks(
         self, document_data: dict[str, Any], questions: list[Question]
     ) -> list[ContentSection]:
-        """Parse sections from LLM-generated document data."""
+        """Parse sections from LLM-generated document blocks."""
+        sections = []
+
+        # Handle new "blocks" format from structured output
+        blocks = document_data.get("blocks", [])
+        if not blocks:
+            # Fallback to old format if needed
+            return self._parse_sections_from_llm_data_legacy(document_data, questions)
+
+        for i, block in enumerate(blocks):
+            block_type = block.get("block_type", "generic")
+            content = block.get("content", {})
+            
+            # Create section title from block type
+            section_title = block_type.replace("_", " ").title()
+            
+            section = ContentSection(
+                title=section_title,
+                content_type=block_type,
+                content_data=content,
+                order_index=i,
+            )
+
+            # Enrich sections with actual question data where appropriate
+            if block_type == "practice_questions" and questions:
+                # Merge LLM-generated content with actual question data
+                practice_data = self._create_practice_questions_data(questions)
+                section.content_data = {**content, **practice_data}
+            elif block_type == "worked_examples" and questions:
+                # Merge LLM-generated content with actual solution data
+                examples_data = self._create_worked_examples_data(questions[:3])
+                section.content_data = {**content, **examples_data}
+
+            sections.append(section)
+
+        return sections
+
+    def _parse_sections_from_llm_data_legacy(
+        self, document_data: dict[str, Any], questions: list[Question]
+    ) -> list[ContentSection]:
+        """Parse sections from old LLM-generated document data format."""
         sections = []
 
         for i, section_data in enumerate(document_data.get("sections", [])):
@@ -436,25 +525,29 @@ class DocumentGenerationService:
         """Create fallback document data when LLM response parsing fails."""
         structure_pattern = self.structure_patterns[request.document_type][request.detail_level]
 
-        sections = []
+        blocks = []
         for i, section_type in enumerate(structure_pattern):
-            section = {
-                "title": section_type.replace("_", " ").title(),
-                "content_type": section_type,
-                "content_data": {"text": f"Generated content for {section_type}"},
-                "order_index": i,
+            block = {
+                "block_type": section_type,
+                "content": {"text": f"Generated content for {section_type}"},
+                "estimated_minutes": 5,
+                "reasoning": f"Fallback content for {section_type.replace('_', ' ')}"
             }
-            sections.append(section)
+            blocks.append(block)
+
+        estimated_duration = self._estimate_duration(
+            request.document_type, request.detail_level, len(questions)
+        )
 
         return {
-            "title": request.title,
-            "document_type": request.document_type.value,
-            "detail_level": request.detail_level.value,
-            "sections": sections,
-            "estimated_duration": self._estimate_duration(
-                request.document_type, request.detail_level, len(questions)
-            ),
-            "total_questions": len(questions),
+            "enhanced_title": request.title,
+            "introduction": f"Introduction to {request.topic}",
+            "blocks": blocks,
+            "total_estimated_minutes": estimated_duration,
+            "actual_detail_level": request.detail_level.value if hasattr(request.detail_level, 'value') else 5,
+            "generation_reasoning": "Fallback content generated due to LLM response parsing failure",
+            "coverage_notes": f"Basic coverage of {request.topic}",
+            "personalization_applied": []
         }
 
     def _estimate_duration(
