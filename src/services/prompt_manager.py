@@ -104,6 +104,7 @@ class PromptManager:
             "slides_generation": self._get_slides_generation_template(),
             # V2 Document generation templates
             "block_selection": self._get_block_selection_template(),
+            "document_content_generation": self._get_document_content_generation_template(),
         }
 
     async def render_prompt(self, config: PromptConfig, model_name: Optional[str] = None) -> str:
@@ -1049,6 +1050,126 @@ Select blocks that create an effective learning progression and match the specif
                 "syllabus_content",
             ],
             tags=["blocks", "selection", "v2", "cambridge", "igcse"],
+        )
+
+    def _get_document_content_generation_template(self) -> PromptTemplate:
+        """Get built-in document content generation template for V2 document generation."""
+        content = """You are an expert Cambridge IGCSE Mathematics educator. Generate comprehensive document content using the selected content blocks and following all specified requirements:
+
+**Document Specifications:**
+- Document Type: {{ document_type }}
+- Title: {{ title }}
+- Topic: {{ topic }}
+- Grade Level: {{ grade_level }}
+- Detail Level: {{ detail_level }}
+- Duration: {{ target_duration_minutes }} minutes
+- Tier: {{ tier }}
+{% if custom_instructions -%}
+- Special Instructions: {{ custom_instructions }}
+{% endif -%}
+{% if subtopics -%}
+- Subtopics: {{ subtopics | join(', ') }}
+{% endif -%}
+
+**Syllabus Content References:**
+{% for ref in syllabus_refs -%}
+- {{ ref }}
+{% endfor -%}
+
+**Detailed Syllabus Content:**
+{% for content_detail in detailed_syllabus_content -%}
+**{{ content_detail.title }}:**
+{{ content_detail.description }}
+
+Key Learning Objectives:
+{% for objective in content_detail.learning_objectives -%}
+- {{ objective }}
+{% endfor -%}
+
+Key Concepts:
+{% for concept in content_detail.key_concepts -%}
+- {{ concept }}
+{% endfor %}
+
+{% endfor -%}
+
+**Selected Content Blocks:**
+{% for block in selected_blocks -%}
+**{{ block.block_type }}:**
+- Content Guidelines: {{ block.content_guidelines }}
+- Estimated Volume: {{ block.estimated_content_volume }}
+- Schema Requirements: {{ block.schema | tojson }}
+
+{% endfor -%}
+
+**Generation Requirements:**
+1. Generate content for each selected block that matches the guidelines and estimated volume
+2. Ensure mathematical accuracy and Cambridge IGCSE compliance
+3. Use appropriate difficulty level for Grade {{ grade_level }}
+4. Include clear explanations suitable for the {{ tier }} tier
+5. Follow the exact JSON schema provided below
+
+**CRITICAL: JSON Output Format**
+You MUST return valid JSON matching this exact schema:
+{{ output_schema | tojson }}
+
+**Content Creation Guidelines:**
+{% if document_type == "worksheet" -%}
+- Focus on practice questions with clear instructions
+- Include worked examples before independent practice
+- Provide step-by-step solutions where appropriate
+- Ensure progressive difficulty within each block
+{% elif document_type == "notes" -%}
+- Emphasize clear explanations and concept development
+- Include multiple examples to illustrate concepts
+- Use structured formatting with headings and bullet points
+- Balance theory with practical applications
+{% elif document_type == "textbook" -%}
+- Provide comprehensive coverage with detailed explanations
+- Include historical context where relevant
+- Offer multiple solution methods for complex problems
+- Add extension activities for advanced learners
+{% elif document_type == "slides" -%}
+- Use concise, presentation-friendly content
+- Focus on key concepts and visual learning
+- Include interactive elements and discussion points
+- Keep text minimal but impactful
+{% endif -%}
+
+**Quality Standards:**
+- All mathematical notation must be correct and consistent
+- Content must align with Cambridge IGCSE curriculum requirements
+- Explanations should be age-appropriate and clear
+- Examples must be relevant and engaging
+- Solutions must be mathematically sound and complete
+
+Generate high-quality educational content that effectively supports student learning and meets all specified requirements."""
+
+        return PromptTemplate(
+            name="document_content_generation",
+            version="latest",
+            content=content,
+            description="Generate structured document content using selected blocks for V2 generation",
+            required_variables=[
+                "document_type",
+                "title",
+                "topic",
+                "grade_level",
+                "detail_level",
+                "target_duration_minutes",
+                "tier",
+                "selected_blocks",
+                "output_schema",
+            ],
+            optional_variables=[
+                "custom_instructions",
+                "subtopics",
+                "syllabus_refs",
+                "detailed_syllabus_content",
+                "personalization_context",
+                "difficulty",
+            ],
+            tags=["content", "generation", "v2", "cambridge", "igcse"],
         )
 
 
