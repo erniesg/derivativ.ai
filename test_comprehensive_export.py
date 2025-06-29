@@ -162,12 +162,16 @@ class ComprehensiveExportTest:
                                 "timestamp": datetime.now().isoformat(),
                             }
 
-                            if export_result.get("r2_file_key"):
+                            # Use presigned URL if available, otherwise construct direct URL
+                            if export_result.get("r2_presigned_url"):
+                                export_info["r2_url"] = export_result["r2_presigned_url"]
+                                print(f"   🌐 R2 (Presigned): {export_result['r2_presigned_url']}")
+                            elif export_result.get("r2_file_key"):
                                 account_id = self.settings.cloudflare_account_id
                                 bucket_name = self.settings.cloudflare_r2_bucket_name
                                 r2_url = f"https://{account_id}.r2.cloudflarestorage.com/{bucket_name}/{export_result['r2_file_key']}"
                                 export_info["r2_url"] = r2_url
-                                print(f"   🌐 R2: {r2_url}")
+                                print(f"   🌐 R2 (Direct): {r2_url}")
 
                             if export_result.get("local_file_path"):
                                 print(f"   📁 Local: {export_result['local_file_path']}")

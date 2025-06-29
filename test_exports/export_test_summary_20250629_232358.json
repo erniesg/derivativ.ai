@@ -1,0 +1,240 @@
+{
+  "export_test_run": {
+    "timestamp": "2025-06-29T23:23:58.840614",
+    "total_operations": 16,
+    "successful_exports": 16,
+    "success_rate": 100.0,
+    "format_statistics": {
+      "pdf": {
+        "count": 4,
+        "total_size": 11395
+      },
+      "docx": {
+        "count": 4,
+        "total_size": 149202
+      },
+      "html": {
+        "count": 4,
+        "total_size": 11004
+      },
+      "markdown": {
+        "count": 4,
+        "total_size": 5820
+      }
+    },
+    "version_statistics": {
+      "student": {
+        "count": 8,
+        "formats": [
+          "html",
+          "docx",
+          "pdf",
+          "markdown"
+        ]
+      },
+      "teacher": {
+        "count": 8,
+        "formats": [
+          "html",
+          "docx",
+          "pdf",
+          "markdown"
+        ]
+      }
+    }
+  },
+  "exported_files": [
+    {
+      "document_type": "worksheet",
+      "detail_level": "MEDIUM",
+      "topic": "Linear Equations",
+      "format": "pdf",
+      "version": "student",
+      "file_size": 2445,
+      "local_path": "/var/folders/lh/srvdp05d2yg65flqrscm7vp00000gn/T/linear_equations_worksheet_student.pdf",
+      "r2_key": "documents/ae42c25f-6732-45f8-be4e-f501e793f14b/student.pdf",
+      "timestamp": "2025-06-29T23:23:36.907052",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/ae42c25f-6732-45f8-be4e-f501e793f14b/student.pdf"
+    },
+    {
+      "document_type": "worksheet",
+      "detail_level": "MEDIUM",
+      "topic": "Linear Equations",
+      "format": "pdf",
+      "version": "teacher",
+      "file_size": 2445,
+      "local_path": "/var/folders/lh/srvdp05d2yg65flqrscm7vp00000gn/T/linear_equations_worksheet_teacher.pdf",
+      "r2_key": "documents/ae42c25f-6732-45f8-be4e-f501e793f14b/teacher.pdf",
+      "timestamp": "2025-06-29T23:23:37.187060",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/ae42c25f-6732-45f8-be4e-f501e793f14b/teacher.pdf"
+    },
+    {
+      "document_type": "worksheet",
+      "detail_level": "MEDIUM",
+      "topic": "Linear Equations",
+      "format": "docx",
+      "version": "student",
+      "file_size": 37032,
+      "local_path": "/var/folders/lh/srvdp05d2yg65flqrscm7vp00000gn/T/linear_equations_worksheet_student.docx",
+      "r2_key": "documents/ae42c25f-6732-45f8-be4e-f501e793f14b/student.docx",
+      "timestamp": "2025-06-29T23:23:37.543424",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/ae42c25f-6732-45f8-be4e-f501e793f14b/student.docx"
+    },
+    {
+      "document_type": "worksheet",
+      "detail_level": "MEDIUM",
+      "topic": "Linear Equations",
+      "format": "docx",
+      "version": "teacher",
+      "file_size": 37032,
+      "local_path": "/var/folders/lh/srvdp05d2yg65flqrscm7vp00000gn/T/linear_equations_worksheet_teacher.docx",
+      "r2_key": "documents/ae42c25f-6732-45f8-be4e-f501e793f14b/teacher.docx",
+      "timestamp": "2025-06-29T23:23:37.929941",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/ae42c25f-6732-45f8-be4e-f501e793f14b/teacher.docx"
+    },
+    {
+      "document_type": "worksheet",
+      "detail_level": "MEDIUM",
+      "topic": "Linear Equations",
+      "format": "html",
+      "version": "student",
+      "file_size": 1998,
+      "local_path": null,
+      "r2_key": "documents/ae42c25f-6732-45f8-be4e-f501e793f14b/student.html",
+      "timestamp": "2025-06-29T23:23:38.200335",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/ae42c25f-6732-45f8-be4e-f501e793f14b/student.html"
+    },
+    {
+      "document_type": "worksheet",
+      "detail_level": "MEDIUM",
+      "topic": "Linear Equations",
+      "format": "html",
+      "version": "teacher",
+      "file_size": 1998,
+      "local_path": null,
+      "r2_key": "documents/ae42c25f-6732-45f8-be4e-f501e793f14b/teacher.html",
+      "timestamp": "2025-06-29T23:23:38.566555",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/ae42c25f-6732-45f8-be4e-f501e793f14b/teacher.html"
+    },
+    {
+      "document_type": "worksheet",
+      "detail_level": "MEDIUM",
+      "topic": "Linear Equations",
+      "format": "markdown",
+      "version": "student",
+      "file_size": 718,
+      "local_path": null,
+      "r2_key": "documents/ae42c25f-6732-45f8-be4e-f501e793f14b/student.md",
+      "timestamp": "2025-06-29T23:23:38.840014",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/ae42c25f-6732-45f8-be4e-f501e793f14b/student.md"
+    },
+    {
+      "document_type": "worksheet",
+      "detail_level": "MEDIUM",
+      "topic": "Linear Equations",
+      "format": "markdown",
+      "version": "teacher",
+      "file_size": 718,
+      "local_path": null,
+      "r2_key": "documents/ae42c25f-6732-45f8-be4e-f501e793f14b/teacher.md",
+      "timestamp": "2025-06-29T23:23:39.154925",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/ae42c25f-6732-45f8-be4e-f501e793f14b/teacher.md"
+    },
+    {
+      "document_type": "notes",
+      "detail_level": "COMPREHENSIVE",
+      "topic": "Quadratic Functions",
+      "format": "pdf",
+      "version": "student",
+      "file_size": 3250,
+      "local_path": "/var/folders/lh/srvdp05d2yg65flqrscm7vp00000gn/T/comprehensive_study_notes_on_quadratic_functions_student.pdf",
+      "r2_key": "documents/ab3fdf43-22c4-4206-b42a-68ab38daeb21/student.pdf",
+      "timestamp": "2025-06-29T23:23:56.753347",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/ab3fdf43-22c4-4206-b42a-68ab38daeb21/student.pdf"
+    },
+    {
+      "document_type": "notes",
+      "detail_level": "COMPREHENSIVE",
+      "topic": "Quadratic Functions",
+      "format": "pdf",
+      "version": "teacher",
+      "file_size": 3255,
+      "local_path": "/var/folders/lh/srvdp05d2yg65flqrscm7vp00000gn/T/comprehensive_study_notes_on_quadratic_functions_teacher.pdf",
+      "r2_key": "documents/ab3fdf43-22c4-4206-b42a-68ab38daeb21/teacher.pdf",
+      "timestamp": "2025-06-29T23:23:57.066976",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/ab3fdf43-22c4-4206-b42a-68ab38daeb21/teacher.pdf"
+    },
+    {
+      "document_type": "notes",
+      "detail_level": "COMPREHENSIVE",
+      "topic": "Quadratic Functions",
+      "format": "docx",
+      "version": "student",
+      "file_size": 37568,
+      "local_path": "/var/folders/lh/srvdp05d2yg65flqrscm7vp00000gn/T/comprehensive_study_notes_on_quadratic_functions_student.docx",
+      "r2_key": "documents/ab3fdf43-22c4-4206-b42a-68ab38daeb21/student.docx",
+      "timestamp": "2025-06-29T23:23:57.377458",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/ab3fdf43-22c4-4206-b42a-68ab38daeb21/student.docx"
+    },
+    {
+      "document_type": "notes",
+      "detail_level": "COMPREHENSIVE",
+      "topic": "Quadratic Functions",
+      "format": "docx",
+      "version": "teacher",
+      "file_size": 37570,
+      "local_path": "/var/folders/lh/srvdp05d2yg65flqrscm7vp00000gn/T/comprehensive_study_notes_on_quadratic_functions_teacher.docx",
+      "r2_key": "documents/ab3fdf43-22c4-4206-b42a-68ab38daeb21/teacher.docx",
+      "timestamp": "2025-06-29T23:23:57.712114",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/ab3fdf43-22c4-4206-b42a-68ab38daeb21/teacher.docx"
+    },
+    {
+      "document_type": "notes",
+      "detail_level": "COMPREHENSIVE",
+      "topic": "Quadratic Functions",
+      "format": "html",
+      "version": "student",
+      "file_size": 3504,
+      "local_path": null,
+      "r2_key": "documents/ab3fdf43-22c4-4206-b42a-68ab38daeb21/student.html",
+      "timestamp": "2025-06-29T23:23:57.987299",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/ab3fdf43-22c4-4206-b42a-68ab38daeb21/student.html"
+    },
+    {
+      "document_type": "notes",
+      "detail_level": "COMPREHENSIVE",
+      "topic": "Quadratic Functions",
+      "format": "html",
+      "version": "teacher",
+      "file_size": 3504,
+      "local_path": null,
+      "r2_key": "documents/ab3fdf43-22c4-4206-b42a-68ab38daeb21/teacher.html",
+      "timestamp": "2025-06-29T23:23:58.277471",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/ab3fdf43-22c4-4206-b42a-68ab38daeb21/teacher.html"
+    },
+    {
+      "document_type": "notes",
+      "detail_level": "COMPREHENSIVE",
+      "topic": "Quadratic Functions",
+      "format": "markdown",
+      "version": "student",
+      "file_size": 2192,
+      "local_path": null,
+      "r2_key": "documents/ab3fdf43-22c4-4206-b42a-68ab38daeb21/student.md",
+      "timestamp": "2025-06-29T23:23:58.551738",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/ab3fdf43-22c4-4206-b42a-68ab38daeb21/student.md"
+    },
+    {
+      "document_type": "notes",
+      "detail_level": "COMPREHENSIVE",
+      "topic": "Quadratic Functions",
+      "format": "markdown",
+      "version": "teacher",
+      "file_size": 2192,
+      "local_path": null,
+      "r2_key": "documents/ab3fdf43-22c4-4206-b42a-68ab38daeb21/teacher.md",
+      "timestamp": "2025-06-29T23:23:58.840040",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/ab3fdf43-22c4-4206-b42a-68ab38daeb21/teacher.md"
+    }
+  ]
+}

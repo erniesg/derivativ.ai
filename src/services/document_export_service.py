@@ -190,6 +190,18 @@ class DocumentExportService:
                 if upload_result["success"]:
                     result["r2_file_key"] = r2_file_key
                     result["r2_upload_id"] = upload_result["upload_id"]
+                    
+                    # Generate presigned URL for access (24 hour expiration)
+                    try:
+                        presigned_url = await r2_service.generate_presigned_url(
+                            r2_file_key, expiration=86400  # 24 hours
+                        )
+                        result["r2_presigned_url"] = presigned_url
+                        logger.info(f"✅ Stored in R2 with presigned URL: {r2_file_key}")
+                    except Exception as e:
+                        logger.warning(f"Failed to generate presigned URL: {e}")
+                        result["r2_presigned_url"] = None
+                        
                     logger.info(f"✅ Stored in R2: {r2_file_key}")
                 else:
                     logger.error(f"❌ Failed to store in R2: {upload_result}")
