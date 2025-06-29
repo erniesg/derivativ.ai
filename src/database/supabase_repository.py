@@ -236,6 +236,7 @@ class QuestionRepository:
         min_quality_score: Optional[float] = None,
         command_word: Optional[CommandWord] = None,
         topic: Optional[str] = None,
+        grade_level: Optional[int] = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[dict[str, Any]]:
@@ -247,6 +248,7 @@ class QuestionRepository:
             min_quality_score: Minimum quality score
             command_word: Filter by command word
             topic: Filter by topic (currently ignored)
+            grade_level: Filter by grade level (currently ignored)
             limit: Maximum number of results
             offset: Number of results to skip
 
