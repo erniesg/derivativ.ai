@@ -18,6 +18,7 @@ from src.api.dependencies import get_system_health, initialize_global_services  
 from src.api.endpoints import (  # noqa: E402
     agents,
     documents,
+    downloads,
     questions,
     sessions,
     storage,
@@ -85,6 +86,7 @@ async def health_check():
 # Include routers
 app.include_router(agents.router, tags=["agents"])
 app.include_router(documents.router, tags=["documents"])
+app.include_router(downloads.router, prefix="/api", tags=["downloads"])
 app.include_router(storage.router, tags=["storage"])
 app.include_router(questions.router, prefix="/api", tags=["questions"])
 app.include_router(sessions.router, prefix="/api", tags=["sessions"])
