@@ -13,6 +13,11 @@ from fastapi.responses import FileResponse
 
 from src.api.dependencies import (
     get_document_generation_service,
+    get_document_generation_service_v2,
+)
+from src.models.document_generation_v2 import (
+    DocumentGenerationRequestV2,
+    DocumentGenerationResultV2,
 )
 from src.models.document_models import (
     DocumentGenerationRequest,
@@ -25,6 +30,7 @@ from src.models.document_models import (
     GeneratedDocument,
 )
 from src.services.document_generation_service import DocumentGenerationService
+from src.services.document_generation_service_v2 import DocumentGenerationServiceV2
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +63,36 @@ async def generate_document(
     except Exception as e:
         logger.error(f"Document generation error: {e}")
         raise HTTPException(status_code=500, detail=f"Document generation failed: {e!s}")
+
+
+@router.post("/generate-v2", response_model=DocumentGenerationResultV2)
+async def generate_document_v2(
+    request: DocumentGenerationRequestV2,
+    service: DocumentGenerationServiceV2 = Depends(get_document_generation_service_v2),
+) -> DocumentGenerationResultV2:
+    """
+    Generate an educational document using V2 service with blocks-based architecture.
+
+    Creates a structured document using flexible content blocks, with database
+    question retrieval and fallback to on-the-fly generation.
+    """
+    try:
+        logger.info(f"Generating V2 document: {request.title} ({request.document_type})")
+
+        result = await service.generate_document(request)
+
+        if result.success:
+            logger.info(f"V2 Document generated successfully: {result.document.document_id}")
+            if result.document_id:
+                logger.info(f"Document saved to storage with ID: {result.document_id}")
+        else:
+            logger.error(f"V2 Document generation failed: {result.error_message}")
+
+        return result
+
+    except Exception as e:
+        logger.error(f"V2 Document generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"V2 Document generation failed: {e!s}")
 
 
 @router.get("/templates", response_model=dict[str, DocumentTemplate])

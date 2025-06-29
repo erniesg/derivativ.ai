@@ -18,6 +18,7 @@ from src.database.supabase_repository import (
 from src.repositories.document_storage_repository import DocumentStorageRepository
 from src.services.document_export_service import DocumentExportService
 from src.services.document_generation_service import DocumentGenerationService
+from src.services.document_generation_service_v2 import DocumentGenerationServiceV2
 from src.services.document_storage_service import DocumentStorageService
 from src.services.llm_factory import LLMFactory
 from src.services.prompt_manager import PromptManager
@@ -495,6 +496,35 @@ def get_document_storage_service(
     export_service = DocumentExportService()
 
     return DocumentStorageService(r2_service, repository, export_service)
+
+
+def get_document_generation_service_v2(
+    llm_factory: LLMFactory = Depends(get_llm_factory),
+    prompt_manager: PromptManager = Depends(get_prompt_manager),
+    question_repo: QuestionRepository = Depends(get_question_repository),
+    question_service: QuestionGenerationService = Depends(get_question_generation_service),
+    document_storage_repo: DocumentStorageRepository = Depends(get_document_storage_repository),
+) -> DocumentGenerationServiceV2:
+    """
+    Get DocumentGenerationServiceV2 instance with full dependency injection.
+
+    Args:
+        llm_factory: LLM factory (injected)
+        prompt_manager: Prompt manager (injected)
+        question_repo: Question repository (injected)
+        question_service: Question generation service (injected)
+        document_storage_repo: Document storage repository (injected)
+
+    Returns:
+        Configured DocumentGenerationServiceV2
+    """
+    return DocumentGenerationServiceV2(
+        llm_factory=llm_factory,
+        prompt_manager=prompt_manager,
+        question_repository=question_repo,
+        question_generation_service=question_service,
+        document_storage_repository=document_storage_repo,
+    )
 
 
 # Global service instances for backwards compatibility
