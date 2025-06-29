@@ -83,8 +83,10 @@ async def generate_document_v2(
 
         if result.success:
             logger.info(f"V2 Document generated successfully: {result.document.document_id}")
-            if result.document_id:
-                logger.info(f"Document saved to storage with ID: {result.document_id}")
+            # Check if document was saved to storage
+            storage_id = result.generation_insights.get("document_id")
+            if storage_id:
+                logger.info(f"Document saved to storage with ID: {storage_id}")
         else:
             logger.error(f"V2 Document generation failed: {result.error_message}")
 
