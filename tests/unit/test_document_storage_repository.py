@@ -138,7 +138,7 @@ class TestDocumentStorageRepository:
 
         # Assert
         assert result == sample_document_metadata.id
-        mock_supabase_client.table.assert_called_with("stored_documents")
+        mock_supabase_client.table.assert_called_with("documents")
         # Note: insert() is called twice - once for the method call, once with data
         assert mock_supabase_client.table().insert.call_count == 2
 

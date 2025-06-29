@@ -25,7 +25,7 @@ def test_document_generation_v2_api():
             "data": {
                 "title": "Linear Equations Practice Worksheet",
                 "document_type": "worksheet",
-                "topic": "algebra_and_graphs",  # TopicName.ALGEBRA_AND_GRAPHS.value
+                "topic": "Algebra and graphs",  # TopicName.ALGEBRA_AND_GRAPHS.value
                 "tier": "Core",
                 "grade_level": 8,
                 "target_time_minutes": 30,
@@ -38,7 +38,7 @@ def test_document_generation_v2_api():
             "data": {
                 "title": "Coordinate Geometry Study Notes",
                 "document_type": "notes",
-                "topic": "coordinate_geometry",  # TopicName.COORDINATE_GEOMETRY.value
+                "topic": "Coordinate geometry",  # TopicName.COORDINATE_GEOMETRY.value
                 "tier": "Extended",
                 "grade_level": 9,
                 "target_time_minutes": 45,
@@ -52,9 +52,9 @@ def test_document_generation_v2_api():
             "data": {
                 "title": "Data Analysis and Statistics",
                 "document_type": "textbook",
-                "topic": "statistics",  # TopicName.STATISTICS.value
+                "topic": "Statistics",  # TopicName.STATISTICS.value
                 "tier": "Core",
-                "grade_level": 10,
+                "grade_level": 9,
                 "target_time_minutes": 60,
                 "detail_level": 8,
                 "custom_instructions": "Comprehensive coverage with real-world examples and exercises",
@@ -82,24 +82,26 @@ def test_document_generation_v2_api():
 
             if response.status_code == 200:
                 result = response.json()
+                # Fix: Access content_structure.blocks instead of content_blocks
+                content_blocks = result["document"].get("content_structure", {}).get("blocks", [])
+
                 print(f"✅ SUCCESS ({processing_time:.2f}s)")
                 print(f"   Document ID: {result['document']['document_id']}")
                 print(f"   Title: {result['document']['title']}")
-                print(f"   Content Blocks: {len(result['document']['content_blocks'])}")
+                print(f"   Content Blocks: {len(content_blocks)}")
                 print(f"   Processing Time: {result['processing_time']:.2f}s")
 
                 # Check if document was saved to storage
-                if result.get("document_id"):
-                    print(f"   ✅ Saved to Storage: {result['document_id']}")
+                storage_id = result.get("generation_insights", {}).get("document_id")
+                if storage_id:
+                    print(f"   ✅ Saved to Storage: {storage_id}")
                 else:
                     print("   ⚠️ Not saved to storage (demo mode?)")
 
                 # Display block information
-                for i, block in enumerate(
-                    result["document"]["content_blocks"][:3]
-                ):  # First 3 blocks
+                for i, block in enumerate(content_blocks[:3]):  # First 3 blocks
                     print(
-                        f"   Block {i+1}: {block['block_type']} - {block.get('title', 'Untitled')}"
+                        f"   Block {i+1}: {block['block_type']} - {block.get('reasoning', 'No reasoning')} ({block.get('estimated_minutes', 0)} min)"
                     )
 
                 results.append(
@@ -108,9 +110,9 @@ def test_document_generation_v2_api():
                         "status": "success",
                         "processing_time": processing_time,
                         "api_processing_time": result["processing_time"],
-                        "blocks_count": len(result["document"]["content_blocks"]),
+                        "blocks_count": len(content_blocks),
                         "document_id": result["document"]["document_id"],
-                        "storage_id": result.get("document_id"),
+                        "storage_id": storage_id,
                     }
                 )
             else:
@@ -214,11 +216,11 @@ def test_topic_enum_validation():
 
     # Test a few key topic values that should be available
     test_topics = [
-        "algebra_and_graphs",
-        "coordinate_geometry",
-        "statistics",
-        "number_and_set_theory",
-        "trigonometry",
+        "Algebra and graphs",
+        "Coordinate geometry",
+        "Statistics",
+        "Number",
+        "Trigonometry",
     ]
 
     api_url = "http://localhost:8000/api/generation/documents/generate-v2"
