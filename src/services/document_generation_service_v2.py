@@ -835,6 +835,10 @@ class DocumentGenerationServiceV2:
         )
         tags = self._generate_document_tags(request)
 
+        # Ensure estimated_duration is at least 1 (database constraint)
+        estimated_duration = document.total_estimated_minutes or request.target_duration_minutes or 30
+        estimated_duration = max(1, estimated_duration)  # Ensure it's at least 1
+
         metadata = StoredDocumentMetadata(
             session_id=session_id,
             title=document.title,
@@ -842,7 +846,7 @@ class DocumentGenerationServiceV2:
             detail_level=detail_description,
             topic=request.topic.value,
             grade_level=request.grade_level,
-            estimated_duration=document.total_estimated_minutes,
+            estimated_duration=estimated_duration,
             total_questions=self._count_questions_in_document(document),
             status=status,
             tags=tags,
