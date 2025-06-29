@@ -102,6 +102,8 @@ class PromptManager:
             "notes_generation": self._get_notes_generation_template(),
             "textbook_generation": self._get_textbook_generation_template(),
             "slides_generation": self._get_slides_generation_template(),
+            # V2 Document generation templates
+            "block_selection": self._get_block_selection_template(),
         }
 
     async def render_prompt(self, config: PromptConfig, model_name: Optional[str] = None) -> str:
@@ -933,6 +935,120 @@ Generate slides that engage students and facilitate effective mathematics instru
             required_variables=["title", "topic", "detail_level", "target_grade"],
             optional_variables=["estimated_duration", "custom_instructions"],
             tags=["slides", "presentation", "cambridge", "igcse"],
+        )
+
+    def _get_block_selection_template(self) -> PromptTemplate:
+        """Get built-in block selection template for V2 document generation."""
+        content = """You are an expert Cambridge IGCSE Mathematics curriculum designer. Select and structure appropriate content blocks for document generation based on the following specifications:
+
+**Document Requirements:**
+- Document Type: {{ document_type }}
+- Topic: {{ topic }}
+- Detail Level: {{ detail_level }}
+- Target Grade: {{ target_grade }}
+- Time Constraint: {{ target_time_minutes | default(30) }} minutes
+{% if tier is defined and tier -%}
+- Tier: {{ tier }}
+{% endif -%}
+{% if custom_instructions is defined and custom_instructions -%}
+- Special Instructions: {{ custom_instructions }}
+{% endif -%}
+{% if syllabus_content is defined and syllabus_content -%}
+
+**Syllabus Content References:**
+{% for content_ref in syllabus_content -%}
+- {{ content_ref.title }}: {{ content_ref.description }}
+{% endfor -%}
+{% endif %}
+
+**Available Content Blocks:**
+- IntroductionBlock: Learning objectives and topic overview
+- ConceptExplanationBlock: Detailed theoretical explanations
+- WorkedExampleBlock: Step-by-step solution demonstrations
+- StepByStepGuideBlock: Practice questions with guided solutions
+- PracticeQuestionsBlock: Independent practice exercises
+- SummaryBlock: Key points and concept consolidation
+- AssessmentBlock: Evaluation questions and rubrics
+- ExtensionBlock: Advanced applications and enrichment
+
+**Selection Guidelines:**
+{% if document_type == "worksheet" -%}
+- Focus on practice-oriented blocks (WorkedExample, StepByStepGuide, PracticeQuestions)
+- Include minimal theory, maximum practice opportunity
+- Ensure progressive difficulty in practice questions
+{% elif document_type == "notes" -%}
+- Emphasize explanation and understanding (Introduction, ConceptExplanation, WorkedExample)
+- Include summary for consolidation
+- Balance theory with practical examples
+{% elif document_type == "textbook" -%}
+- Comprehensive coverage (Introduction, ConceptExplanation, WorkedExample, Practice, Extension)
+- Include assessment opportunities
+- Provide both depth and breadth of coverage
+{% elif document_type == "slides" -%}
+- Presentation-friendly blocks (Introduction, WorkedExample, summary highlights)
+- Keep content concise and visually structured
+- Focus on key concepts and engagement
+{% endif -%}
+
+**Detail Level Adjustments:**
+{% if detail_level <= 3 -%}
+- Minimal blocks: Introduction + 1-2 core blocks + Summary
+- Keep explanations concise and focused
+{% elif detail_level <= 6 -%}
+- Moderate blocks: Introduction + Explanation + Examples + Practice + Summary
+- Balanced depth and breadth
+{% elif detail_level <= 8 -%}
+- Comprehensive blocks: Full range including Assessment and Extension
+- Detailed explanations and multiple examples
+{% else -%}
+- Maximum coverage: All relevant blocks with advanced content
+- Deep theoretical treatment and extensive practice
+{% endif %}
+
+**Time Constraint Considerations:**
+- {{ target_time_minutes }} minutes total time
+- Select blocks that fit realistic completion time
+- Balance content depth with time availability
+
+**Output Format:**
+Return a JSON object with this structure:
+{
+  "selected_blocks": [
+    {
+      "block_type": "IntroductionBlock",
+      "title": "Learning Objectives",
+      "priority": 1,
+      "estimated_time_minutes": 5,
+      "content_focus": "What students will learn in this session"
+    },
+    {
+      "block_type": "ConceptExplanationBlock",
+      "title": "Understanding [Topic]",
+      "priority": 2,
+      "estimated_time_minutes": 10,
+      "content_focus": "Core theoretical concepts and definitions"
+    }
+  ],
+  "total_estimated_time": {{ target_time_minutes }},
+  "educational_rationale": "Why these blocks were selected for this specific document type and requirements",
+  "content_progression": "How the blocks build understanding from introduction to mastery"
+}
+
+Select blocks that create an effective learning progression and match the specified requirements."""
+
+        return PromptTemplate(
+            name="block_selection",
+            version="latest",
+            content=content,
+            description="Select appropriate content blocks for V2 document generation",
+            required_variables=["document_type", "topic", "detail_level", "target_grade"],
+            optional_variables=[
+                "target_time_minutes",
+                "tier",
+                "custom_instructions",
+                "syllabus_content",
+            ],
+            tags=["blocks", "selection", "v2", "cambridge", "igcse"],
         )
 
 
