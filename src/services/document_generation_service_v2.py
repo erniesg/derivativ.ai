@@ -409,13 +409,22 @@ class DocumentGenerationServiceV2:
         }
 
         # Generate content using LLM
-        llm_service = self.llm_factory.get_service("openai")
+        try:
+            llm_service = self.llm_factory.get_service("openai")
+            logger.debug("✅ LLM service obtained successfully")
 
-        prompt_config = PromptConfig(template_name="document_content_generation", variables=context)
+            prompt_config = PromptConfig(
+                template_name="document_content_generation", variables=context
+            )
+            logger.debug("✅ Prompt config created")
 
-        rendered_prompt = await self.prompt_manager.render_prompt(
-            prompt_config, model_name="gpt-4o-mini"
-        )
+            rendered_prompt = await self.prompt_manager.render_prompt(
+                prompt_config, model_name="gpt-4o-mini"
+            )
+            logger.debug(f"✅ Prompt rendered successfully ({len(rendered_prompt)} chars)")
+        except Exception as e:
+            logger.error(f"❌ Error in prompt setup: {e}")
+            raise e
 
         from src.models.llm_models import LLMRequest
 
@@ -427,11 +436,37 @@ class DocumentGenerationServiceV2:
             response_format={"type": "json_object"},  # Request JSON output
         )
 
-        response = await llm_service.generate_non_stream(llm_request)
+        try:
+            logger.debug(f"📤 Sending LLM request: {llm_request.model}")
+            response = await llm_service.generate_non_stream(llm_request)
+            logger.debug(f"✅ LLM response received ({len(response.content)} chars)")
+        except Exception as e:
+            logger.error(f"❌ LLM generation failed: {e}")
+            raise e
 
         # Parse structured output
         try:
-            content_data = json.loads(response.content)
+            # Handle case where LLM wraps JSON in markdown code blocks
+            content_to_parse = response.content
+            if content_to_parse.startswith("```json"):
+                # Extract JSON from markdown code block
+                content_to_parse = content_to_parse[7:]  # Remove ```json
+                if content_to_parse.endswith("```"):
+                    content_to_parse = content_to_parse[:-3]  # Remove closing ```
+                content_to_parse = content_to_parse.strip()
+            elif content_to_parse.startswith("```"):
+                # Extract from generic code block
+                content_to_parse = content_to_parse[3:]
+                if content_to_parse.endswith("```"):
+                    content_to_parse = content_to_parse[:-3]
+                content_to_parse = content_to_parse.strip()
+
+            content_data = json.loads(content_to_parse)
+
+            # Handle case where LLM nests under "properties" (common with JSON schema)
+            if "properties" in content_data and "blocks" not in content_data:
+                logger.warning("LLM nested response under 'properties', extracting...")
+                content_data = content_data["properties"]
 
             # Validate against schema (basic validation)
             self._validate_content_structure(content_data)
@@ -459,6 +494,14 @@ class DocumentGenerationServiceV2:
 
         except (json.JSONDecodeError, KeyError, ValueError) as e:
             logger.error(f"Failed to parse structured output: {e}")
+            logger.error(f"Raw LLM response: {response.content[:500]}...")  # Show first 500 chars
+            # Fallback to creating basic structure
+            return self._create_fallback_structure(request, selection_result)
+        except Exception as e:
+            logger.error(f"Unexpected error in content generation: {type(e).__name__}: {e}")
+            import traceback
+
+            logger.error(f"Traceback: {traceback.format_exc()}")
             # Fallback to creating basic structure
             return self._create_fallback_structure(request, selection_result)
 

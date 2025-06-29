@@ -6,11 +6,16 @@ Provides REST API and WebSocket endpoints for question generation.
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
-from src.api.dependencies import get_system_health, initialize_global_services
-from src.api.endpoints import (
+# Load environment variables before importing anything else
+load_dotenv()
+
+from fastapi import FastAPI  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+
+from src.api.dependencies import get_system_health, initialize_global_services  # noqa: E402
+from src.api.endpoints import (  # noqa: E402
     agents,
     documents,
     questions,
@@ -20,7 +25,7 @@ from src.api.endpoints import (
     templates,
     websocket,
 )
-from src.core.config import get_settings
+from src.core.config import get_settings  # noqa: E402
 
 logger = logging.getLogger(__name__)
 

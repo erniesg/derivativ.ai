@@ -9,7 +9,12 @@ import os
 import time
 from datetime import datetime
 
-import requests
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+import requests  # noqa: E402
 
 
 def test_document_generation_v2_api():
@@ -168,7 +173,7 @@ def test_database_table_prefixes():
     expected_tables = [
         f"{expected_prefix}generated_questions",
         f"{expected_prefix}generation_sessions",
-        f"{expected_prefix}stored_documents",
+        f"{expected_prefix}documents",  # Updated table name
         f"{expected_prefix}document_files",
     ]
 

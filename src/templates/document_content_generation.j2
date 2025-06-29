@@ -74,11 +74,29 @@ You must generate content for the following blocks:
 
 ## Output Requirements
 
-You MUST respond with a valid JSON object that follows this exact structure:
+You MUST respond with a valid JSON object that has these fields at the root level (not nested under "properties"):
 
 ```json
-{{ output_schema | tojson(indent=2) }}
+{
+  "enhanced_title": "string - enhanced version of the document title",
+  "introduction": "string - optional introduction paragraph",
+  "blocks": [
+    {
+      "block_type": "string - type of block (e.g., 'practice_questions')",
+      "content": { /* block-specific content object */ },
+      "estimated_minutes": 5,  // integer - time in minutes
+      "reasoning": "string - why this content was generated this way"
+    }
+  ],
+  "total_estimated_minutes": 30,  // integer - total time
+  "actual_detail_level": 5,  // integer 1-10
+  "generation_reasoning": "string - overall reasoning for the document",
+  "coverage_notes": "string - optional notes about topic coverage",
+  "personalization_applied": []  // array of personalization features used
+}
 ```
+
+IMPORTANT: Return the JSON object directly at the root level, NOT nested under "properties" or any other key.
 
 ## Content Generation Guidelines
 
