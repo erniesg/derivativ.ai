@@ -20,9 +20,9 @@ const router = Router();
 router.use(authMiddleware.verifyToken);
 
 // Quiz session management
-router.post("/initialize", initializeQuiz);
+router.post("/init", initializeQuiz);
 router.get("/session/:sessionId", getQuizSession);
-router.post("/submit-response", submitResponse);
+router.post("/submit", submitResponse);
 router.post("/complete", completeQuiz);
 
 // User performance and analytics
@@ -31,7 +31,7 @@ router.get("/history", getQuizHistory);
 router.get("/analytics", getAnalytics);
 
 // Quiz configuration
-router.get("/difficulty-distribution", getDifficultyDistribution);
+// router.get("/difficulty-distribution", getDifficultyDistribution);
 router.get("/topics", getTopics);
 
 module.exports = router;

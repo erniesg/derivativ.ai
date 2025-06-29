@@ -7,17 +7,7 @@ const supabase = require("../config/supabase");
 const supabaseAuthMiddleware = async (req, res, next) => {
   try {
     const jwtToken = req.headers["authorization"]?.replace("Bearer ", "");
-
-    if (!jwtToken) {
-      return res.status(400).send({ message: "No JWT token provided" });
-    }
-
-    const decoded = jwt.verify(jwtToken, process.env.JWT_SECRET);
-
-    if (!decoded) {
-      return res.status(401).send({ message: "Invalid JWT token" });
-    }
-
+    
     const {
       data: { user },
     } = await supabase.auth.getUser(jwtToken);

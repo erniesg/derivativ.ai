@@ -9,7 +9,7 @@ const initializeQuizSchema = Joi.object({
 const submitResponseSchema = Joi.object({
   sessionId: Joi.string().uuid().required(),
   questionId: Joi.string().uuid().required(),
-  userAnswer: Joi.string().required(),
+  answer: Joi.string().required(),
 });
 
 const completeQuizSchema = Joi.object({
@@ -62,12 +62,12 @@ const submitResponse = async (req, res) => {
       });
     }
 
-    const { sessionId, questionId, userAnswer } = value;
+    const { sessionId, questionId, answer } = value;
 
     const result = await quizService.submitQuizResponse(
       sessionId,
       questionId,
-      userAnswer
+      answer
     );
 
     res.status(200).json({
@@ -77,6 +77,15 @@ const submitResponse = async (req, res) => {
     });
   } catch (error) {
     console.error("Error in submitResponse:", error);
+    
+    // Handle duplicate response error specifically
+    if (error.message === "Question has already been answered in this session") {
+      return res.status(409).json({
+        error: "Question has already been answered in this session",
+        code: "DUPLICATE_RESPONSE"
+      });
+    }
+    
     res.status(500).json({
       error: error.message,
     });
@@ -116,9 +125,17 @@ const getUserPerformance = async (req, res) => {
 
     const performance = await quizService.getUserPerformance(userId);
 
+    performance.forEach((p) => {
+      if (p.total_attempts == 0 && p.current_grade == 3.2) {
+        p.current_grade = 0;
+        p.wma_grade = 0;
+      }
+    });
+    
     res.status(200).json({
       data: performance,
     });
+    
   } catch (error) {
     console.error("Error in getUserPerformance:", error);
     res.status(500).json({
@@ -138,14 +155,12 @@ const getQuizHistory = async (req, res) => {
     const history = await quizService.getQuizHistory(userId, limit);
 
     res.status(200).json({
-      message: "Quiz history retrieved successfully",
       data: history,
     });
   } catch (error) {
     console.error("Error in getQuizHistory:", error);
     res.status(500).json({
       message: "Failed to retrieve quiz history",
-      error: error.message,
     });
   }
 };
@@ -194,7 +209,6 @@ const getTopics = async (req, res) => {
     if (error) throw error;
 
     res.status(200).json({
-      message: "Topics retrieved successfully",
       data: topics,
     });
   } catch (error) {
@@ -221,25 +235,26 @@ const getQuizSession = async (req, res) => {
       .select("*")
       .eq("id", sessionId)
       .eq("user_id", userId)
+      .eq("status", "active")
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === "PGRST116") {
+        return res.status(404).json({
+          message: "Quiz session not found",
+        });
+      }
 
-    if (!session) {
-      return res.status(404).json({
-        message: "Quiz session not found",
-      });
-    }
+      throw error;
+    };
 
     res.status(200).json({
-      message: "Quiz session retrieved successfully",
-      data: session,
+       data: session,
     });
   } catch (error) {
     console.error("Error in getQuizSession:", error);
     res.status(500).json({
       message: "Failed to retrieve quiz session",
-      error: error.message,
     });
   }
 };
@@ -267,8 +282,8 @@ const getAnalytics = async (req, res) => {
           : 0,
       topicPerformance: performance.map((p) => ({
         topicName: p.topics.topic_name,
-        currentGrade: p.current_grade,
-        wmaGrade: p.wma_grade,
+        currentGrade: p.total_attempts > 0 ? p.current_grade : 0,
+        wmaGrade: p.total_attempts > 0 ? p.wma_grade : 0,
         totalAttempts: p.total_attempts,
         trend:
           p.wma_grade > p.current_grade
@@ -278,27 +293,25 @@ const getAnalytics = async (req, res) => {
             : "stable",
       })),
       recentQuizzes: history.slice(0, 3),
-      strongestTopic: performance.reduce(
+      strongestTopic:  history.length > 0 ? performance.reduce(
         (strongest, current) =>
           current.wma_grade > strongest.wma_grade ? current : strongest,
         performance[0] || {}
-      ),
-      weakestTopic: performance.reduce(
+      ) : [],
+      weakestTopic: history.length > 0 ? performance.reduce(
         (weakest, current) =>
           current.wma_grade < weakest.wma_grade ? current : weakest,
         performance[0] || {}
-      ),
+      ) : [],
     };
 
     res.status(200).json({
-      message: "Analytics data retrieved successfully",
       data: analytics,
     });
   } catch (error) {
     console.error("Error in getAnalytics:", error);
     res.status(500).json({
       message: "Failed to retrieve analytics data",
-      error: error.message,
     });
   }
 };

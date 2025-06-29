@@ -15,35 +15,28 @@ const PADDING_FACTOR = 0.8; // Factor to pad initial grades to avoid false achie
  */
 const initializeQuizSession = async (userId, totalQuestions = 10) => {
   try {
-    await initializeUserPerformance(userId);
     const difficultyDistribution = await calculateDynamicDifficulty(userId);
 
-    // Create new quiz session
-    const { data: session, error } = await supabase
+    // Select questions for this session
+    const questions = await selectQuestionsForSession(
+      difficultyDistribution,
+      totalQuestions
+    );
+
+      // Create new quiz session
+      const { data: session, error } = await supabase
       .from("quiz_sessions")
       .insert({
         user_id: userId,
         difficulty_distribution: difficultyDistribution,
         total_questions: totalQuestions,
+        questions_selected: questions.map((q) => q.id),
         status: "active",
       })
       .select()
       .single();
 
     if (error) throw error;
-
-    // Select questions for this session
-    const questions = await selectQuestionsForSession(
-      session.id,
-      difficultyDistribution,
-      totalQuestions
-    );
-
-    // Update session with selected questions
-    await supabase
-      .from("quiz_sessions")
-      .update({ questions_selected: questions.map((q) => q.id) })
-      .eq("id", session.id);
 
     return {
       session,
@@ -53,7 +46,7 @@ const initializeQuizSession = async (userId, totalQuestions = 10) => {
         difficulty: q.difficulty,
         stem: q.stem,
         options: q.options,
-      })), // Remove correct answers from response
+      })),
     };
   } catch (error) {
     console.error("Error initializing quiz session:", error);
@@ -69,12 +62,14 @@ const calculateDynamicDifficulty = async (userId) => {
     // Get user's current WMA scores for all topics
     const { data: performance, error } = await supabase
       .from("student_topic_performance")
-      .select("topic_id, wma_grade")
+      .select("topic_id, wma_grade, total_attempts")
       .eq("user_id", userId);
 
     if (error) throw error;
 
-    if (!performance || performance.length === 0) {
+    const totalAttempts = performance.reduce((sum, p) => sum + p.total_attempts, 0); // if no attempts, return default distribution
+
+    if (!performance || performance.length === 0 || totalAttempts === 0) {
       return DEFAULT_DIFFICULTY_DISTRIBUTION;
     }
 
@@ -135,7 +130,6 @@ const applySoftmaxDifficulty = (avgWma) => {
  * Select questions for a quiz session based on difficulty distribution
  */
 const selectQuestionsForSession = async (
-  sessionId,
   distribution,
   totalQuestions
 ) => {
@@ -157,27 +151,16 @@ const selectQuestionsForSession = async (
 
     const selectedQuestions = [];
 
-    // Select questions for each difficulty level
-    for (const [difficulty, count] of Object.entries(questionsPerDifficulty)) {
-      if (count > 0) {
-        const { data: questions, error } = await supabase
-          .from("questions")
-          .select("*")
-          .eq("difficulty", difficulty)
-          .eq("status", "approved")
-          .limit(count * 2) // Get more questions than needed for randomization
-          .order("created_at", { ascending: false });
+    const easyQuestions = await fetchQuestionsByDifficulty(Object.keys(questionsPerDifficulty)[0], questionsPerDifficulty.easy);
+    const mediumQuestions = await fetchQuestionsByDifficulty(Object.keys(questionsPerDifficulty)[1], questionsPerDifficulty.medium);
+    const hardQuestions = await fetchQuestionsByDifficulty(Object.keys(questionsPerDifficulty)[2], questionsPerDifficulty.hard);
+    
+    selectedQuestions.push(...easyQuestions.slice(0, questionsPerDifficulty.easy));
+    selectedQuestions.push(...mediumQuestions.slice(0, questionsPerDifficulty.medium));
+    selectedQuestions.push(...hardQuestions.slice(0, questionsPerDifficulty.hard));
+  
+    return durstenfeldShuffle(selectedQuestions);
 
-        if (error) throw error;
-
-        // Randomly select the required number of questions
-        const shuffled = questions.sort(() => 0.5 - Math.random());
-        selectedQuestions.push(...shuffled.slice(0, count));
-      }
-    }
-
-    // Shuffle all selected questions
-    return selectedQuestions.sort(() => 0.5 - Math.random());
   } catch (error) {
     console.error("Error selecting questions:", error);
     throw error;
@@ -189,6 +172,23 @@ const selectQuestionsForSession = async (
  */
 const submitQuizResponse = async (sessionId, questionId, userAnswer) => {
   try {
+    // Check if this question has already been answered in this session
+    const { data: existingResponse, error: checkError } = await supabase
+      .from("quiz_responses")
+      .select("id")
+      .eq("quiz_session_id", sessionId)
+      .eq("question_id", questionId)
+      .single();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      // PGRST116 is "not found" error, which is expected if no response exists
+      throw checkError;
+    }
+
+    if (existingResponse) {
+      throw new Error("Question has already been answered in this session");
+    }
+
     const { data: question, error: questionError } = await supabase
       .from("questions")
       .select("correct_answer, topic_id")
@@ -390,6 +390,7 @@ const initializeUserPerformance = async (userId) => {
       total_attempts: 0
     }));
 
+    
     // Insert all records at once, ignore conflicts (user already has records)
     const { error: insertError } = await supabase
       .from("student_topic_performance")
@@ -398,6 +399,7 @@ const initializeUserPerformance = async (userId) => {
         ignoreDuplicates: true 
       });
 
+    
     if (insertError) throw insertError;
 
   } catch (error) {
@@ -455,6 +457,34 @@ const getQuizHistory = async (userId, limit = 10) => {
     throw error;
   }
 };
+
+const fetchQuestionsByDifficulty = async (difficulty, count) => {
+  try {
+    const { data: questions, error } = await supabase
+    .from("questions")
+    .select("*")
+    .eq("difficulty", difficulty)
+    .eq("status", "approved")
+    .limit(count * 2) // Fetch more for better randomization
+    .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return questions;
+  } catch (error) {
+    console.error("Error fetching questions by difficulty:", error);
+    throw error;
+  }
+}
+
+const durstenfeldShuffle = (array) => {
+  for (let i = array.length - 1; i> 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+
+  return array;
+}
 
 module.exports = {
   initializeQuizSession,

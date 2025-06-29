@@ -67,7 +67,8 @@ CREATE TABLE quiz_responses (
     question_id UUID REFERENCES questions(id) ON DELETE CASCADE NOT NULL,
     user_answer TEXT,
     is_correct BOOLEAN NOT NULL,
-    answered_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    answered_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(quiz_session_id, question_id) -- Ensure each question can only be answered once per session
 );
 
 -- Quiz results to store aggregated performance per session

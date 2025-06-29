@@ -11,7 +11,4 @@ router.post('/profile', authController.createProfile);
 router.get('/profile', authController.getProfile);
 router.put('/profile', authController.updateProfile);
 
-// Backward compatibility
-router.post('/', authController.createUser);
-
 module.exports = router;

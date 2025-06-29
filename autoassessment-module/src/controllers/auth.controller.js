@@ -13,6 +13,9 @@ const createProfileSchema = Joi.object({
  */
 const createProfile = async (req, res) => {
   try {
+
+    const user = req.user;
+
     const { error: validationError, value } = createProfileSchema.validate(
       req.body
     );
@@ -20,17 +23,6 @@ const createProfile = async (req, res) => {
       return res.status(400).json({
         message: "Validation error",
         details: validationError.details,
-      });
-    }
-
-    const {
-      data: { user },
-      error: getUserError,
-    } = await supabase.auth.getUser(req.jwt);
-
-    if (getUserError || !user) {
-      return res.status(401).json({
-        message: "Invalid authentication token",
       });
     }
 
@@ -101,16 +93,8 @@ const createProfile = async (req, res) => {
  */
 const getProfile = async (req, res) => {
   try {
-    const {
-      data: { user },
-      error: getUserError,
-    } = await supabase.auth.getUser(req.jwt);
 
-    if (getUserError || !user) {
-      return res.status(401).json({
-        message: "Invalid authentication token",
-      });
-    }
+    const user = req.user;
 
     const { data: profile, error } = await supabase
       .from("profiles")
@@ -125,7 +109,6 @@ const getProfile = async (req, res) => {
     }
 
     res.status(200).json({
-      message: "Profile retrieved successfully",
       data: {
         ...profile,
         email: user.email,
@@ -156,16 +139,7 @@ const updateProfile = async (req, res) => {
       });
     }
 
-    const {
-      data: { user },
-      error: getUserError,
-    } = await supabase.auth.getUser(req.jwt);
-
-    if (getUserError || !user) {
-      return res.status(401).json({
-        message: "Invalid authentication token",
-      });
-    }
+    const user = req.user;
 
     const { data: profile, error } = await supabase
       .from("profiles")
