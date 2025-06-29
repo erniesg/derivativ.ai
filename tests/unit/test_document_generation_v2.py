@@ -9,7 +9,7 @@ from src.models.document_generation_v2 import (
     GenerationApproach,
 )
 from src.models.document_models import DocumentType
-from src.models.enums import Tier
+from src.models.enums import Tier, TopicName
 from src.services.document_generation_service_v2 import (
     BlockSelector,
     DocumentGenerationServiceV2,
@@ -24,8 +24,8 @@ class TestDocumentGenerationRequestV2:
         request = DocumentGenerationRequestV2(
             document_type=DocumentType.WORKSHEET,
             title="Quadratic Equations Practice",
-            topic="Quadratic Equations",
-            target_duration_minutes=25
+            topic=TopicName.ALGEBRA_AND_GRAPHS,
+            target_duration_minutes=25,
         )
 
         assert request.document_type == DocumentType.WORKSHEET
@@ -38,8 +38,8 @@ class TestDocumentGenerationRequestV2:
         request = DocumentGenerationRequestV2(
             document_type=DocumentType.NOTES,
             title="Algebra Basics",
-            topic="Algebra",
-            detail_level=7
+            topic=TopicName.ALGEBRA_AND_GRAPHS,
+            detail_level=7,
         )
 
         assert request.detail_level == 7
@@ -51,9 +51,9 @@ class TestDocumentGenerationRequestV2:
         request = DocumentGenerationRequestV2(
             document_type=DocumentType.TEXTBOOK,
             title="Comprehensive Geometry",
-            topic="Geometry",
+            topic=TopicName.GEOMETRY,
             target_duration_minutes=45,
-            detail_level=8
+            detail_level=8,
         )
 
         assert request.target_duration_minutes == 45
@@ -65,7 +65,7 @@ class TestDocumentGenerationRequestV2:
         request = DocumentGenerationRequestV2(
             document_type=DocumentType.SLIDES,
             title="Quick Trigonometry",
-            topic="Trigonometry"
+            topic=TopicName.TRIGONOMETRY,
         )
 
         assert request.tier == Tier.CORE
@@ -77,18 +77,18 @@ class TestDocumentGenerationRequestV2:
     def test_get_effective_detail_level_from_time(self):
         """Test detail level computation from time."""
         test_cases = [
-            (10, 3),   # Short time → low detail
-            (20, 5),   # Medium time → medium detail
-            (40, 7),   # Longer time → high detail
-            (60, 9),   # Very long → very high detail
+            (10, 3),  # Short time → low detail
+            (20, 5),  # Medium time → medium detail
+            (40, 7),  # Longer time → high detail
+            (60, 9),  # Very long → very high detail
         ]
 
         for minutes, expected_level in test_cases:
             request = DocumentGenerationRequestV2(
                 document_type=DocumentType.WORKSHEET,
                 title="Test",
-                topic="Test",
-                target_duration_minutes=minutes
+                topic=TopicName.NUMBER,
+                target_duration_minutes=minutes,
             )
             assert request.get_effective_detail_level() == expected_level
 
@@ -123,9 +123,9 @@ class TestBlockSelector:
         request = DocumentGenerationRequestV2(
             document_type=DocumentType.WORKSHEET,
             title="Algebra Practice",
-            topic="Algebra",
+            topic=TopicName.ALGEBRA_AND_GRAPHS,
             target_duration_minutes=20,
-            generation_approach=GenerationApproach.RULE_BASED
+            generation_approach=GenerationApproach.RULE_BASED,
         )
 
         result = await block_selector.select_blocks(request)
@@ -143,9 +143,9 @@ class TestBlockSelector:
         request = DocumentGenerationRequestV2(
             document_type=DocumentType.NOTES,
             title="Geometry Concepts",
-            topic="Geometry",
+            topic=TopicName.GEOMETRY,
             detail_level=6,
-            generation_approach=GenerationApproach.RULE_BASED
+            generation_approach=GenerationApproach.RULE_BASED,
         )
 
         result = await block_selector.select_blocks(request)
@@ -163,17 +163,17 @@ class TestBlockSelector:
         short_request = DocumentGenerationRequestV2(
             document_type=DocumentType.WORKSHEET,
             title="Quick Practice",
-            topic="Fractions",
+            topic=TopicName.NUMBER,
             target_duration_minutes=10,
-            generation_approach=GenerationApproach.RULE_BASED
+            generation_approach=GenerationApproach.RULE_BASED,
         )
 
         long_request = DocumentGenerationRequestV2(
             document_type=DocumentType.WORKSHEET,
             title="Extended Practice",
-            topic="Fractions",
+            topic=TopicName.NUMBER,
             target_duration_minutes=45,
-            generation_approach=GenerationApproach.RULE_BASED
+            generation_approach=GenerationApproach.RULE_BASED,
         )
 
         short_result = await block_selector.select_blocks(short_request)
@@ -189,10 +189,10 @@ class TestBlockSelector:
         request = DocumentGenerationRequestV2(
             document_type=DocumentType.NOTES,
             title="Custom Notes",
-            topic="Statistics",
+            topic=TopicName.STATISTICS,
             force_include_blocks=["quick_reference"],
             exclude_blocks=["practice_questions"],
-            generation_approach=GenerationApproach.RULE_BASED
+            generation_approach=GenerationApproach.RULE_BASED,
         )
 
         result = await block_selector.select_blocks(request)
@@ -257,8 +257,8 @@ class TestDocumentGenerationServiceV2:
         request = DocumentGenerationRequestV2(
             document_type=DocumentType.WORKSHEET,
             title="Algebra Basics",
-            topic="Linear Equations",
-            target_duration_minutes=20
+            topic=TopicName.ALGEBRA_AND_GRAPHS,
+            target_duration_minutes=20,
         )
 
         result = await service.generate_document(request)
@@ -280,8 +280,8 @@ class TestDocumentGenerationServiceV2:
         request = DocumentGenerationRequestV2(
             document_type=DocumentType.NOTES,
             title="Test Notes",
-            topic="Test Topic",
-            detail_level=5
+            topic=TopicName.NUMBER,
+            detail_level=5,
         )
 
         result = await service.generate_document(request)
@@ -295,8 +295,8 @@ class TestDocumentGenerationServiceV2:
         request = DocumentGenerationRequestV2(
             document_type=DocumentType.SLIDES,
             title="Test Slides",
-            topic="Test Topic",
-            detail_level=4
+            topic=TopicName.NUMBER,
+            detail_level=4,
         )
 
         result = await service.generate_document(request)
@@ -306,4 +306,5 @@ class TestDocumentGenerationServiceV2:
 
         # Slides should support PPTX format
         from src.models.document_models import ExportFormat
+
         assert ExportFormat.SLIDES_PPTX in result.document.available_formats

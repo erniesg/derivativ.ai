@@ -14,11 +14,12 @@ from pydantic import BaseModel, Field, field_validator
 
 from src.models.document_blueprints import BlockConfig
 from src.models.document_models import DocumentType, ExportFormat
-from src.models.enums import SubjectContentReference, Tier
+from src.models.enums import SubjectContentReference, Tier, TopicName, refs_by_topic
 
 
 class GenerationApproach(str, Enum):
     """Approach for content generation."""
+
     LLM_DRIVEN = "llm_driven"  # LLM decides block selection
     RULE_BASED = "rule_based"  # System selects blocks by rules
     HYBRID = "hybrid"  # Rules select, LLM can override
@@ -33,92 +34,63 @@ class DocumentGenerationRequestV2(BaseModel):
 
     # Flexible constraints (user provides what they know)
     target_duration_minutes: Optional[int] = Field(
-        None,
-        ge=5,
-        le=120,
-        description="Target time to complete/read the document"
+        None, ge=5, le=120, description="Target time to complete/read the document"
     )
     detail_level: Optional[int] = Field(
-        None,
-        ge=1,
-        le=10,
-        description="Level of detail (1=minimal, 10=comprehensive)"
+        None, ge=1, le=10, description="Level of detail (1=minimal, 10=comprehensive)"
     )
 
     # If neither provided, we use defaults
     generation_approach: GenerationApproach = Field(
-        default=GenerationApproach.LLM_DRIVEN,
-        description="How to handle block selection"
+        default=GenerationApproach.LLM_DRIVEN, description="How to handle block selection"
     )
 
     # Content targeting
-    topic: str = Field(..., description="Main topic/subject")
-    subtopics: list[str] = Field(
-        default_factory=list,
-        description="Specific subtopics to cover"
-    )
+    topic: TopicName = Field(..., description="Main topic from Cambridge IGCSE syllabus")
+    subtopics: list[str] = Field(default_factory=list, description="Specific subtopics to cover")
     tier: Tier = Field(default=Tier.CORE, description="Core or Extended tier")
     grade_level: Optional[int] = Field(None, ge=1, le=9, description="Target grade level")
     difficulty: Optional[str] = Field(
-        None,
-        description="Target difficulty: easy, medium, hard, mixed"
+        None, description="Target difficulty: easy, medium, hard, mixed"
     )
 
     # Syllabus alignment
     subject_content_refs: list[SubjectContentReference] = Field(
-        default_factory=list,
-        description="Specific syllabus references to cover"
+        default_factory=list, description="Specific syllabus references to cover"
     )
 
     # Question integration
     include_questions: bool = Field(
-        default=True,
-        description="Whether to include practice questions"
+        default=True, description="Whether to include practice questions"
     )
     num_questions: Optional[int] = Field(
-        None,
-        ge=1,
-        le=50,
-        description="Number of practice questions to include"
+        None, ge=1, le=50, description="Number of practice questions to include"
     )
     question_sources: list[str] = Field(
-        default_factory=list,
-        description="Specific question IDs to include"
+        default_factory=list, description="Specific question IDs to include"
     )
 
     # Customization
     custom_instructions: Optional[str] = Field(
-        None,
-        description="Custom instructions for content generation"
+        None, description="Custom instructions for content generation"
     )
     personalization_context: dict[str, Any] = Field(
         default_factory=dict,
-        description="Context for personalization (learning style, preferences)"
+        description="Context for personalization (learning style, preferences)",
     )
     style_preferences: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Style preferences (formal/casual, visual/textual)"
+        default_factory=dict, description="Style preferences (formal/casual, visual/textual)"
     )
 
     # Block overrides (advanced)
     force_include_blocks: list[str] = Field(
-        default_factory=list,
-        description="Block types to force include"
+        default_factory=list, description="Block types to force include"
     )
-    exclude_blocks: list[str] = Field(
-        default_factory=list,
-        description="Block types to exclude"
-    )
+    exclude_blocks: list[str] = Field(default_factory=list, description="Block types to exclude")
 
     # Output preferences
-    include_answers: bool = Field(
-        default=True,
-        description="Include answers/solutions"
-    )
-    teacher_version: bool = Field(
-        default=False,
-        description="Generate teacher version with extras"
-    )
+    include_answers: bool = Field(default=True, description="Include answers/solutions")
+    teacher_version: bool = Field(default=False, description="Generate teacher version with extras")
 
     @field_validator("target_duration_minutes", "detail_level")
     @classmethod
@@ -145,6 +117,14 @@ class DocumentGenerationRequestV2(BaseModel):
 
         return 5  # Default medium
 
+    def get_syllabus_refs(self) -> list[str]:
+        """Get syllabus references for the topic and tier, if not explicitly provided."""
+        if self.subject_content_refs:
+            return [ref.value for ref in self.subject_content_refs]
+
+        # Auto-generate from topic and tier
+        return refs_by_topic(self.topic, self.tier)
+
 
 class BlockGenerationResult(BaseModel):
     """Result of generating content for a single block."""
@@ -152,15 +132,9 @@ class BlockGenerationResult(BaseModel):
     block_type: str = Field(..., description="Type of content block")
     content: dict[str, Any] = Field(..., description="Generated content data")
     estimated_minutes: int = Field(..., description="Estimated time for this block")
-    reasoning: Optional[str] = Field(
-        None,
-        description="LLM reasoning for content decisions"
-    )
+    reasoning: Optional[str] = Field(None, description="LLM reasoning for content decisions")
     quality_score: Optional[float] = Field(
-        None,
-        ge=0,
-        le=1,
-        description="Self-assessed quality score"
+        None, ge=0, le=1, description="Self-assessed quality score"
     )
 
 
@@ -173,44 +147,22 @@ class DocumentContentStructure(BaseModel):
 
     # Document metadata
     enhanced_title: Optional[str] = Field(
-        None,
-        description="Enhanced title if different from request"
+        None, description="Enhanced title if different from request"
     )
-    introduction: Optional[str] = Field(
-        None,
-        description="Document introduction paragraph"
-    )
+    introduction: Optional[str] = Field(None, description="Document introduction paragraph")
 
     # Selected blocks with content
-    blocks: list[BlockGenerationResult] = Field(
-        ...,
-        description="Generated content blocks"
-    )
+    blocks: list[BlockGenerationResult] = Field(..., description="Generated content blocks")
 
     # Metadata
-    total_estimated_minutes: int = Field(
-        ...,
-        description="Total estimated completion time"
-    )
-    actual_detail_level: int = Field(
-        ...,
-        ge=1,
-        le=10,
-        description="Actual detail level achieved"
-    )
+    total_estimated_minutes: int = Field(..., description="Total estimated completion time")
+    actual_detail_level: int = Field(..., ge=1, le=10, description="Actual detail level achieved")
 
     # Generation insights
-    generation_reasoning: str = Field(
-        ...,
-        description="Overall reasoning for content decisions"
-    )
-    coverage_notes: Optional[str] = Field(
-        None,
-        description="Notes on topic coverage and gaps"
-    )
+    generation_reasoning: str = Field(..., description="Overall reasoning for content decisions")
+    coverage_notes: Optional[str] = Field(None, description="Notes on topic coverage and gaps")
     personalization_applied: list[str] = Field(
-        default_factory=list,
-        description="List of personalizations applied"
+        default_factory=list, description="List of personalizations applied"
     )
 
 
@@ -219,34 +171,20 @@ class SelectedBlock(BaseModel):
 
     block_config: BlockConfig = Field(..., description="Block configuration")
     content_guidelines: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Guidelines for content generation"
+        default_factory=dict, description="Guidelines for content generation"
     )
     estimated_content_volume: dict[str, int] = Field(
-        default_factory=dict,
-        description="Expected content amounts"
+        default_factory=dict, description="Expected content amounts"
     )
 
 
 class BlockSelectionResult(BaseModel):
     """Result of block selection process."""
 
-    selected_blocks: list[SelectedBlock] = Field(
-        ...,
-        description="Blocks selected for inclusion"
-    )
-    total_estimated_minutes: int = Field(
-        ...,
-        description="Total estimated time"
-    )
-    selection_reasoning: str = Field(
-        ...,
-        description="Reasoning for selection decisions"
-    )
-    excluded_blocks: list[str] = Field(
-        default_factory=list,
-        description="Blocks excluded and why"
-    )
+    selected_blocks: list[SelectedBlock] = Field(..., description="Blocks selected for inclusion")
+    total_estimated_minutes: int = Field(..., description="Total estimated time")
+    selection_reasoning: str = Field(..., description="Reasoning for selection decisions")
+    excluded_blocks: list[str] = Field(default_factory=list, description="Blocks excluded and why")
 
 
 class GeneratedDocumentV2(BaseModel):
@@ -259,54 +197,35 @@ class GeneratedDocumentV2(BaseModel):
 
     # Generation info
     generated_at: str = Field(
-        default_factory=lambda: datetime.now().isoformat(),
-        description="Generation timestamp"
+        default_factory=lambda: datetime.now().isoformat(), description="Generation timestamp"
     )
-    generation_request: DocumentGenerationRequestV2 = Field(
-        ...,
-        description="Original request"
-    )
+    generation_request: DocumentGenerationRequestV2 = Field(..., description="Original request")
     blueprint_used: str = Field(..., description="Blueprint name used")
 
     # Content
     content_structure: DocumentContentStructure = Field(
-        ...,
-        description="Generated content structure"
+        ..., description="Generated content structure"
     )
     rendered_blocks: dict[str, str] = Field(
-        default_factory=dict,
-        description="Rendered block content by type"
+        default_factory=dict, description="Rendered block content by type"
     )
 
     # Metrics
-    total_estimated_minutes: int = Field(
-        ...,
-        description="Total estimated completion time"
-    )
-    actual_detail_level: int = Field(
-        ...,
-        description="Detail level achieved"
-    )
+    total_estimated_minutes: int = Field(..., description="Total estimated completion time")
+    actual_detail_level: int = Field(..., description="Detail level achieved")
     word_count: int = Field(default=0, description="Total word count")
 
     # Quality indicators
     coverage_completeness: float = Field(
-        default=1.0,
-        ge=0,
-        le=1,
-        description="How completely topics were covered"
+        default=1.0, ge=0, le=1, description="How completely topics were covered"
     )
     personalization_score: float = Field(
-        default=0.0,
-        ge=0,
-        le=1,
-        description="How well personalized"
+        default=0.0, ge=0, le=1, description="How well personalized"
     )
 
     # Export readiness
     available_formats: list[ExportFormat] = Field(
-        default_factory=list,
-        description="Formats this can be exported to"
+        default_factory=list, description="Formats this can be exported to"
     )
 
     def get_markdown_content(self) -> str:
@@ -334,26 +253,18 @@ class DocumentGenerationResultV2(BaseModel):
 
     success: bool = Field(..., description="Whether generation succeeded")
     document: Optional[GeneratedDocumentV2] = Field(
-        None,
-        description="Generated document if successful"
+        None, description="Generated document if successful"
     )
-    error_message: Optional[str] = Field(
-        None,
-        description="Error message if failed"
-    )
+    error_message: Optional[str] = Field(None, description="Error message if failed")
 
     # Performance metrics
     processing_time: float = Field(..., description="Total time in seconds")
     llm_calls: int = Field(default=1, description="Number of LLM calls made")
-    tokens_used: Optional[int] = Field(
-        None,
-        description="Total tokens consumed"
-    )
+    tokens_used: Optional[int] = Field(None, description="Total tokens consumed")
 
     # Insights
     generation_insights: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Insights from generation process"
+        default_factory=dict, description="Insights from generation process"
     )
 
 
@@ -371,23 +282,23 @@ DOCUMENT_CONTENT_SCHEMA = {
                     "block_type": {"type": "string"},
                     "content": {"type": "object"},
                     "estimated_minutes": {"type": "integer"},
-                    "reasoning": {"type": "string"}
+                    "reasoning": {"type": "string"},
                 },
-                "required": ["block_type", "content", "estimated_minutes"]
-            }
+                "required": ["block_type", "content", "estimated_minutes"],
+            },
         },
         "total_estimated_minutes": {"type": "integer"},
         "actual_detail_level": {"type": "integer", "minimum": 1, "maximum": 10},
         "generation_reasoning": {"type": "string"},
         "coverage_notes": {"type": "string"},
-        "personalization_applied": {"type": "array", "items": {"type": "string"}}
+        "personalization_applied": {"type": "array", "items": {"type": "string"}},
     },
     "required": [
         "blocks",
         "total_estimated_minutes",
         "actual_detail_level",
-        "generation_reasoning"
-    ]
+        "generation_reasoning",
+    ],
 }
 
 
@@ -400,10 +311,10 @@ BLOCK_CONTENT_SCHEMAS = {
                 "type": "array",
                 "items": {"type": "string"},
                 "minItems": 2,
-                "maxItems": 8
+                "maxItems": 8,
             }
         },
-        "required": ["objectives"]
+        "required": ["objectives"],
     },
     "concept_explanation": {
         "type": "object",
@@ -417,13 +328,13 @@ BLOCK_CONTENT_SCHEMAS = {
                     "properties": {
                         "name": {"type": "string"},
                         "explanation": {"type": "string"},
-                        "example": {"type": "string"}
+                        "example": {"type": "string"},
                     },
-                    "required": ["name", "explanation"]
-                }
-            }
+                    "required": ["name", "explanation"],
+                },
+            },
         },
-        "required": ["concepts"]
+        "required": ["concepts"],
     },
     "worked_example": {
         "type": "object",
@@ -434,18 +345,15 @@ BLOCK_CONTENT_SCHEMAS = {
                     "type": "object",
                     "properties": {
                         "problem": {"type": "string"},
-                        "steps": {
-                            "type": "array",
-                            "items": {"type": "string"}
-                        },
+                        "steps": {"type": "array", "items": {"type": "string"}},
                         "answer": {"type": "string"},
-                        "explanation": {"type": "string"}
+                        "explanation": {"type": "string"},
                     },
-                    "required": ["problem", "steps", "answer"]
-                }
+                    "required": ["problem", "steps", "answer"],
+                },
             }
         },
-        "required": ["examples"]
+        "required": ["examples"],
     },
     "practice_questions": {
         "type": "object",
@@ -459,14 +367,14 @@ BLOCK_CONTENT_SCHEMAS = {
                         "marks": {"type": "integer", "minimum": 1},
                         "difficulty": {"type": "string"},
                         "hint": {"type": "string"},
-                        "answer": {"type": "string"}
+                        "answer": {"type": "string"},
                     },
-                    "required": ["text", "marks"]
-                }
+                    "required": ["text", "marks"],
+                },
             },
-            "include_answers": {"type": "boolean"}
+            "include_answers": {"type": "boolean"},
         },
-        "required": ["questions"]
+        "required": ["questions"],
     },
     "quick_reference": {
         "type": "object",
@@ -475,45 +383,27 @@ BLOCK_CONTENT_SCHEMAS = {
                 "type": "array",
                 "items": {
                     "type": "object",
-                    "properties": {
-                        "name": {"type": "string"},
-                        "expression": {"type": "string"}
-                    },
-                    "required": ["name", "expression"]
-                }
+                    "properties": {"name": {"type": "string"}, "expression": {"type": "string"}},
+                    "required": ["name", "expression"],
+                },
             },
             "definitions": {
                 "type": "array",
                 "items": {
                     "type": "object",
-                    "properties": {
-                        "term": {"type": "string"},
-                        "definition": {"type": "string"}
-                    },
-                    "required": ["term", "definition"]
-                }
+                    "properties": {"term": {"type": "string"}, "definition": {"type": "string"}},
+                    "required": ["term", "definition"],
+                },
             },
-            "key_facts": {
-                "type": "array",
-                "items": {"type": "string"}
-            }
-        }
+            "key_facts": {"type": "array", "items": {"type": "string"}},
+        },
     },
     "summary": {
         "type": "object",
         "properties": {
-            "key_points": {
-                "type": "array",
-                "items": {"type": "string"}
-            },
-            "insights": {
-                "type": "array",
-                "items": {"type": "string"}
-            },
-            "next_steps": {
-                "type": "array",
-                "items": {"type": "string"}
-            }
-        }
-    }
+            "key_points": {"type": "array", "items": {"type": "string"}},
+            "insights": {"type": "array", "items": {"type": "string"}},
+            "next_steps": {"type": "array", "items": {"type": "string"}},
+        },
+    },
 }

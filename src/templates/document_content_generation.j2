@@ -13,6 +13,26 @@ You are an expert educational content creator specializing in Cambridge IGCSE Ma
 - **Grade Level**: {{ grade_level or "7-9" }}
 - **Difficulty**: {{ difficulty or "mixed" }}
 - **Tier**: {{ tier }}
+{% if syllabus_refs -%}
+- **Syllabus References**: {{ syllabus_refs | join(", ") }}
+{% endif -%}
+
+{% if detailed_syllabus_content -%}
+## Detailed Syllabus Content
+
+{% for ref, content in detailed_syllabus_content.items() -%}
+### {{ ref }}: {{ content.title }}
+{{ content.description }}
+
+**Learning Objectives:**
+{% for objective in content.learning_objectives -%}
+- {{ objective }}
+{% endfor %}
+
+**Key Concepts:** {{ content.key_concepts | join(", ") }}
+
+{% endfor %}
+{% endif -%}
 
 {% if custom_instructions -%}
 ## Custom Instructions
@@ -33,13 +53,13 @@ You must generate content for the following blocks:
 {% for block in selected_blocks -%}
 ### {{ loop.index }}. {{ block.block_type | title | replace("_", " ") }}
 {% if block.content_guidelines -%}
-**Guidelines**: 
+**Guidelines**:
 {% for key, value in block.content_guidelines.items() if value -%}
 - {{ key }}: {{ value }}
 {% endfor %}
 {% endif -%}
 {% if block.estimated_content_volume -%}
-**Content Volume**: 
+**Content Volume**:
 {% for key, value in block.estimated_content_volume.items() -%}
 - {{ key }}: {{ value }}
 {% endfor %}

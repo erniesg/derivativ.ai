@@ -355,3 +355,92 @@ def refs_by_topic(topic: TopicName, tier: Tier = Tier.CORE) -> list[str]:
                 break
 
     return filtered_refs
+
+
+def get_syllabus_content_for_ref(ref: str) -> dict[str, str]:
+    """Get detailed syllabus content for a specific reference."""
+    # Comprehensive mapping of syllabus references to content
+    content_map = {
+        # Core Algebra and graphs (C2)
+        "C2.1": {
+            "title": "Introduction to algebra",
+            "description": "Understand that algebra is a generalization of arithmetic in which letters represent numbers",
+            "learning_objectives": [
+                "Use letters to represent unknown numbers or variables",
+                "Understand the difference between an equation and an expression",
+                "Use algebraic notation to represent simple algebraic expressions",
+            ],
+            "key_concepts": [
+                "Variables and constants",
+                "Algebraic expressions",
+                "Equations vs expressions",
+                "Substitution",
+            ],
+        },
+        "C2.2": {
+            "title": "Algebraic manipulation",
+            "description": "Manipulate simple algebraic expressions by collecting like terms, expanding brackets and factorizing",
+            "learning_objectives": [
+                "Collect like terms in algebraic expressions",
+                "Expand brackets involving single terms",
+                "Factorize expressions by taking out common factors",
+                "Understand and use the distributive law",
+            ],
+            "key_concepts": [
+                "Like terms",
+                "Expanding brackets",
+                "Factorization",
+                "Common factors",
+                "Distributive property",
+            ],
+        },
+        "C2.4": {
+            "title": "Indices II",
+            "description": "Use and interpret positive, negative and zero indices",
+            "learning_objectives": [
+                "Understand and use the rules of indices for positive, negative and zero powers",
+                "Apply index laws to simplify expressions",
+                "Convert between index and standard forms",
+            ],
+            "key_concepts": [
+                "Positive indices",
+                "Negative indices",
+                "Zero index",
+                "Index laws",
+                "Powers and roots",
+            ],
+        },
+        "C2.5": {
+            "title": "Equations",
+            "description": "Set up and solve simple linear equations",
+            "learning_objectives": [
+                "Solve linear equations with the unknown on one side",
+                "Solve linear equations with the unknown on both sides",
+                "Set up equations from word problems",
+                "Check solutions by substitution",
+            ],
+            "key_concepts": [
+                "Linear equations",
+                "Solving equations",
+                "Word problems",
+                "Balance method",
+                "Checking solutions",
+            ],
+        },
+        # Add more as needed...
+    }
+
+    return content_map.get(
+        ref,
+        {
+            "title": f"Content for {ref}",
+            "description": f"Cambridge IGCSE Mathematics content reference {ref}",
+            "learning_objectives": [],
+            "key_concepts": [],
+        },
+    )
+
+
+def get_detailed_syllabus_content(refs: list[str]) -> dict[str, dict]:
+    """Get detailed content for multiple syllabus references."""
+    return {ref: get_syllabus_content_for_ref(ref) for ref in refs}

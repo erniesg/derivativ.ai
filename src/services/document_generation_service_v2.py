@@ -24,6 +24,7 @@ from src.models.document_generation_v2 import (
     GenerationApproach,
     SelectedBlock,
 )
+from src.models.enums import get_detailed_syllabus_content
 from src.services.llm_factory import LLMFactory
 from src.services.prompt_manager import PromptConfig, PromptManager
 
@@ -37,10 +38,7 @@ class BlockSelector:
         self.llm_factory = llm_factory
         self.prompt_manager = prompt_manager
 
-    async def select_blocks(
-        self,
-        request: DocumentGenerationRequestV2
-    ) -> BlockSelectionResult:
+    async def select_blocks(self, request: DocumentGenerationRequestV2) -> BlockSelectionResult:
         """
         Select blocks for inclusion based on request constraints.
 
@@ -61,10 +59,7 @@ class BlockSelector:
             return await self._hybrid_selection(blueprint, request, detail_level)
 
     async def _rule_based_selection(
-        self,
-        blueprint,
-        request: DocumentGenerationRequestV2,
-        detail_level: int
+        self, blueprint, request: DocumentGenerationRequestV2, detail_level: int
     ) -> BlockSelectionResult:
         """Select blocks using rule-based logic."""
         # Get applicable blocks at this detail level
@@ -75,7 +70,7 @@ class BlockSelector:
             SelectedBlock(
                 block_config=block,
                 content_guidelines=self._get_content_guidelines(block, request),
-                estimated_content_volume=self._estimate_content_volume(block, request)
+                estimated_content_volume=self._estimate_content_volume(block, request),
             )
             for block in blueprint.get_required_blocks()
             if block.is_applicable(detail_level)
@@ -85,55 +80,53 @@ class BlockSelector:
         remaining_time = request.target_duration_minutes or 30
         current_time = blueprint.estimate_time(
             [s.block_config for s in selected],
-            self._get_total_content_volume([s.block_config for s in selected], request)
+            self._get_total_content_volume([s.block_config for s in selected], request),
         )
 
         # Add blocks by priority if we have time
         for block in applicable_blocks:
-            if block not in [s.block_config for s in selected]:
-                if block.priority.value in ["high", "medium"]:
-                    # Estimate time if we add this block
-                    test_blocks = [s.block_config for s in selected] + [block]
-                    test_time = blueprint.estimate_time(
-                        test_blocks,
-                        self._get_total_content_volume(test_blocks, request)
-                    )
+            if block not in [s.block_config for s in selected] and block.priority.value in [
+                "high",
+                "medium",
+            ]:
+                # Estimate time if we add this block
+                test_blocks = [s.block_config for s in selected] + [block]
+                test_time = blueprint.estimate_time(
+                    test_blocks, self._get_total_content_volume(test_blocks, request)
+                )
 
-                    if test_time <= remaining_time * 1.1:  # 10% buffer
-                        selected.append(
-                            SelectedBlock(
-                                block_config=block,
-                                content_guidelines=self._get_content_guidelines(block, request),
-                                estimated_content_volume=self._estimate_content_volume(block, request)
-                            )
+                if test_time <= remaining_time * 1.1:  # 10% buffer
+                    selected.append(
+                        SelectedBlock(
+                            block_config=block,
+                            content_guidelines=self._get_content_guidelines(block, request),
+                            estimated_content_volume=self._estimate_content_volume(block, request),
                         )
-                        current_time = test_time
+                    )
+                    current_time = test_time
 
         # Apply user overrides
         selected = self._apply_user_overrides(selected, request, blueprint)
 
         final_time = blueprint.estimate_time(
             [s.block_config for s in selected],
-            self._get_total_content_volume([s.block_config for s in selected], request)
+            self._get_total_content_volume([s.block_config for s in selected], request),
         )
 
         return BlockSelectionResult(
             selected_blocks=selected,
             total_estimated_minutes=final_time,
             selection_reasoning=f"Rule-based selection for {request.document_type} at detail level {detail_level}. "
-                              f"Selected {len(selected)} blocks targeting {remaining_time} minutes.",
+            f"Selected {len(selected)} blocks targeting {remaining_time} minutes.",
             excluded_blocks=[
                 f"{block.block_type} (priority: {block.priority}, min_detail: {block.min_detail_level})"
                 for block in applicable_blocks
                 if block not in [s.block_config for s in selected]
-            ]
+            ],
         )
 
     async def _llm_driven_selection(
-        self,
-        blueprint,
-        request: DocumentGenerationRequestV2,
-        detail_level: int
+        self, blueprint, request: DocumentGenerationRequestV2, detail_level: int
     ) -> BlockSelectionResult:
         """Let LLM decide block selection based on constraints."""
         # Get all available blocks
@@ -150,26 +143,24 @@ class BlockSelector:
                     "block_type": block.block_type,
                     "priority": block.priority.value,
                     "estimated_minutes": get_block_class(block.block_type)().estimated_minutes,
-                    "customization_hints": block.customization_hints
+                    "customization_hints": block.customization_hints,
                 }
                 for block in applicable_blocks
             ],
             "required_blocks": [
-                block.block_type for block in blueprint.get_required_blocks()
+                block.block_type
+                for block in blueprint.get_required_blocks()
                 if block.is_applicable(detail_level)
             ],
             "custom_instructions": request.custom_instructions,
             "force_include": request.force_include_blocks,
-            "exclude": request.exclude_blocks
+            "exclude": request.exclude_blocks,
         }
 
         # Generate selection using LLM
         llm_service = self.llm_factory.get_service("openai")
 
-        prompt_config = PromptConfig(
-            template_name="block_selection",
-            variables=context
-        )
+        prompt_config = PromptConfig(template_name="block_selection", variables=context)
 
         rendered_prompt = await self.prompt_manager.render_prompt(
             prompt_config, model_name="gpt-4o-mini"
@@ -180,10 +171,7 @@ class BlockSelector:
         return await self._rule_based_selection(blueprint, request, detail_level)
 
     async def _hybrid_selection(
-        self,
-        blueprint,
-        request: DocumentGenerationRequestV2,
-        detail_level: int
+        self, blueprint, request: DocumentGenerationRequestV2, detail_level: int
     ) -> BlockSelectionResult:
         """Hybrid approach: rules select, LLM can adjust."""
         # Start with rule-based selection
@@ -193,7 +181,9 @@ class BlockSelector:
         # For now, just return rule-based result
         return rule_result
 
-    def _get_content_guidelines(self, block: BlockConfig, request: DocumentGenerationRequestV2) -> dict[str, Any]:
+    def _get_content_guidelines(
+        self, block: BlockConfig, request: DocumentGenerationRequestV2
+    ) -> dict[str, Any]:
         """Get content guidelines for a block."""
         guidelines = {
             "topic": request.topic,
@@ -201,7 +191,7 @@ class BlockSelector:
             "grade_level": request.grade_level,
             "difficulty": request.difficulty,
             "tier": request.tier.value,
-            "custom_instructions": request.custom_instructions
+            "custom_instructions": request.custom_instructions,
         }
 
         # Add block-specific customization hints
@@ -209,7 +199,9 @@ class BlockSelector:
 
         return guidelines
 
-    def _estimate_content_volume(self, block: BlockConfig, request: DocumentGenerationRequestV2) -> dict[str, int]:
+    def _estimate_content_volume(
+        self, block: BlockConfig, request: DocumentGenerationRequestV2
+    ) -> dict[str, int]:
         """Estimate content volume for a block."""
         volume = {}
 
@@ -227,7 +219,9 @@ class BlockSelector:
 
         return volume
 
-    def _get_total_content_volume(self, blocks: list[BlockConfig], request: DocumentGenerationRequestV2) -> dict[str, int]:
+    def _get_total_content_volume(
+        self, blocks: list[BlockConfig], request: DocumentGenerationRequestV2
+    ) -> dict[str, int]:
         """Get total content volume across all blocks."""
         total_volume = {"num_questions": 0, "num_examples": 0}
 
@@ -239,17 +233,13 @@ class BlockSelector:
         return total_volume
 
     def _apply_user_overrides(
-        self,
-        selected: list[SelectedBlock],
-        request: DocumentGenerationRequestV2,
-        blueprint
+        self, selected: list[SelectedBlock], request: DocumentGenerationRequestV2, blueprint
     ) -> list[SelectedBlock]:
         """Apply user's block inclusion/exclusion preferences."""
         # Remove excluded blocks
         if request.exclude_blocks:
             selected = [
-                s for s in selected
-                if s.block_config.block_type not in request.exclude_blocks
+                s for s in selected if s.block_config.block_type not in request.exclude_blocks
             ]
 
         # Add force-included blocks
@@ -265,7 +255,9 @@ class BlockSelector:
                                 SelectedBlock(
                                     block_config=block,
                                     content_guidelines=self._get_content_guidelines(block, request),
-                                    estimated_content_volume=self._estimate_content_volume(block, request)
+                                    estimated_content_volume=self._estimate_content_volume(
+                                        block, request
+                                    ),
                                 )
                             )
                             break
@@ -284,15 +276,18 @@ class DocumentGenerationServiceV2:
     def __init__(
         self,
         llm_factory: LLMFactory,
-        prompt_manager: PromptManager
+        prompt_manager: PromptManager,
+        question_generation_service=None,
+        question_repository=None,
     ):
         self.llm_factory = llm_factory
         self.prompt_manager = prompt_manager
+        self.question_generation_service = question_generation_service
+        self.question_repository = question_repository
         self.block_selector = BlockSelector(llm_factory, prompt_manager)
 
     async def generate_document(
-        self,
-        request: DocumentGenerationRequestV2
+        self, request: DocumentGenerationRequestV2
     ) -> DocumentGenerationResultV2:
         """
         Generate a document using the blocks-based approach.
@@ -317,9 +312,7 @@ class DocumentGenerationServiceV2:
             )
 
             # 2. Generate content using LLM with structured output
-            content_structure = await self._generate_content_structure(
-                request, selection_result
-            )
+            content_structure = await self._generate_content_structure(request, selection_result)
 
             # 3. Render blocks to final content
             rendered_blocks = await self._render_blocks(content_structure)
@@ -337,7 +330,7 @@ class DocumentGenerationServiceV2:
                 total_estimated_minutes=content_structure.total_estimated_minutes,
                 actual_detail_level=content_structure.actual_detail_level,
                 word_count=self._calculate_word_count(rendered_blocks),
-                available_formats=blueprint.supported_formats
+                available_formats=blueprint.supported_formats,
             )
 
             processing_time = (datetime.now() - start_time).total_seconds()
@@ -351,8 +344,8 @@ class DocumentGenerationServiceV2:
                 generation_insights={
                     "blocks_selected": len(selection_result.selected_blocks),
                     "selection_reasoning": selection_result.selection_reasoning,
-                    "llm_reasoning": content_structure.generation_reasoning
-                }
+                    "llm_reasoning": content_structure.generation_reasoning,
+                },
             )
 
         except Exception as e:
@@ -360,22 +353,18 @@ class DocumentGenerationServiceV2:
             logger.error(f"Document generation failed: {e}")
 
             return DocumentGenerationResultV2(
-                success=False,
-                error_message=str(e),
-                processing_time=processing_time
+                success=False, error_message=str(e), processing_time=processing_time
             )
 
     async def _generate_content_structure(
-        self,
-        request: DocumentGenerationRequestV2,
-        selection_result: BlockSelectionResult
+        self, request: DocumentGenerationRequestV2, selection_result: BlockSelectionResult
     ) -> DocumentContentStructure:
         """Generate content structure using LLM with structured output."""
         # Prepare context for LLM generation
         context = {
             "document_type": request.document_type.value,
             "title": request.title,
-            "topic": request.topic,
+            "topic": request.topic.value,  # Use enum value
             "subtopics": request.subtopics,
             "detail_level": request.get_effective_detail_level(),
             "target_duration_minutes": request.target_duration_minutes,
@@ -384,29 +373,28 @@ class DocumentGenerationServiceV2:
             "tier": request.tier.value,
             "custom_instructions": request.custom_instructions,
             "personalization_context": request.personalization_context,
-
+            "syllabus_refs": request.get_syllabus_refs(),  # Add syllabus references
+            "detailed_syllabus_content": get_detailed_syllabus_content(
+                request.get_syllabus_refs()
+            ),  # Detailed content
             # Selected blocks with their guidelines
             "selected_blocks": [
                 {
                     "block_type": block.block_config.block_type,
                     "content_guidelines": block.content_guidelines,
                     "estimated_content_volume": block.estimated_content_volume,
-                    "schema": BLOCK_CONTENT_SCHEMAS.get(block.block_config.block_type, {})
+                    "schema": BLOCK_CONTENT_SCHEMAS.get(block.block_config.block_type, {}),
                 }
                 for block in selection_result.selected_blocks
             ],
-
             # Output structure requirements
-            "output_schema": DOCUMENT_CONTENT_SCHEMA
+            "output_schema": DOCUMENT_CONTENT_SCHEMA,
         }
 
         # Generate content using LLM
         llm_service = self.llm_factory.get_service("openai")
 
-        prompt_config = PromptConfig(
-            template_name="document_content_generation",
-            variables=context
-        )
+        prompt_config = PromptConfig(template_name="document_content_generation", variables=context)
 
         rendered_prompt = await self.prompt_manager.render_prompt(
             prompt_config, model_name="gpt-4o-mini"
@@ -419,7 +407,7 @@ class DocumentGenerationServiceV2:
             prompt=rendered_prompt,
             temperature=0.3,
             max_tokens=8000,
-            response_format={"type": "json_object"}  # Request JSON output
+            response_format={"type": "json_object"},  # Request JSON output
         )
 
         response = await llm_service.generate_non_stream(llm_request)
@@ -433,11 +421,10 @@ class DocumentGenerationServiceV2:
 
             # Convert to DocumentContentStructure
             blocks = [
-                BlockGenerationResult(**block_data)
-                for block_data in content_data.get("blocks", [])
+                BlockGenerationResult(**block_data) for block_data in content_data.get("blocks", [])
             ]
 
-            return DocumentContentStructure(
+            content_structure = DocumentContentStructure(
                 enhanced_title=content_data.get("enhanced_title"),
                 introduction=content_data.get("introduction"),
                 blocks=blocks,
@@ -445,18 +432,20 @@ class DocumentGenerationServiceV2:
                 actual_detail_level=content_data["actual_detail_level"],
                 generation_reasoning=content_data["generation_reasoning"],
                 coverage_notes=content_data.get("coverage_notes"),
-                personalization_applied=content_data.get("personalization_applied", [])
+                personalization_applied=content_data.get("personalization_applied", []),
             )
+
+            # Generate questions if needed and service available
+            await self._generate_questions_if_needed(content_structure, request)
+
+            return content_structure
 
         except (json.JSONDecodeError, KeyError, ValueError) as e:
             logger.error(f"Failed to parse structured output: {e}")
             # Fallback to creating basic structure
             return self._create_fallback_structure(request, selection_result)
 
-    async def _render_blocks(
-        self,
-        content_structure: DocumentContentStructure
-    ) -> dict[str, str]:
+    async def _render_blocks(self, content_structure: DocumentContentStructure) -> dict[str, str]:
         """Render each block to its final content format."""
         rendered = {}
 
@@ -465,15 +454,15 @@ class DocumentGenerationServiceV2:
                 block_class = get_block_class(block_result.block_type)
                 block_instance = block_class()
 
-                rendered_content = await block_instance.render(
-                    block_result.content
-                )
+                rendered_content = await block_instance.render(block_result.content)
 
                 rendered[block_result.block_type] = rendered_content
 
             except Exception as e:
                 logger.error(f"Failed to render block {block_result.block_type}: {e}")
-                rendered[block_result.block_type] = f"<!-- Error rendering {block_result.block_type}: {e} -->"
+                rendered[
+                    block_result.block_type
+                ] = f"<!-- Error rendering {block_result.block_type}: {e} -->"
 
         return rendered
 
@@ -495,9 +484,7 @@ class DocumentGenerationServiceV2:
                 raise ValueError("Block missing estimated_minutes")
 
     def _create_fallback_structure(
-        self,
-        request: DocumentGenerationRequestV2,
-        selection_result: BlockSelectionResult
+        self, request: DocumentGenerationRequestV2, selection_result: BlockSelectionResult
     ) -> DocumentContentStructure:
         """Create fallback structure when LLM generation fails."""
         blocks = []
@@ -505,16 +492,17 @@ class DocumentGenerationServiceV2:
         for selected_block in selection_result.selected_blocks:
             # Create minimal content for each block
             fallback_content = self._create_fallback_block_content(
-                selected_block.block_config.block_type,
-                request
+                selected_block.block_config.block_type, request
             )
 
             blocks.append(
                 BlockGenerationResult(
                     block_type=selected_block.block_config.block_type,
                     content=fallback_content,
-                    estimated_minutes=get_block_class(selected_block.block_config.block_type)().estimated_minutes,
-                    reasoning="Fallback content due to generation error"
+                    estimated_minutes=get_block_class(
+                        selected_block.block_config.block_type
+                    )().estimated_minutes,
+                    reasoning="Fallback content due to generation error",
                 )
             )
 
@@ -523,46 +511,132 @@ class DocumentGenerationServiceV2:
             blocks=blocks,
             total_estimated_minutes=selection_result.total_estimated_minutes,
             actual_detail_level=request.get_effective_detail_level(),
-            generation_reasoning="Fallback structure created due to LLM generation failure"
+            generation_reasoning="Fallback structure created due to LLM generation failure",
         )
 
-    def _create_fallback_block_content(self, block_type: str, request: DocumentGenerationRequestV2) -> dict[str, Any]:
+    def _create_fallback_block_content(
+        self, block_type: str, request: DocumentGenerationRequestV2
+    ) -> dict[str, Any]:
         """Create minimal fallback content for a block type."""
-        if block_type == "learning_objectives":
-            return {
+        content_map = {
+            "learning_objectives": {
                 "objectives": [
                     f"Understand {request.topic}",
-                    f"Apply key concepts from {request.topic}"
+                    f"Apply key concepts from {request.topic}",
                 ]
-            }
-        elif block_type == "concept_explanation":
-            return {
+            },
+            "concept_explanation": {
                 "concepts": [
                     {
                         "name": f"{request.topic} Fundamentals",
-                        "explanation": f"Key concepts and principles of {request.topic}"
+                        "explanation": f"Key concepts and principles of {request.topic}",
                     }
                 ]
-            }
-        elif block_type == "practice_questions":
-            return {
+            },
+            "practice_questions": {
                 "questions": [
                     {
                         "text": f"Solve a basic {request.topic} problem",
                         "marks": 3,
-                        "difficulty": "medium"
+                        "difficulty": "medium",
                     }
                 ]
-            }
-        elif block_type == "summary":
-            return {
+            },
+            "summary": {
                 "key_points": [
                     f"Reviewed fundamental concepts of {request.topic}",
-                    "Practiced key problem-solving techniques"
+                    "Practiced key problem-solving techniques",
                 ]
-            }
-        else:
-            return {"content": f"Content for {block_type} related to {request.topic}"}
+            },
+        }
+
+        return content_map.get(
+            block_type, {"content": f"Content for {block_type} related to {request.topic}"}
+        )
+
+    async def _generate_questions_if_needed(
+        self, content_structure: DocumentContentStructure, request: DocumentGenerationRequestV2
+    ):
+        """Get questions from DB first, then generate if needed."""
+        # Find practice question blocks that need actual questions
+        for block in content_structure.blocks:
+            if block.block_type == "practice_questions":
+                questions_data = block.content.get("questions", [])
+                num_needed = len(questions_data)
+
+                if not questions_data or not request.include_questions:
+                    continue
+
+                real_questions = []
+
+                # 1. Try to get questions from database first
+                if self.question_repository:
+                    try:
+                        db_questions = self.question_repository.search_questions_by_content(
+                            subject_content_refs=request.get_syllabus_refs(),
+                            tier=request.tier,
+                            min_quality_score=0.7,  # Only high-quality questions
+                            limit=num_needed,
+                        )
+
+                        if db_questions:
+                            real_questions.extend(db_questions[:num_needed])
+                            logger.info(f"Retrieved {len(real_questions)} questions from database")
+
+                    except Exception as e:
+                        logger.error(f"Failed to retrieve questions from DB: {e}")
+
+                # 2. If we still need more questions, generate them
+                remaining_needed = num_needed - len(real_questions)
+                if remaining_needed > 0 and self.question_generation_service:
+                    try:
+                        from src.models.question_models import GenerationRequest
+
+                        generation_request = GenerationRequest(
+                            topic=request.topic.value,
+                            subtopics=request.subtopics,
+                            subject_content_refs=request.get_syllabus_refs(),
+                            tier=request.tier,
+                            num_questions=remaining_needed,
+                            difficulty=request.difficulty or "medium",
+                            grade_level=request.grade_level or 8,
+                        )
+
+                        session = await self.question_generation_service.generate_questions(
+                            generation_request
+                        )
+
+                        if session.questions:
+                            real_questions.extend(session.questions[:remaining_needed])
+                            logger.info(f"Generated {len(session.questions)} additional questions")
+
+                    except Exception as e:
+                        logger.error(f"Failed to generate questions: {e}")
+
+                # 3. Replace LLM-generated questions with real ones
+                if real_questions:
+                    block.content["questions"] = [
+                        {
+                            "text": q.raw_text_content,
+                            "marks": q.total_marks or 3,
+                            "difficulty": getattr(q, "difficulty_level", "medium"),
+                            "answer": (
+                                q.solution_and_marking_scheme.final_answers_summary[0].answer_text
+                                if q.solution_and_marking_scheme
+                                and q.solution_and_marking_scheme.final_answers_summary
+                                else None
+                            ),
+                        }
+                        for q in real_questions
+                    ]
+
+                    logger.info(
+                        f"Using {len(real_questions)} real questions ({len([q for q in real_questions if hasattr(q, 'question_id_global')])} from DB, {len(real_questions) - len([q for q in real_questions if hasattr(q, 'question_id_global')])} generated)"
+                    )
+                else:
+                    logger.info(
+                        "No real questions available, keeping LLM-generated placeholder questions"
+                    )
 
     def _calculate_word_count(self, rendered_blocks: dict[str, str]) -> int:
         """Calculate total word count from rendered content."""

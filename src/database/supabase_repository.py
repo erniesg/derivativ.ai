@@ -107,6 +107,56 @@ class QuestionRepository:
             logger.error(f"Failed to get question {question_id_global}: {e}")
             raise
 
+    def search_questions_by_content(
+        self,
+        subject_content_refs: list[str],
+        tier: Optional[Tier] = None,
+        min_quality_score: Optional[float] = None,
+        limit: int = 20,
+    ) -> list[Question]:
+        """
+        Search questions by subject content references.
+
+        Args:
+            subject_content_refs: List of syllabus references to match
+            tier: Filter by tier
+            min_quality_score: Minimum quality score
+            limit: Maximum number of results
+
+        Returns:
+            List of Question objects
+        """
+        try:
+            # For now, we'll use the text content to match
+            # In a full implementation, we'd have proper indexing by subject_content_refs
+            questions = []
+
+            # Try to find questions that might match the content areas
+            query = self.supabase.table(self.table_name).select("*")
+
+            if tier:
+                query = query.eq("tier", tier.value)
+            if min_quality_score:
+                query = query.gte("quality_score", min_quality_score)
+
+            query = query.order("created_at", desc=True).limit(limit * 2)  # Get more to filter
+
+            response = query.execute()
+
+            if response.data:
+                for row in response.data[:limit]:
+                    try:
+                        question = Question.model_validate(row["content_json"])
+                        questions.append(question)
+                    except Exception as e:
+                        logger.warning(f"Failed to parse question from DB: {e}")
+
+            return questions
+
+        except Exception as e:
+            logger.error(f"Failed to search questions by content: {e}")
+            return []  # Return empty list on error
+
     def list_questions(
         self,
         tier: Optional[Tier] = None,
