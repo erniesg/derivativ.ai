@@ -29,7 +29,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-async def test_rich_content():
+async def test_rich_content():  # noqa: PLR0915
     """Test document generation for rich content."""
 
     print("🧪 Testing Rich Content Generation")
@@ -97,7 +97,10 @@ async def test_rich_content():
                     print(f"   Content size: {content_size} chars")
 
                     # Check for rich content
-                    if any(key in section.content_data for key in ["questions", "examples", "solution_steps"]):
+                    if any(
+                        key in section.content_data
+                        for key in ["questions", "examples", "solution_steps"]
+                    ):
                         rich_sections += 1
                         print("   ✅ Rich content detected")
                     elif content_size > 100:

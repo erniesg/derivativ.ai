@@ -1,0 +1,156 @@
+# Document structure patterns for different types and detail levels
+# Moved from hardcoded service layer to configuration
+
+document_structures:
+  worksheet:
+    1:  # MINIMAL
+      - practice_questions
+      - answers
+    3:  # BASIC
+      - learning_objectives
+      - key_formulas
+      - practice_questions
+      - answers
+    5:  # MEDIUM
+      - learning_objectives
+      - key_formulas
+      - worked_examples
+      - practice_questions
+      - solutions
+    7:  # DETAILED
+      - learning_objectives
+      - topic_introduction
+      - key_concepts
+      - worked_examples
+      - practice_questions
+      - detailed_solutions
+    9:  # COMPREHENSIVE
+      - learning_objectives
+      - topic_introduction
+      - key_concepts
+      - worked_examples
+      - graded_practice
+      - challenge_questions
+      - detailed_solutions
+    10: # GUIDED
+      - learning_objectives
+      - step_by_step_guide
+      - guided_examples
+      - scaffolded_practice
+      - solutions_with_explanations
+
+  notes:
+    1:  # MINIMAL
+      - key_concepts
+      - quick_examples
+    3:  # BASIC
+      - key_concepts
+      - examples
+      - practice_questions
+    5:  # MEDIUM
+      - learning_objectives
+      - concept_explanations
+      - worked_examples
+      - practice_exercises
+      - summary
+    7:  # DETAILED
+      - learning_objectives
+      - detailed_theory
+      - multiple_examples
+      - practice_exercises
+      - summary
+    9:  # COMPREHENSIVE
+      - learning_objectives
+      - detailed_theory
+      - multiple_examples
+      - advanced_applications
+      - extensive_practice
+      - comprehensive_summary
+    10: # GUIDED
+      - learning_objectives
+      - step_by_step_concepts
+      - guided_examples
+      - scaffolded_practice
+      - self_check
+
+  textbook:
+    1:  # MINIMAL
+      - key_concepts
+      - essential_examples
+    3:  # BASIC
+      - learning_objectives
+      - key_concepts
+      - examples
+      - practice_questions
+    5:  # MEDIUM
+      - chapter_introduction
+      - learning_objectives
+      - concept_development
+      - worked_examples
+      - practice_exercises
+      - chapter_summary
+    7:  # DETAILED
+      - chapter_introduction
+      - prerequisite_knowledge
+      - concept_development
+      - worked_examples
+      - applications
+      - practice_exercises
+      - chapter_summary
+    9:  # COMPREHENSIVE
+      - chapter_introduction
+      - prerequisite_knowledge
+      - detailed_theory
+      - worked_examples
+      - applications
+      - extensive_exercises
+      - extension_activities
+      - chapter_review
+    10: # GUIDED
+      - learning_pathway
+      - step_by_step_development
+      - guided_discovery
+      - scaffolded_practice
+      - reflection_activities
+
+  slides:
+    1:  # MINIMAL
+      - title_slide
+      - key_points
+      - summary
+    3:  # BASIC
+      - title_slide
+      - key_points
+      - example
+      - summary
+    5:  # MEDIUM
+      - title_slide
+      - learning_objectives
+      - key_concepts
+      - examples
+      - practice_questions
+      - summary
+    7:  # DETAILED
+      - title_slide
+      - agenda
+      - learning_objectives
+      - key_concepts
+      - multiple_examples
+      - practice_questions
+      - summary
+    9:  # COMPREHENSIVE
+      - title_slide
+      - agenda
+      - learning_objectives
+      - detailed_concepts
+      - multiple_examples
+      - applications
+      - practice_activities
+      - summary
+    10: # GUIDED
+      - title_slide
+      - learning_objectives
+      - step_by_step_introduction
+      - guided_examples
+      - interactive_practice
+      - reflection

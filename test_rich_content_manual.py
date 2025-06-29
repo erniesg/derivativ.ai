@@ -174,7 +174,7 @@ def create_mock_question_repository():
     return mock_repo
 
 
-async def test_rich_content():
+async def test_rich_content():  # noqa: PLR0915
     """Test document generation for rich content."""
 
     print("🧪 Testing Rich Content Generation")
@@ -300,14 +300,16 @@ async def test_rich_content():
 
             # Determine success criteria
             is_rich_content = (
-                total_content > 1000 and  # Substantial content
-                rich_sections > 0 and    # At least one rich section
-                result.sections_generated > 3  # Multiple sections
+                total_content > 1000  # Substantial content
+                and rich_sections > 0  # At least one rich section
+                and result.sections_generated > 3  # Multiple sections
             )
 
             if is_rich_content:
                 print("\n✅ RICH CONTENT CONFIRMED")
-                print("   Document contains substantial LLM-generated content with proper structure")
+                print(
+                    "   Document contains substantial LLM-generated content with proper structure"
+                )
                 print("   This is NOT fallback mock data")
                 return True
             else:

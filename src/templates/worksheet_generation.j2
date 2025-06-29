@@ -35,47 +35,35 @@ You must generate content for a {{ document_type }} with these sections:
 5. **Worked Examples**: Include step-by-step solutions with reasoning
 6. **Practical Applications**: Where possible, include real-world connections
 
-## Output Format
+## Output Requirements
 
-You MUST respond with a JSON object that has EXACTLY this structure:
+Generate structured educational content as a JSON object with this exact structure:
 
 ```json
 {
-  "enhanced_title": "Enhanced version of the document title",
-  "introduction": "Brief introduction to the topic",
+  "enhanced_title": "Engaging title for the {{ document_type }}",
+  "introduction": "Brief introduction to {{ topic }}",
   "blocks": [
     {
       "block_type": "learning_objectives",
       "content": {
-        "objectives": ["Objective 1", "Objective 2", "Objective 3"]
+        "objectives": ["Objective 1", "Objective 2"],
+        "text": "Learning objectives content"
       },
-      "estimated_minutes": 2,
-      "reasoning": "Why this content was included"
-    },
-    {
-      "block_type": "practice_questions", 
-      "content": {
-        "questions": [
-          {
-            "text": "Question text here",
-            "marks": 3,
-            "hint": "Optional hint"
-          }
-        ],
-        "total_marks": 10
-      },
-      "estimated_minutes": 15,
-      "reasoning": "Why these questions were chosen"
+      "estimated_minutes": 5,
+      "reasoning": "Why this block was included"
     }
   ],
   "total_estimated_minutes": 30,
-  "actual_detail_level": 5,
+  "actual_detail_level": {{ detail_level }},
   "generation_reasoning": "Overall reasoning for document structure",
-  "coverage_notes": "Notes about topic coverage",
-  "personalization_applied": []
+  "coverage_notes": "What topics are covered",
+  "personalization_applied": ["List of applied personalizations"]
 }
 ```
 
-The "blocks" array is REQUIRED and must contain at least one block. Each block must have the exact fields shown above.
+Create content blocks for the structure pattern requested: {{ structure_pattern | join(", ") }}
 
-Generate rich, educationally sound content for {{ document_type }} about {{ topic }}.
+Each block should contain rich, specific content appropriate for the topic and grade level, ensuring mathematical accuracy and Cambridge IGCSE alignment.
+
+Generate the JSON response now with this exact structure for {{ document_type }} about {{ topic }}.

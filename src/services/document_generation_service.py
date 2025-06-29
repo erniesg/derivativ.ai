@@ -7,9 +7,8 @@ structured educational documents following Cambridge IGCSE standards.
 
 import logging
 from datetime import datetime
-from typing import Any, List
+from typing import Any
 
-from pydantic import BaseModel
 from src.database.supabase_repository import QuestionRepository
 from src.models.document_models import (
     ContentSection,
@@ -19,30 +18,12 @@ from src.models.document_models import (
     DocumentType,
     GeneratedDocument,
 )
+from src.models.llm_schemas import DocumentGenerationResponse
 from src.models.question_models import Question
+from src.services.document_structure_config import get_document_structure_config
 from src.services.json_parser import JSONParser
 from src.services.llm_factory import LLMFactory
 from src.services.prompt_manager import PromptConfig, PromptManager
-
-
-class DocumentBlock(BaseModel):
-    """A single content block in the document."""
-    block_type: str
-    content: dict[str, Any]
-    estimated_minutes: int
-    reasoning: str
-
-
-class DocumentGenerationSchema(BaseModel):
-    """Schema for LLM-generated document content."""
-    enhanced_title: str
-    introduction: str = ""
-    blocks: List[DocumentBlock]
-    total_estimated_minutes: int
-    actual_detail_level: int
-    generation_reasoning: str
-    coverage_notes: str = ""
-    personalization_applied: List[str] = []
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +49,9 @@ class DocumentGenerationService:
         self.prompt_manager = prompt_manager
         self.json_parser = JSONParser(enable_cache=True)
 
+        # Load structure patterns from configuration
+        self.structure_config = get_document_structure_config()
+
         # Template mappings for different document types
         self.template_mappings = {
             DocumentType.WORKSHEET: "worksheet_generation",
@@ -76,124 +60,7 @@ class DocumentGenerationService:
             DocumentType.SLIDES: "slides_generation",
         }
 
-        # Structure patterns for each document type and detail level
-        self.structure_patterns = {
-            DocumentType.WORKSHEET: {
-                DetailLevel.MINIMAL: ["practice_questions", "answers"],
-                DetailLevel.MEDIUM: [
-                    "learning_objectives",
-                    "key_formulas",
-                    "worked_examples",
-                    "practice_questions",
-                    "solutions",
-                ],
-                DetailLevel.COMPREHENSIVE: [
-                    "learning_objectives",
-                    "topic_introduction",
-                    "key_concepts",
-                    "worked_examples",
-                    "graded_practice",
-                    "challenge_questions",
-                    "detailed_solutions",
-                ],
-                DetailLevel.GUIDED: [
-                    "learning_objectives",
-                    "step_by_step_guide",
-                    "guided_examples",
-                    "scaffolded_practice",
-                    "solutions_with_explanations",
-                ],
-            },
-            DocumentType.NOTES: {
-                DetailLevel.MINIMAL: ["key_concepts", "quick_examples", "practice_questions"],
-                DetailLevel.MEDIUM: [
-                    "learning_objectives",
-                    "concept_explanations",
-                    "worked_examples",
-                    "practice_exercises",
-                    "summary",
-                ],
-                DetailLevel.COMPREHENSIVE: [
-                    "learning_objectives",
-                    "detailed_theory",
-                    "multiple_examples",
-                    "advanced_applications",
-                    "extensive_practice",
-                    "comprehensive_summary",
-                ],
-                DetailLevel.GUIDED: [
-                    "learning_objectives",
-                    "step_by_step_concepts",
-                    "guided_examples",
-                    "scaffolded_practice",
-                    "self_check",
-                ],
-            },
-            DocumentType.TEXTBOOK: {
-                DetailLevel.MINIMAL: [
-                    "learning_objectives",
-                    "key_concepts",
-                    "essential_examples",
-                    "practice_questions",
-                ],
-                DetailLevel.MEDIUM: [
-                    "chapter_introduction",
-                    "learning_objectives",
-                    "concept_development",
-                    "worked_examples",
-                    "practice_exercises",
-                    "chapter_summary",
-                ],
-                DetailLevel.COMPREHENSIVE: [
-                    "chapter_introduction",
-                    "prerequisite_knowledge",
-                    "detailed_theory",
-                    "worked_examples",
-                    "applications",
-                    "extensive_exercises",
-                    "extension_activities",
-                    "chapter_review",
-                ],
-                DetailLevel.GUIDED: [
-                    "learning_pathway",
-                    "step_by_step_development",
-                    "guided_discovery",
-                    "scaffolded_practice",
-                    "reflection_activities",
-                ],
-            },
-            DocumentType.SLIDES: {
-                DetailLevel.MINIMAL: ["title_slide", "key_points", "example", "summary"],
-                DetailLevel.MEDIUM: [
-                    "title_slide",
-                    "learning_objectives",
-                    "key_concepts",
-                    "examples",
-                    "practice_questions",
-                    "summary",
-                ],
-                DetailLevel.COMPREHENSIVE: [
-                    "title_slide",
-                    "agenda",
-                    "learning_objectives",
-                    "detailed_concepts",
-                    "multiple_examples",
-                    "applications",
-                    "practice_activities",
-                    "summary",
-                ],
-                DetailLevel.GUIDED: [
-                    "title_slide",
-                    "learning_objectives",
-                    "step_by_step_introduction",
-                    "guided_examples",
-                    "interactive_practice",
-                    "reflection",
-                ],
-            },
-        }
-
-    async def generate_document(
+    async def generate_document(  # noqa: PLR0915
         self, request: DocumentGenerationRequest
     ) -> DocumentGenerationResult:
         """
@@ -217,7 +84,9 @@ class DocumentGenerationService:
             template_name = self.template_mappings.get(request.document_type, "document_generation")
 
             # 3. Get structure pattern for detail level
-            structure_pattern = self.structure_patterns[request.document_type][request.detail_level]
+            structure_pattern = self.structure_config.get_structure_pattern(
+                request.document_type, request.detail_level
+            )
 
             # 4. Prepare template variables
             template_vars = {
@@ -249,6 +118,44 @@ class DocumentGenerationService:
                 prompt_config, model_name="gpt-4o-mini"
             )
 
+            # For OpenAI json_object mode (when parse method isn't available),
+            # add explicit schema instructions to the prompt
+            provider = self.llm_factory.detect_provider("gpt-4o-mini")
+            if provider == "openai":
+                llm_service_temp = self.llm_factory.get_service("openai")
+                if not hasattr(llm_service_temp.client.chat.completions, "parse"):
+                    logger.info("Adding explicit JSON schema to prompt for json_object mode")
+                    detail_level_num = template_vars.get("detail_level", 5)
+                    if hasattr(detail_level_num, "value"):
+                        detail_level_num = detail_level_num.value
+
+                    schema_instruction = f"""
+
+CRITICAL: You MUST respond with a JSON object that exactly matches this schema:
+{{
+  "enhanced_title": "string - Enhanced title for the document",
+  "introduction": "string - Brief introduction to the topic",
+  "blocks": [
+    {{
+      "block_type": "string - One of: {', '.join(structure_pattern)}",
+      "content": {{"key": "value"}},
+      "estimated_minutes": 5,
+      "reasoning": "string - Why this block was included"
+    }}
+  ],
+  "total_estimated_minutes": 30,
+  "actual_detail_level": {detail_level_num},
+  "generation_reasoning": "string - Overall reasoning",
+  "coverage_notes": "string - Coverage notes",
+  "personalization_applied": []
+}}
+
+IMPORTANT:
+- estimated_minutes and total_estimated_minutes must be integers (numbers), not strings
+- actual_detail_level must be an integer {detail_level_num}, not a string
+- Do NOT use any other JSON structure. Do NOT wrap the response in additional keys."""
+                    rendered_prompt += schema_instruction
+
             logger.info(f"Generated prompt for {template_name}")
 
             # Generate content using LLM with provider-specific structured output
@@ -256,63 +163,59 @@ class DocumentGenerationService:
 
             # Configure structured output based on provider
             provider = self.llm_factory.detect_provider("gpt-4o-mini")
-            extra_params = {}
-            
-            if provider == "openai":
-                # OpenAI: Use json_object format for reliable JSON
-                extra_params["response_format"] = {"type": "json_object"}
-            elif provider == "anthropic":
-                # Anthropic: Use strong prompt instructions (no special params needed)
-                pass
-            elif provider == "google":
-                # Google Gemini: Configure response schema
-                extra_params["response_mime_type"] = "application/json"
-                extra_params["response_schema"] = DocumentGenerationSchema
-
             llm_request = LLMRequest(
                 model="gpt-4o-mini",
                 prompt=rendered_prompt,
                 temperature=0.3,
                 max_tokens=4000,
-                extra_params=extra_params
             )
 
-            response = await llm_service.generate_non_stream(llm_request)
-
-            # 6. Parse LLM response using enhanced JSON parser
-            logger.info(f"Parsing LLM response (length: {len(response.content)} chars)")
-
-            # Log first 200 chars of response for debugging
-            logger.debug(f"LLM response preview: {response.content[:200]}")
-
-            extraction_result = await self.json_parser.extract_json(
-                response.content,
-                model_name=llm_request.model,
-            )
-
-            if extraction_result.success:
-                raw_data = extraction_result.data
-                logger.info(
-                    f"JSON parsed successfully using method: {extraction_result.extraction_method}"
+            if provider == "openai":
+                # OpenAI: Use structured parsing with Pydantic model
+                logger.info("Using OpenAI structured parsing")
+                document_response = await llm_service.parse_structured(
+                    llm_request, DocumentGenerationResponse
                 )
-                logger.info(f"Raw data keys: {list(raw_data.keys())}")
-                
-                # Handle wrapped responses (e.g., {'worksheet': {...}})
-                if len(raw_data) == 1 and request.document_type.value in raw_data:
-                    document_data = raw_data[request.document_type.value]
-                    logger.info(f"Unwrapped {request.document_type.value} data")
+                # Convert Pydantic model to dict for existing logic
+                document_data = document_response.model_dump()
+
+            elif provider == "google":
+                # Google Gemini: Use response_schema (if available)
+                logger.info("Using Gemini structured output")
+                llm_request.extra_params = {
+                    "response_mime_type": "application/json",
+                    "response_schema": DocumentGenerationResponse,
+                }
+                response = await llm_service.generate_non_stream(llm_request)
+
+                # Parse JSON response
+                extraction_result = await self.json_parser.extract_json(
+                    response.content, model_name=llm_request.model
+                )
+                if extraction_result.success:
+                    document_data = extraction_result.data
                 else:
-                    document_data = raw_data
-                
-                logger.info(f"Final data keys: {list(document_data.keys())}")
-                logger.info(f"Blocks found: {len(document_data.get('blocks', []))}")
-                if extraction_result.thinking_tokens_removed:
-                    logger.info("Thinking tokens were removed from response")
-            else:
-                logger.error(f"Enhanced JSON parsing failed: {extraction_result.error}")
-                logger.error(f"Raw response: {response.content}")
-                # Fallback: create basic document structure
-                document_data = self._create_fallback_document_data(request, questions)
+                    logger.error(f"Gemini JSON parsing failed: {extraction_result.error}")
+                    document_data = self._create_fallback_document_data(request, questions)
+
+            else:  # Anthropic and others
+                # Anthropic: Use enhanced prompt instructions with JSON parsing
+                logger.info("Using prompt-based structured output with JSON parsing")
+                response = await llm_service.generate_non_stream(llm_request)
+
+                # Parse JSON response with enhanced parser
+                extraction_result = await self.json_parser.extract_json(
+                    response.content, model_name=llm_request.model
+                )
+                if extraction_result.success:
+                    document_data = extraction_result.data
+                else:
+                    logger.error(f"JSON parsing failed: {extraction_result.error}")
+                    document_data = self._create_fallback_document_data(request, questions)
+
+            # Log the structured data we got
+            logger.info(f"Final data keys: {list(document_data.keys())}")
+            logger.info(f"Blocks found: {len(document_data.get('blocks', []))}")
 
             # 7. Create structured document from blocks
             sections = self._parse_sections_from_blocks(document_data, questions)
@@ -428,10 +331,10 @@ class DocumentGenerationService:
         for i, block in enumerate(blocks):
             block_type = block.get("block_type", "generic")
             content = block.get("content", {})
-            
+
             # Create section title from block type
             section_title = block_type.replace("_", " ").title()
-            
+
             section = ContentSection(
                 title=section_title,
                 content_type=block_type,
@@ -523,7 +426,9 @@ class DocumentGenerationService:
         self, request: DocumentGenerationRequest, questions: list[Question]
     ) -> dict[str, Any]:
         """Create fallback document data when LLM response parsing fails."""
-        structure_pattern = self.structure_patterns[request.document_type][request.detail_level]
+        structure_pattern = self.structure_config.get_structure_pattern(
+            request.document_type, request.detail_level
+        )
 
         blocks = []
         for i, section_type in enumerate(structure_pattern):
@@ -531,7 +436,7 @@ class DocumentGenerationService:
                 "block_type": section_type,
                 "content": {"text": f"Generated content for {section_type}"},
                 "estimated_minutes": 5,
-                "reasoning": f"Fallback content for {section_type.replace('_', ' ')}"
+                "reasoning": f"Fallback content for {section_type.replace('_', ' ')}",
             }
             blocks.append(block)
 
@@ -544,10 +449,12 @@ class DocumentGenerationService:
             "introduction": f"Introduction to {request.topic}",
             "blocks": blocks,
             "total_estimated_minutes": estimated_duration,
-            "actual_detail_level": request.detail_level.value if hasattr(request.detail_level, 'value') else 5,
+            "actual_detail_level": request.detail_level.value
+            if hasattr(request.detail_level, "value")
+            else 5,
             "generation_reasoning": "Fallback content generated due to LLM response parsing failure",
             "coverage_notes": f"Basic coverage of {request.topic}",
-            "personalization_applied": []
+            "personalization_applied": [],
         }
 
     def _estimate_duration(
@@ -597,11 +504,12 @@ class DocumentGenerationService:
 
     async def get_structure_patterns(self) -> dict[str, dict[str, list[str]]]:
         """Get structure patterns for all document types and detail levels."""
+        all_patterns = self.structure_config.get_all_patterns()
         return {
             doc_type.value: {
                 detail_level.value: pattern for detail_level, pattern in patterns.items()
             }
-            for doc_type, patterns in self.structure_patterns.items()
+            for doc_type, patterns in all_patterns.items()
         }
 
     async def get_document_templates(self) -> dict[str, Any]:
@@ -609,14 +517,17 @@ class DocumentGenerationService:
         from src.models.document_models import DocumentTemplate
 
         templates = {}
+        all_patterns = self.structure_config.get_all_patterns()
+
         for doc_type, template_name in self.template_mappings.items():
+            doc_patterns = all_patterns.get(doc_type, {})
             structure_patterns = {}
-            for detail_level, pattern in self.structure_patterns[doc_type].items():
+            for detail_level, pattern in doc_patterns.items():
                 structure_patterns[detail_level.value] = pattern
 
             # Create content rules for each supported detail level
             content_rules = {}
-            for detail_level in self.structure_patterns[doc_type]:
+            for detail_level in doc_patterns:
                 content_rules[detail_level] = {
                     "min_questions": 1,
                     "max_questions": 50,
@@ -627,10 +538,8 @@ class DocumentGenerationService:
             templates[doc_type.value] = DocumentTemplate(
                 name=template_name,
                 document_type=doc_type,
-                supported_detail_levels=[level for level in self.structure_patterns[doc_type]],
-                structure_patterns={
-                    level: pattern for level, pattern in self.structure_patterns[doc_type].items()
-                },
+                supported_detail_levels=[level for level in doc_patterns],
+                structure_patterns={level: pattern for level, pattern in doc_patterns.items()},
                 content_rules=content_rules,
             )
 

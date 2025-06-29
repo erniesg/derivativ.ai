@@ -9,6 +9,8 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, computed_field, field_validator
 
+from src.models.document_models import DocumentType
+
 
 class StoredDocumentMetadata(BaseModel):
     """Metadata for a stored document."""
@@ -18,12 +20,8 @@ class StoredDocumentMetadata(BaseModel):
 
     # Document content metadata
     title: str = Field(..., min_length=1, description="Document title")
-    document_type: str = Field(
-        ..., description="Document type (worksheet, notes, textbook, slides)"
-    )
-    detail_level: Optional[str] = Field(
-        None, description="Detail level (minimal, medium, comprehensive)"
-    )
+    document_type: DocumentType = Field(..., description="Document type enum")
+    detail_level: Optional[int] = Field(None, ge=1, le=10, description="Detail level (1-10 scale)")
     topic: Optional[str] = Field(None, description="Main topic/subject")
     grade_level: Optional[int] = Field(None, ge=1, le=12, description="Target grade level")
 

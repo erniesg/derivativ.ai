@@ -5,7 +5,6 @@ Provides reusable content components that can be composed into different
 document types with varying levels of detail.
 """
 
-from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any
 
@@ -14,24 +13,29 @@ from pydantic import BaseModel, Field
 
 class BlockRenderFormat(str, Enum):
     """Supported rendering formats for content blocks."""
+
     MARKDOWN = "markdown"
     HTML = "html"
     LATEX = "latex"
     PLAIN_TEXT = "plain_text"
 
 
-class ContentBlock(ABC, BaseModel):
+class ContentBlock(BaseModel):
     """
     Base class for all content blocks.
 
     Each block represents a reusable educational component that can be
     rendered in different formats and composed into documents.
     """
-    block_type: str = Field(..., description="Type identifier for this block")
-    estimated_minutes: int = Field(..., description="Base time estimate to complete/read this block")
 
-    @abstractmethod
-    async def render(self, content: dict[str, Any], format: BlockRenderFormat = BlockRenderFormat.MARKDOWN) -> str:
+    block_type: str = Field(..., description="Type identifier for this block")
+    estimated_minutes: int = Field(
+        ..., description="Base time estimate to complete/read this block"
+    )
+
+    async def render(
+        self, content: dict[str, Any], format: BlockRenderFormat = BlockRenderFormat.MARKDOWN
+    ) -> str:
         """
         Render block content for specific output format.
 
@@ -42,10 +46,12 @@ class ContentBlock(ABC, BaseModel):
         Returns:
             Rendered content as string
         """
-        pass
+        # Default implementation - subclasses can override
+        return str(content)
 
     class Config:
-        """Allow arbitrary types for ABC compatibility."""
+        """Pydantic configuration."""
+
         arbitrary_types_allowed = True
 
 
@@ -56,10 +62,13 @@ class LearningObjectivesBlock(ContentBlock):
     Typically 2-5 bullet points that clearly state what students
     will know or be able to do after completing the material.
     """
+
     block_type: str = "learning_objectives"
     estimated_minutes: int = 2
 
-    async def render(self, content: dict[str, Any], format: BlockRenderFormat = BlockRenderFormat.MARKDOWN) -> str:
+    async def render(
+        self, content: dict[str, Any], format: BlockRenderFormat = BlockRenderFormat.MARKDOWN
+    ) -> str:
         """Render learning objectives as formatted list."""
         objectives = content.get("objectives", [])
 
@@ -90,10 +99,13 @@ class ConceptExplanationBlock(ContentBlock):
     Scales with detail level - from brief definitions at low detail
     to comprehensive explanations with examples at high detail.
     """
+
     block_type: str = "concept_explanation"
     estimated_minutes: int = 5  # Base estimate, scales with content
 
-    async def render(self, content: dict[str, Any], format: BlockRenderFormat = BlockRenderFormat.MARKDOWN) -> str:
+    async def render(
+        self, content: dict[str, Any], format: BlockRenderFormat = BlockRenderFormat.MARKDOWN
+    ) -> str:
         """Render concept explanations with appropriate formatting."""
         title = content.get("title", "Key Concepts")
         introduction = content.get("introduction", "")
@@ -106,8 +118,8 @@ class ConceptExplanationBlock(ContentBlock):
 
             for concept in concepts:
                 lines.append(f"### {concept.get('name', 'Concept')}")
-                lines.append(concept.get('explanation', ''))
-                if concept.get('example'):
+                lines.append(concept.get("explanation", ""))
+                if concept.get("example"):
                     lines.append(f"\n**Example:** {concept['example']}")
                 lines.append("")
 
@@ -123,10 +135,13 @@ class WorkedExampleBlock(ContentBlock):
     Each example includes the problem statement, detailed solution steps,
     and explanation of the reasoning. Typically takes ~5 minutes per example.
     """
+
     block_type: str = "worked_example"
     estimated_minutes: int = 5  # Per example
 
-    async def render(self, content: dict[str, Any], format: BlockRenderFormat = BlockRenderFormat.MARKDOWN) -> str:
+    async def render(
+        self, content: dict[str, Any], format: BlockRenderFormat = BlockRenderFormat.MARKDOWN
+    ) -> str:
         """Render worked examples with solution steps."""
         examples = content.get("examples", [])
 
@@ -138,14 +153,14 @@ class WorkedExampleBlock(ContentBlock):
                 lines.append(f"**Problem:** {example.get('problem', '')}")
                 lines.append("\n**Solution:**")
 
-                steps = example.get('steps', [])
+                steps = example.get("steps", [])
                 for j, step in enumerate(steps, 1):
                     lines.append(f"{j}. {step}")
 
-                if example.get('answer'):
+                if example.get("answer"):
                     lines.append(f"\n**Answer:** {example['answer']}")
 
-                if example.get('explanation'):
+                if example.get("explanation"):
                     lines.append(f"\n**Explanation:** {example['explanation']}")
 
                 lines.append("")
@@ -162,10 +177,13 @@ class PracticeQuestionBlock(ContentBlock):
     These are typically pulled from the question bank based on topic,
     difficulty, and other criteria. Can include hints and partial solutions.
     """
+
     block_type: str = "practice_questions"
     estimated_minutes: int = 3  # Per question average
 
-    async def render(self, content: dict[str, Any], format: BlockRenderFormat = BlockRenderFormat.MARKDOWN) -> str:
+    async def render(
+        self, content: dict[str, Any], format: BlockRenderFormat = BlockRenderFormat.MARKDOWN
+    ) -> str:
         """Render practice questions from question bank or generated content."""
         questions = content.get("questions", [])
         include_answers = content.get("include_answers", False)
@@ -176,18 +194,18 @@ class PracticeQuestionBlock(ContentBlock):
             for i, q in enumerate(questions, 1):
                 lines.append(f"**{i}.** {q.get('text', '')}")
 
-                if q.get('marks'):
+                if q.get("marks"):
                     lines.append(f"*[{q['marks']} marks]*")
 
-                if q.get('hint'):
+                if q.get("hint"):
                     lines.append(f"\n*Hint: {q['hint']}*")
 
                 lines.append("")
 
-            if include_answers and any(q.get('answer') for q in questions):
+            if include_answers and any(q.get("answer") for q in questions):
                 lines.append("\n## Answer Key\n")
                 for i, q in enumerate(questions, 1):
-                    if q.get('answer'):
+                    if q.get("answer"):
                         lines.append(f"**{i}.** {q['answer']}")
                         lines.append("")
 
@@ -203,10 +221,13 @@ class QuickReferenceBlock(ContentBlock):
     Designed for quick lookup during problem-solving or review.
     Typically includes formulas, important definitions, and key relationships.
     """
+
     block_type: str = "quick_reference"
     estimated_minutes: int = 2
 
-    async def render(self, content: dict[str, Any], format: BlockRenderFormat = BlockRenderFormat.MARKDOWN) -> str:
+    async def render(
+        self, content: dict[str, Any], format: BlockRenderFormat = BlockRenderFormat.MARKDOWN
+    ) -> str:
         """Render quick reference section."""
         formulas = content.get("formulas", [])
         definitions = content.get("definitions", [])
@@ -245,10 +266,13 @@ class SummaryBlock(ContentBlock):
     Consolidates the main points of the material for review and retention.
     Can include summary points, key insights, and next steps.
     """
+
     block_type: str = "summary"
     estimated_minutes: int = 3
 
-    async def render(self, content: dict[str, Any], format: BlockRenderFormat = BlockRenderFormat.MARKDOWN) -> str:
+    async def render(
+        self, content: dict[str, Any], format: BlockRenderFormat = BlockRenderFormat.MARKDOWN
+    ) -> str:
         """Render summary section."""
         key_points = content.get("key_points", [])
         insights = content.get("insights", [])

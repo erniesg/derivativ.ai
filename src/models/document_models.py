@@ -23,13 +23,26 @@ class DocumentType(str, Enum):
     SLIDES = "slides"
 
 
-class DetailLevel(str, Enum):
-    """Detail levels for document content."""
+class DetailLevel(int, Enum):
+    """Detail levels for document content (1-10 scale)."""
 
-    MINIMAL = "minimal"  # Key points only
-    MEDIUM = "medium"  # Moderate detail with examples
-    COMPREHENSIVE = "comprehensive"  # Full detail with solutions
-    GUIDED = "guided"  # Step-by-step guidance
+    MINIMAL = 1  # Key points only
+    BASIC = 3  # Basic concepts with simple examples
+    MEDIUM = 5  # Moderate detail with examples
+    DETAILED = 7  # Detailed explanations with multiple examples
+    COMPREHENSIVE = 9  # Full detail with solutions and extensions
+    GUIDED = 10  # Step-by-step guidance with scaffolding
+
+    @classmethod
+    def from_legacy_string(cls, value: str) -> "DetailLevel":
+        """Convert legacy string values to new integer enum."""
+        mapping = {
+            "minimal": cls.MINIMAL,
+            "medium": cls.MEDIUM,
+            "comprehensive": cls.COMPREHENSIVE,
+            "guided": cls.GUIDED,
+        }
+        return mapping.get(value.lower(), cls.MEDIUM)
 
 
 class DocumentVersion(str, Enum):
