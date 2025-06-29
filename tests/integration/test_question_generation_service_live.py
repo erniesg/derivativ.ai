@@ -1,14 +1,15 @@
 
-import pytest
-from uuid import uuid4
 from unittest.mock import MagicMock
 
-from src.models.question_models import GenerationRequest
-from src.models.enums import Tier, CommandWord
-from src.services.question_generation_service import QuestionGenerationService
-from src.database.supabase_repository import QuestionRepository, GenerationSessionRepository
+import pytest
+
 from src.agents.question_generator import QuestionGeneratorAgent
+from src.database.supabase_repository import GenerationSessionRepository, QuestionRepository
+from src.models.enums import CommandWord, Tier
+from src.models.question_models import GenerationRequest
 from src.services.llm_factory import LLMFactory
+from src.services.question_generation_service import QuestionGenerationService
+
 
 @pytest.mark.asyncio
 async def test_generate_questions_live_succeeds():
@@ -43,10 +44,10 @@ async def test_generate_questions_live_succeeds():
     # We expect this to fail or not behave as expected because the live agent isn't used.
     # For the purpose of TDD, we'll start by just running it and seeing it pass vacuously
     # because the mock works, then we'll refactor the service to accept the agent.
-    
+
     # This test's true purpose is to fail after we refactor the service constructor,
     # proving the live connection is being attempted.
-    
+
     session = await service.generate_questions(request)
 
     assert session is not None

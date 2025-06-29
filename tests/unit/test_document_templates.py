@@ -1,8 +1,11 @@
 
-import pytest
-from src.models.document_models import DocumentTemplate, ArtifactType, ContentBlock
-from src.services.content_blocks import AnswerKeyBlock, PracticeQuestionsBlock
 from unittest.mock import MagicMock
+
+import pytest
+
+from src.models.document_models import ArtifactType, ContentBlock, DocumentTemplate
+from src.services.content_blocks import AnswerKeyBlock, PracticeQuestionsBlock
+
 
 # Mock ContentBlock implementations for testing DocumentTemplate logic
 class MockTitleBlock(ContentBlock):
