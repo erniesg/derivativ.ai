@@ -190,18 +190,19 @@ class DocumentExportService:
                 if upload_result["success"]:
                     result["r2_file_key"] = r2_file_key
                     result["r2_upload_id"] = upload_result["upload_id"]
-                    
+
                     # Generate presigned URL for access (24 hour expiration)
                     try:
                         presigned_url = await r2_service.generate_presigned_url(
-                            r2_file_key, expiration=86400  # 24 hours
+                            r2_file_key,
+                            expiration=86400,  # 24 hours
                         )
                         result["r2_presigned_url"] = presigned_url
                         logger.info(f"✅ Stored in R2 with presigned URL: {r2_file_key}")
                     except Exception as e:
                         logger.warning(f"Failed to generate presigned URL: {e}")
                         result["r2_presigned_url"] = None
-                        
+
                     logger.info(f"✅ Stored in R2: {r2_file_key}")
                 else:
                     logger.error(f"❌ Failed to store in R2: {upload_result}")
@@ -345,7 +346,7 @@ class DocumentExportService:
 
         return markdown_content, None
 
-    async def _block_to_html(self, block: dict[str, Any], version: str) -> str:
+    async def _block_to_html(self, block: dict[str, Any], version: str) -> str:  # noqa: PLR0915
         """Convert a content block to HTML."""
         block_type = block.get("block_type", "")
         content = block.get("content", {})
@@ -355,13 +356,28 @@ class DocumentExportService:
 
         if block_type == "learning_objectives":
             objectives = content.get("objectives", [])
+            if not objectives and isinstance(content, dict):
+                # Try numbered dictionary format (what LLM actually generates)
+                objectives = []
+                for key in sorted(content.keys()):
+                    if key.isdigit() or str(key).isdigit():
+                        objectives.append(str(content[key]))
+
             html += '<div class="objectives"><ul>\n'
             for objective in objectives:
                 html += f"<li>{objective}</li>\n"
             html += "</ul></div>\n"
 
         elif block_type == "practice_questions":
-            questions = content.get("questions", [])
+            # Handle numbered dictionary format
+            if isinstance(content, dict):
+                questions = []
+                for key in sorted(content.keys()):
+                    if key.isdigit() or str(key).isdigit():
+                        questions.append({"text": str(content[key]), "marks": 1})
+            else:
+                questions = content.get("questions", [])
+
             for i, question in enumerate(questions, 1):
                 question_text = question.get("text", "")
                 marks = question.get("marks", 0)
@@ -398,6 +414,87 @@ class DocumentExportService:
                     html += f"<strong>Example {i}:</strong> {example!s}\n"
                 html += "</div>\n"
 
+        elif block_type == "key_formulas":
+            # Handle numbered dictionary format
+            if isinstance(content, dict):
+                formulas = []
+                for key in sorted(content.keys()):
+                    if key.isdigit() or str(key).isdigit():
+                        formulas.append(str(content[key]))
+
+                html += "<div><ul>\n"
+                for formula in formulas:
+                    html += f"<li>{formula}</li>\n"
+                html += "</ul></div>\n"
+            else:
+                html += f"<div>{content!s}</div>\n"
+
+        elif block_type == "worked_examples":
+            # Handle numbered dictionary format with nested examples
+            if isinstance(content, dict):
+                examples = []
+                for key in sorted(content.keys()):
+                    if key.isdigit() or str(key).isdigit():
+                        examples.append(content[key])
+
+                for i, example in enumerate(examples, 1):
+                    html += f'<div class="example"><strong>Example {i}:</strong><br>'
+
+                    if isinstance(example, dict):
+                        # Handle structured example with equation and solution
+                        equation = example.get("equation", example.get("example", ""))
+                        solution = example.get("solution", example.get("answer", ""))
+
+                        if equation:
+                            html += f"<strong>Problem:</strong> {equation}<br>"
+                        if solution:
+                            html += f"<strong>Solution:</strong> {solution}"
+                    else:
+                        # Handle simple string example
+                        html += str(example)
+
+                    html += "</div>\n"
+            else:
+                html += f"<div>{content!s}</div>\n"
+
+        elif block_type == "solutions":
+            # Handle numbered dictionary format
+            if isinstance(content, dict):
+                solutions = []
+                for key in sorted(content.keys()):
+                    if key.isdigit() or str(key).isdigit():
+                        solutions.append(str(content[key]))
+
+                # Only show solutions in teacher version
+                if version in ["teacher", "combined"]:
+                    html += "<div><ol>\n"
+                    for solution in solutions:
+                        html += f'<li class="answer">{solution}</li>\n'
+                    html += "</ol></div>\n"
+                else:
+                    html += '<div class="answer">Solutions available in teacher version.</div>\n'
+            else:
+                html += f"<div>{content!s}</div>\n"
+
+        elif isinstance(content, dict):
+            # Generic content handling for numbered dictionaries
+            # Try to handle as numbered dictionary
+            items = []
+            for key in sorted(content.keys()):
+                if key.isdigit() or str(key).isdigit():
+                    items.append(str(content[key]))
+
+            if items:
+                html += "<div><ol>\n"
+                for item in items:
+                    html += f"<li>{item}</li>\n"
+                html += "</ol></div>\n"
+            else:
+                # Non-numbered dictionary, show as key-value pairs
+                html += "<div>\n"
+                for key, value in content.items():
+                    html += f"<p><strong>{key}:</strong> {value}</p>\n"
+                html += "</div>\n"
         else:
             # Generic content
             html += f"<div>{content!s}</div>\n"
@@ -535,7 +632,35 @@ class DocumentExportService:
         story.append(Paragraph(block_title, self.styles["SectionHeader"]))
 
         if block_type == "learning_objectives":
+            # Handle multiple possible formats
             objectives = content.get("objectives", [])
+            if not objectives:
+                # Try other possible field names
+                objectives = content.get("learning_objectives", [])
+            if not objectives and isinstance(content, dict):
+                # Try numbered dictionary format (what LLM actually generates)
+                objectives = []
+                for key in sorted(content.keys()):
+                    if key.isdigit() or str(key).isdigit():
+                        objectives.append(str(content[key]))
+            if not objectives:
+                # Try text field with objectives
+                text_content = content.get("text", "")
+                if text_content and "objective" in text_content.lower():
+                    story.append(Paragraph(text_content, self.styles["Normal"]))
+                    story.append(Spacer(1, 10))
+                    return
+                # If still no objectives found, log the issue but don't break the PDF
+                if content:
+                    logger.warning(f"Learning objectives content not in expected format: {content}")
+                    story.append(
+                        Paragraph(
+                            "Learning objectives content will be added here.", self.styles["Normal"]
+                        )
+                    )
+                    story.append(Spacer(1, 10))
+                return
+
             for i, objective in enumerate(objectives, 1):
                 story.append(Paragraph(f"{i}. {objective}", self.styles["Normal"]))
             story.append(Spacer(1, 10))
@@ -626,9 +751,82 @@ class DocumentExportService:
                 story.append(Paragraph(str(content), self.styles["Normal"]))
             story.append(Spacer(1, 10))
 
+        elif block_type == "key_formulas":
+            # Handle numbered dictionary format
+            if isinstance(content, dict):
+                formulas = []
+                for key in sorted(content.keys()):
+                    if key.isdigit() or str(key).isdigit():
+                        formulas.append(str(content[key]))
+
+                for i, formula in enumerate(formulas, 1):
+                    story.append(Paragraph(f"{i}. {formula}", self.styles["Normal"]))
+            else:
+                story.append(Paragraph(str(content), self.styles["Normal"]))
+            story.append(Spacer(1, 10))
+
+        elif block_type == "worked_examples":
+            # Handle numbered dictionary format with nested examples
+            if isinstance(content, dict):
+                examples = []
+                for key in sorted(content.keys()):
+                    if key.isdigit() or str(key).isdigit():
+                        examples.append(content[key])
+
+                for i, example in enumerate(examples, 1):
+                    story.append(Paragraph(f"<b>Example {i}:</b>", self.styles["Normal"]))
+
+                    if isinstance(example, dict):
+                        # Handle structured example with equation and solution
+                        equation = example.get("equation", example.get("example", ""))
+                        solution = example.get("solution", example.get("answer", ""))
+
+                        if equation:
+                            story.append(Paragraph(f"Problem: {equation}", self.styles["Normal"]))
+                        if solution:
+                            story.append(Paragraph(f"Solution: {solution}", self.styles["Answer"]))
+                    else:
+                        # Handle simple string example
+                        story.append(Paragraph(str(example), self.styles["Normal"]))
+
+                    story.append(Spacer(1, 10))
+            else:
+                story.append(Paragraph(str(content), self.styles["Normal"]))
+            story.append(Spacer(1, 10))
+
+        elif block_type == "solutions":
+            # Handle numbered dictionary format
+            if isinstance(content, dict):
+                solutions = []
+                for key in sorted(content.keys()):
+                    if key.isdigit() or str(key).isdigit():
+                        solutions.append(str(content[key]))
+
+                # Only show solutions in teacher version
+                if version in ["teacher", "combined"]:
+                    for i, solution in enumerate(solutions, 1):
+                        story.append(Paragraph(f"{i}. {solution}", self.styles["Answer"]))
+                else:
+                    story.append(
+                        Paragraph("Solutions available in teacher version.", self.styles["Normal"])
+                    )
+            else:
+                story.append(Paragraph(str(content), self.styles["Normal"]))
+            story.append(Spacer(1, 10))
+
         elif block_type == "practice_questions":
-            questions = content.get("questions", [])
-            await self._add_questions_to_pdf(story, questions, version)
+            # Handle numbered dictionary format
+            if isinstance(content, dict):
+                questions = []
+                for key in sorted(content.keys()):
+                    if key.isdigit() or str(key).isdigit():
+                        questions.append({"text": str(content[key]), "marks": 1})
+
+                await self._add_questions_to_pdf(story, questions, version)
+            else:
+                # Fallback to original format
+                questions = content.get("questions", [])
+                await self._add_questions_to_pdf(story, questions, version)
 
         elif block_type == "summary":
             key_points = content.get("key_points", [])
@@ -636,10 +834,25 @@ class DocumentExportService:
                 story.append(Paragraph(f"• {point}", self.styles["Normal"]))
             story.append(Spacer(1, 10))
 
+        elif isinstance(content, dict):
+            # Generic content handling for numbered dictionaries
+            # Try to handle as numbered dictionary
+            items = []
+            for key in sorted(content.keys()):
+                if key.isdigit() or str(key).isdigit():
+                    items.append(str(content[key]))
+
+            if items:
+                for i, item in enumerate(items, 1):
+                    story.append(Paragraph(f"{i}. {item}", self.styles["Normal"]))
+            else:
+                # Non-numbered dictionary, show as key-value pairs
+                for key, value in content.items():
+                    story.append(Paragraph(f"<b>{key}:</b> {value}", self.styles["Normal"]))
         else:
-            # Generic content handling
             story.append(Paragraph(str(content), self.styles["Normal"]))
-            story.append(Spacer(1, 10))
+
+        story.append(Spacer(1, 10))
 
     async def _add_questions_to_pdf(
         self, story: list, questions: list[dict[str, Any]], version: str

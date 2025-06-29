@@ -1,0 +1,240 @@
+{
+  "export_test_run": {
+    "timestamp": "2025-06-29T23:35:21.340930",
+    "total_operations": 16,
+    "successful_exports": 16,
+    "success_rate": 100.0,
+    "format_statistics": {
+      "pdf": {
+        "count": 4,
+        "total_size": 13156
+      },
+      "docx": {
+        "count": 4,
+        "total_size": 149260
+      },
+      "html": {
+        "count": 4,
+        "total_size": 10884
+      },
+      "markdown": {
+        "count": 4,
+        "total_size": 5668
+      }
+    },
+    "version_statistics": {
+      "student": {
+        "count": 8,
+        "formats": [
+          "html",
+          "docx",
+          "pdf",
+          "markdown"
+        ]
+      },
+      "teacher": {
+        "count": 8,
+        "formats": [
+          "html",
+          "docx",
+          "pdf",
+          "markdown"
+        ]
+      }
+    }
+  },
+  "exported_files": [
+    {
+      "document_type": "worksheet",
+      "detail_level": "MEDIUM",
+      "topic": "Linear Equations",
+      "format": "pdf",
+      "version": "student",
+      "file_size": 2461,
+      "local_path": "/var/folders/lh/srvdp05d2yg65flqrscm7vp00000gn/T/linear_equations_worksheet_student.pdf",
+      "r2_key": "documents/1048b44c-00b4-4774-a7d7-cbf7f901741a/student.pdf",
+      "timestamp": "2025-06-29T23:35:00.633000",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/1048b44c-00b4-4774-a7d7-cbf7f901741a/student.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=7f72093dfbcd112621fdbf6001e071be%2F20250629%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250629T153500Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=6d65b9c563f1d743536d113115ee985c54917de2b4e37de5f2fc9ec0048825a4"
+    },
+    {
+      "document_type": "worksheet",
+      "detail_level": "MEDIUM",
+      "topic": "Linear Equations",
+      "format": "pdf",
+      "version": "teacher",
+      "file_size": 2462,
+      "local_path": "/var/folders/lh/srvdp05d2yg65flqrscm7vp00000gn/T/linear_equations_worksheet_teacher.pdf",
+      "r2_key": "documents/1048b44c-00b4-4774-a7d7-cbf7f901741a/teacher.pdf",
+      "timestamp": "2025-06-29T23:35:00.908692",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/1048b44c-00b4-4774-a7d7-cbf7f901741a/teacher.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=7f72093dfbcd112621fdbf6001e071be%2F20250629%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250629T153500Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=06909cbfb9797d0e71b268ab48b7bdc6fee5a1fb42811112f868ba564fbaee23"
+    },
+    {
+      "document_type": "worksheet",
+      "detail_level": "MEDIUM",
+      "topic": "Linear Equations",
+      "format": "docx",
+      "version": "student",
+      "file_size": 36999,
+      "local_path": "/var/folders/lh/srvdp05d2yg65flqrscm7vp00000gn/T/linear_equations_worksheet_student.docx",
+      "r2_key": "documents/1048b44c-00b4-4774-a7d7-cbf7f901741a/student.docx",
+      "timestamp": "2025-06-29T23:35:01.270452",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/1048b44c-00b4-4774-a7d7-cbf7f901741a/student.docx?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=7f72093dfbcd112621fdbf6001e071be%2F20250629%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250629T153501Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=2dcce4037e5ef321c2e0f74fedb89b0b1215c545a9b9ac883109065c2396db40"
+    },
+    {
+      "document_type": "worksheet",
+      "detail_level": "MEDIUM",
+      "topic": "Linear Equations",
+      "format": "docx",
+      "version": "teacher",
+      "file_size": 36999,
+      "local_path": "/var/folders/lh/srvdp05d2yg65flqrscm7vp00000gn/T/linear_equations_worksheet_teacher.docx",
+      "r2_key": "documents/1048b44c-00b4-4774-a7d7-cbf7f901741a/teacher.docx",
+      "timestamp": "2025-06-29T23:35:01.612737",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/1048b44c-00b4-4774-a7d7-cbf7f901741a/teacher.docx?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=7f72093dfbcd112621fdbf6001e071be%2F20250629%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250629T153501Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=1ccedfbc3d6f956b83427b574dc40f8c6604bfea1443750dfa6f59e616103c99"
+    },
+    {
+      "document_type": "worksheet",
+      "detail_level": "MEDIUM",
+      "topic": "Linear Equations",
+      "format": "html",
+      "version": "student",
+      "file_size": 1953,
+      "local_path": null,
+      "r2_key": "documents/1048b44c-00b4-4774-a7d7-cbf7f901741a/student.html",
+      "timestamp": "2025-06-29T23:35:01.955207",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/1048b44c-00b4-4774-a7d7-cbf7f901741a/student.html?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=7f72093dfbcd112621fdbf6001e071be%2F20250629%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250629T153501Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=af01083d160fbcc23f99f6f41c3b67ece01bae1e91aafc3842efee7d58e1292e"
+    },
+    {
+      "document_type": "worksheet",
+      "detail_level": "MEDIUM",
+      "topic": "Linear Equations",
+      "format": "html",
+      "version": "teacher",
+      "file_size": 1953,
+      "local_path": null,
+      "r2_key": "documents/1048b44c-00b4-4774-a7d7-cbf7f901741a/teacher.html",
+      "timestamp": "2025-06-29T23:35:02.230180",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/1048b44c-00b4-4774-a7d7-cbf7f901741a/teacher.html?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=7f72093dfbcd112621fdbf6001e071be%2F20250629%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250629T153502Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=c50a0610f20e5804d3d7813ad37dd73dbce1bb495c9f21cc6cd2405f95ca3690"
+    },
+    {
+      "document_type": "worksheet",
+      "detail_level": "MEDIUM",
+      "topic": "Linear Equations",
+      "format": "markdown",
+      "version": "student",
+      "file_size": 673,
+      "local_path": null,
+      "r2_key": "documents/1048b44c-00b4-4774-a7d7-cbf7f901741a/student.md",
+      "timestamp": "2025-06-29T23:35:02.543255",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/1048b44c-00b4-4774-a7d7-cbf7f901741a/student.md?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=7f72093dfbcd112621fdbf6001e071be%2F20250629%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250629T153502Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=21347036483579b738e1fa4127c65e77a502fa22c851f8075c68bb7155e8a5ba"
+    },
+    {
+      "document_type": "worksheet",
+      "detail_level": "MEDIUM",
+      "topic": "Linear Equations",
+      "format": "markdown",
+      "version": "teacher",
+      "file_size": 673,
+      "local_path": null,
+      "r2_key": "documents/1048b44c-00b4-4774-a7d7-cbf7f901741a/teacher.md",
+      "timestamp": "2025-06-29T23:35:02.841333",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/1048b44c-00b4-4774-a7d7-cbf7f901741a/teacher.md?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=7f72093dfbcd112621fdbf6001e071be%2F20250629%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250629T153502Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=cf2e0cce5f0da4be0a503004c5efa0cc9b2bbe31f29d4be685680daf725813ca"
+    },
+    {
+      "document_type": "notes",
+      "detail_level": "COMPREHENSIVE",
+      "topic": "Quadratic Functions",
+      "format": "pdf",
+      "version": "student",
+      "file_size": 4114,
+      "local_path": "/var/folders/lh/srvdp05d2yg65flqrscm7vp00000gn/T/comprehensive_study_notes_on_quadratic_functions_student.pdf",
+      "r2_key": "documents/8709f172-fea2-454d-b240-e5b90c1369e9/student.pdf",
+      "timestamp": "2025-06-29T23:35:19.068027",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/8709f172-fea2-454d-b240-e5b90c1369e9/student.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=7f72093dfbcd112621fdbf6001e071be%2F20250629%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250629T153519Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=9de763acb31b4dfb3676da86b0cef0f2ed7fbc7aeeb747c82a8db0acda8bc249"
+    },
+    {
+      "document_type": "notes",
+      "detail_level": "COMPREHENSIVE",
+      "topic": "Quadratic Functions",
+      "format": "pdf",
+      "version": "teacher",
+      "file_size": 4119,
+      "local_path": "/var/folders/lh/srvdp05d2yg65flqrscm7vp00000gn/T/comprehensive_study_notes_on_quadratic_functions_teacher.pdf",
+      "r2_key": "documents/8709f172-fea2-454d-b240-e5b90c1369e9/teacher.pdf",
+      "timestamp": "2025-06-29T23:35:19.362203",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/8709f172-fea2-454d-b240-e5b90c1369e9/teacher.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=7f72093dfbcd112621fdbf6001e071be%2F20250629%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250629T153519Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=6c05d94c4b105621e545e61f768cacf76cf38f03591f664d8b9779d1e2abec54"
+    },
+    {
+      "document_type": "notes",
+      "detail_level": "COMPREHENSIVE",
+      "topic": "Quadratic Functions",
+      "format": "docx",
+      "version": "student",
+      "file_size": 37630,
+      "local_path": "/var/folders/lh/srvdp05d2yg65flqrscm7vp00000gn/T/comprehensive_study_notes_on_quadratic_functions_student.docx",
+      "r2_key": "documents/8709f172-fea2-454d-b240-e5b90c1369e9/student.docx",
+      "timestamp": "2025-06-29T23:35:19.799077",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/8709f172-fea2-454d-b240-e5b90c1369e9/student.docx?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=7f72093dfbcd112621fdbf6001e071be%2F20250629%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250629T153519Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=a9159ac0a1eef4f76f0df39e70db26892d92ccd8633f4a5fd783a67e31768e19"
+    },
+    {
+      "document_type": "notes",
+      "detail_level": "COMPREHENSIVE",
+      "topic": "Quadratic Functions",
+      "format": "docx",
+      "version": "teacher",
+      "file_size": 37632,
+      "local_path": "/var/folders/lh/srvdp05d2yg65flqrscm7vp00000gn/T/comprehensive_study_notes_on_quadratic_functions_teacher.docx",
+      "r2_key": "documents/8709f172-fea2-454d-b240-e5b90c1369e9/teacher.docx",
+      "timestamp": "2025-06-29T23:35:20.129480",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/8709f172-fea2-454d-b240-e5b90c1369e9/teacher.docx?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=7f72093dfbcd112621fdbf6001e071be%2F20250629%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250629T153520Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=e1a51d641b987cf2cfeb1b7cd9da8d71142600412bc6d7078354c157a2647650"
+    },
+    {
+      "document_type": "notes",
+      "detail_level": "COMPREHENSIVE",
+      "topic": "Quadratic Functions",
+      "format": "html",
+      "version": "student",
+      "file_size": 3489,
+      "local_path": null,
+      "r2_key": "documents/8709f172-fea2-454d-b240-e5b90c1369e9/student.html",
+      "timestamp": "2025-06-29T23:35:20.398482",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/8709f172-fea2-454d-b240-e5b90c1369e9/student.html?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=7f72093dfbcd112621fdbf6001e071be%2F20250629%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250629T153520Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=12ac753481ff8df9e062c5fdbbce3dc4e70e4d2bd6839e5ce5fff66607ead353"
+    },
+    {
+      "document_type": "notes",
+      "detail_level": "COMPREHENSIVE",
+      "topic": "Quadratic Functions",
+      "format": "html",
+      "version": "teacher",
+      "file_size": 3489,
+      "local_path": null,
+      "r2_key": "documents/8709f172-fea2-454d-b240-e5b90c1369e9/teacher.html",
+      "timestamp": "2025-06-29T23:35:20.742896",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/8709f172-fea2-454d-b240-e5b90c1369e9/teacher.html?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=7f72093dfbcd112621fdbf6001e071be%2F20250629%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250629T153520Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=b6390daf3d6ae458e6c4c7e2e74fff369b35684b8b614545bf5176e40b5a8ff9"
+    },
+    {
+      "document_type": "notes",
+      "detail_level": "COMPREHENSIVE",
+      "topic": "Quadratic Functions",
+      "format": "markdown",
+      "version": "student",
+      "file_size": 2161,
+      "local_path": null,
+      "r2_key": "documents/8709f172-fea2-454d-b240-e5b90c1369e9/student.md",
+      "timestamp": "2025-06-29T23:35:21.048331",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/8709f172-fea2-454d-b240-e5b90c1369e9/student.md?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=7f72093dfbcd112621fdbf6001e071be%2F20250629%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250629T153521Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=d86b4550a453e6d42c6cbb1065a8fcd9f0cd9631941cca8a43c3ac4c0374f6c0"
+    },
+    {
+      "document_type": "notes",
+      "detail_level": "COMPREHENSIVE",
+      "topic": "Quadratic Functions",
+      "format": "markdown",
+      "version": "teacher",
+      "file_size": 2161,
+      "local_path": null,
+      "r2_key": "documents/8709f172-fea2-454d-b240-e5b90c1369e9/teacher.md",
+      "timestamp": "2025-06-29T23:35:21.340760",
+      "r2_url": "https://5b25778cf6d9821373d913f5236e1606.r2.cloudflarestorage.com/derivativ-documents/documents/8709f172-fea2-454d-b240-e5b90c1369e9/teacher.md?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=7f72093dfbcd112621fdbf6001e071be%2F20250629%2Fauto%2Fs3%2Faws4_request&X-Amz-Date=20250629T153521Z&X-Amz-Expires=86400&X-Amz-SignedHeaders=host&X-Amz-Signature=2a73e6a66b042e1bfc5203afbe6f4b310f2c284cf628664c19b4c652c31278a9"
+    }
+  ]
+}

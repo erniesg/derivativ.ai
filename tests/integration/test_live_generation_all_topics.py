@@ -182,34 +182,52 @@ async def main():  # noqa: PLR0915
         print(f"❌ Failed to save session: {e}")
         return
 
-    # Generate questions
-    print(f"\n🎯 Generating {len(MAIN_TOPICS)} questions (one per topic)...")
-    print("This may take a few minutes...\n")
+    # Generate questions - 5 per topic
+    questions_per_topic = 5
+    total_questions = len(MAIN_TOPICS) * questions_per_topic
+    print(f"\n🎯 Generating {total_questions} questions ({questions_per_topic} per topic)...")
+    print("This may take 10-15 minutes...\n")
 
     start_time = datetime.utcnow()
     generated_questions = []
     results = []
 
-    for index, topic in enumerate(MAIN_TOPICS, 1):
-        topic_name, question, success = await generate_question_for_topic(
-            agent, topic, index, len(MAIN_TOPICS)
-        )
+    for topic_index, topic in enumerate(MAIN_TOPICS, 1):
+        print(f"\n{'='*50}")
+        print(f"TOPIC {topic_index}/{len(MAIN_TOPICS)}: {topic.upper()}")
+        print(f"{'='*50}")
 
-        results.append((topic_name, success))
+        topic_results = []
 
-        # Save successful questions
-        if success and question:
-            try:
-                # Convert the question dict back to a Question object
-                question_obj = Question(**question)
-                question_id = question_repo.save_question(question_obj)
-                generated_questions.append((question_id, topic_name))
-                print(f"  💾 Saved to dev table: {question_id}")
-            except Exception as e:
-                print(f"  ⚠️  Failed to save: {e}")
+        for q_num in range(1, questions_per_topic + 1):
+            topic_name, question, success = await generate_question_for_topic(
+                agent, topic, f"{topic_index}.{q_num}", f"{len(MAIN_TOPICS)} topics"
+            )
 
-        # Small delay to avoid rate limiting
-        await asyncio.sleep(1)
+            topic_results.append(success)
+            results.append((f"{topic_name}_Q{q_num}", success))
+
+            # Save successful questions
+            if success and question:
+                try:
+                    # Convert the question dict back to a Question object
+                    question_obj = Question(**question)
+                    question_id = question_repo.save_question(question_obj)
+                    generated_questions.append((question_id, topic_name, q_num))
+                    print(f"  💾 Saved to dev table: {question_id}")
+                except Exception as e:
+                    print(f"  ⚠️  Failed to save: {e}")
+
+            # Small delay to avoid rate limiting
+            await asyncio.sleep(1)
+
+        # Topic summary
+        topic_success = sum(topic_results)
+        print(f"\n📊 {topic.upper()} SUMMARY: {topic_success}/{questions_per_topic} successful")
+
+        # Longer delay between topics
+        if topic_index < len(MAIN_TOPICS):
+            await asyncio.sleep(2)
 
     # Calculate stats
     end_time = datetime.utcnow()
@@ -227,12 +245,13 @@ async def main():  # noqa: PLR0915
     print("\n" + "=" * 80)
     print("GENERATION SUMMARY")
     print("=" * 80)
-    print(f"Topics attempted: {len(MAIN_TOPICS)}")
+    print(f"Total questions attempted: {total_questions}")
     print(f"Successful: {successful}")
-    print(f"Failed: {len(MAIN_TOPICS) - successful}")
+    print(f"Failed: {total_questions - successful}")
+    print(f"Success rate: {(successful/total_questions)*100:.1f}%")
     print(f"Saved to dev tables: {len(generated_questions)}")
-    print(f"Total time: {duration:.1f} seconds")
-    print(f"Average per question: {duration/len(MAIN_TOPICS):.1f} seconds")
+    print(f"Total time: {duration:.1f} seconds ({duration/60:.1f} minutes)")
+    print(f"Average per question: {duration/total_questions:.1f} seconds")
 
     # Show sample questions
     if generated_questions:
@@ -240,9 +259,9 @@ async def main():  # noqa: PLR0915
         print("SAMPLE GENERATED QUESTIONS:")
         print("-" * 80)
 
-        sample_count = min(3, len(generated_questions))
-        for i, (question_id, topic) in enumerate(generated_questions[:sample_count], 1):
-            print(f"{i}. Topic: {topic}")
+        sample_count = min(5, len(generated_questions))
+        for i, (question_id, topic, q_num) in enumerate(generated_questions[:sample_count], 1):
+            print(f"{i}. Topic: {topic} (Question {q_num})")
             print(f"   ID: {question_id}")
 
     # Cleanup prompt
@@ -258,15 +277,15 @@ async def main():  # noqa: PLR0915
             print("\n🧹 Cleaning up...")
             removed = 0
 
-            for question_id, topic in generated_questions:
+            for question_id, topic, q_num in generated_questions:
                 try:
                     supabase_client.table("dev_generated_questions").delete().eq(
                         "id", question_id
                     ).execute()
-                    print(f"  ✅ Removed: {topic}")
+                    print(f"  ✅ Removed: {topic} Q{q_num}")
                     removed += 1
                 except Exception as e:
-                    print(f"  ❌ Failed to remove {topic}: {e}")
+                    print(f"  ❌ Failed to remove {topic} Q{q_num}: {e}")
 
             # Remove session
             try:
