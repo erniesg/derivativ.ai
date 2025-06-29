@@ -152,11 +152,12 @@ class DocumentExportService:
             if store_in_r2 and r2_service:
                 logger.info(f"📤 Storing {format_type} file in R2...")
 
-                # Generate R2 file key
+                # Generate R2 file key with proper extension
+                file_extension = self._get_file_extension(format_type)
                 r2_file_key = r2_service.generate_file_key(
                     document_id=document_id,
                     document_type="document",
-                    file_format=format_type,
+                    file_format=file_extension,
                     version=version,
                 )
 
@@ -209,6 +210,17 @@ class DocumentExportService:
             "txt": "text/plain",
         }
         return content_types.get(format_type.lower(), "application/octet-stream")
+
+    def _get_file_extension(self, format_type: str) -> str:
+        """Get proper file extension for format."""
+        extension_map = {
+            "pdf": "pdf",
+            "docx": "docx",
+            "html": "html",
+            "markdown": "md",  # Use .md instead of .markdown
+            "txt": "txt",
+        }
+        return extension_map.get(format_type.lower(), format_type.lower())
 
     async def _export_single_pdf(
         self, document: dict[str, Any], title: str, version: str

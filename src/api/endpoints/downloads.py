@@ -18,6 +18,18 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+def get_file_extension(format_type: str) -> str:
+    """Get proper file extension for format."""
+    extension_map = {
+        "pdf": "pdf",
+        "docx": "docx",
+        "html": "html",
+        "markdown": "md",  # Use .md instead of .markdown
+        "txt": "txt",
+    }
+    return extension_map.get(format_type.lower(), format_type.lower())
+
+
 # Request/Response Models
 class BulkDownloadRequest(BaseModel):
     document_ids: list[str]
@@ -66,11 +78,12 @@ async def get_document_download_url(
     try:
         logger.info(f"🔗 Generating download URL for {document_id} ({format}, {version})")
 
-        # Generate file key using R2 service pattern
+        # Generate file key using R2 service pattern with proper extension
+        file_extension = get_file_extension(format)
         file_key = r2_service.generate_file_key(
             document_id=document_id,
             document_type="document",  # Generic type for downloads
-            file_format=format,
+            file_format=file_extension,
             version=version,
         )
 
@@ -94,8 +107,8 @@ async def get_document_download_url(
         # Calculate expiration time
         expires_at = (datetime.now() + timedelta(hours=expiration_hours)).isoformat()
 
-        # Generate filename
-        filename = f"{document_id}_{version}.{format}"
+        # Generate filename with proper extension
+        filename = f"{document_id}_{version}.{file_extension}"
 
         logger.info(f"✅ Generated download URL (expires in {expiration_hours}h)")
 
@@ -135,11 +148,12 @@ async def prepare_bulk_download(
 
         for document_id in request.document_ids:
             try:
-                # Generate file key
+                # Generate file key with proper extension
+                file_extension = get_file_extension(request.format)
                 file_key = r2_service.generate_file_key(
                     document_id=document_id,
                     document_type="document",
-                    file_format=request.format,
+                    file_format=file_extension,
                     version=request.version,
                 )
 
@@ -158,7 +172,7 @@ async def prepare_bulk_download(
                     {
                         "document_id": document_id,
                         "download_url": download_url,
-                        "filename": f"{document_id}_{request.version}.{request.format}",
+                        "filename": f"{document_id}_{request.version}.{file_extension}",
                         "file_key": file_key,
                     }
                 )
