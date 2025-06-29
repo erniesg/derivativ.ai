@@ -572,16 +572,26 @@ class DocumentGenerationServiceV2:
                 # 1. Try to get questions from database first
                 if self.question_repository:
                     try:
+                        # Create topic keywords from request
+                        topic_keywords = [request.topic.value.lower()]
+                        if request.subtopics:
+                            topic_keywords.extend([st.lower() for st in request.subtopics])
+
                         db_questions = self.question_repository.search_questions_by_content(
                             subject_content_refs=request.get_syllabus_refs(),
                             tier=request.tier,
                             min_quality_score=0.7,  # Only high-quality questions
                             limit=num_needed,
+                            topic_keywords=topic_keywords,
                         )
 
                         if db_questions:
                             real_questions.extend(db_questions[:num_needed])
-                            logger.info(f"Retrieved {len(real_questions)} questions from database")
+                            logger.info(
+                                f"Retrieved {len(real_questions)} questions from database using "
+                                f"syllabus refs {request.get_syllabus_refs()[:3]}... "
+                                f"and topic keywords {topic_keywords}"
+                            )
 
                     except Exception as e:
                         logger.error(f"Failed to retrieve questions from DB: {e}")
@@ -616,18 +626,7 @@ class DocumentGenerationServiceV2:
                 # 3. Replace LLM-generated questions with real ones
                 if real_questions:
                     block.content["questions"] = [
-                        {
-                            "text": q.raw_text_content,
-                            "marks": q.total_marks or 3,
-                            "difficulty": getattr(q, "difficulty_level", "medium"),
-                            "answer": (
-                                q.solution_and_marking_scheme.final_answers_summary[0].answer_text
-                                if q.solution_and_marking_scheme
-                                and q.solution_and_marking_scheme.final_answers_summary
-                                else None
-                            ),
-                        }
-                        for q in real_questions
+                        self._extract_question_data(q) for q in real_questions
                     ]
 
                     logger.info(
@@ -637,6 +636,92 @@ class DocumentGenerationServiceV2:
                     logger.info(
                         "No real questions available, keeping LLM-generated placeholder questions"
                     )
+
+    def _extract_question_data(self, question) -> dict[str, Any]:
+        """Extract structured data from a Question object for document blocks."""
+        try:
+            # Basic question data
+            question_data = {
+                "text": question.raw_text_content,
+                "marks": question.marks or getattr(question, "total_marks", 3),
+                "difficulty": self._get_difficulty_from_question(question),
+            }
+
+            # Extract answer from solution and marking scheme
+            if (
+                hasattr(question, "solution_and_marking_scheme")
+                and question.solution_and_marking_scheme
+                and question.solution_and_marking_scheme.final_answers_summary
+            ):
+                answer = question.solution_and_marking_scheme.final_answers_summary[0].answer_text
+                question_data["answer"] = answer
+
+            # Add hint from first marking criterion if available
+            if (
+                hasattr(question, "solution_and_marking_scheme")
+                and question.solution_and_marking_scheme
+                and question.solution_and_marking_scheme.mark_allocation_criteria
+            ):
+                first_criterion = question.solution_and_marking_scheme.mark_allocation_criteria[0]
+                if hasattr(first_criterion, "criterion_text"):
+                    question_data["hint"] = f"Focus on: {first_criterion.criterion_text}"
+
+            # Add topic information from taxonomy
+            if hasattr(question, "taxonomy") and question.taxonomy:
+                if hasattr(question.taxonomy, "skill_tags") and question.taxonomy.skill_tags:
+                    question_data["topics"] = question.taxonomy.skill_tags
+                if (
+                    hasattr(question.taxonomy, "subject_content_references")
+                    and question.taxonomy.subject_content_references
+                ):
+                    question_data["syllabus_refs"] = question.taxonomy.subject_content_references
+
+            return question_data
+
+        except Exception as e:
+            logger.warning(f"Error extracting question data: {e}")
+            # Fallback to basic data
+            return {
+                "text": getattr(question, "raw_text_content", "Question text not available"),
+                "marks": getattr(question, "marks", 3),
+                "difficulty": "medium",
+            }
+
+    def _get_difficulty_from_question(self, question) -> str:  # noqa: PLR0911
+        """Extract difficulty from question object."""
+        # Try direct difficulty level first
+        if hasattr(question, "difficulty_level") and question.difficulty_level:
+            return question.difficulty_level
+
+        # Try numeric difficulty estimate
+        if (
+            hasattr(question, "taxonomy")
+            and question.taxonomy
+            and hasattr(question.taxonomy, "difficulty_estimate_0_to_1")
+            and question.taxonomy.difficulty_estimate_0_to_1
+        ):
+            difficulty_score = question.taxonomy.difficulty_estimate_0_to_1
+            if difficulty_score < 0.3:
+                return "easy"
+            if difficulty_score < 0.7:
+                return "medium"
+            return "hard"
+
+        # Try cognitive level mapping
+        if (
+            hasattr(question, "taxonomy")
+            and question.taxonomy
+            and hasattr(question.taxonomy, "cognitive_level")
+            and question.taxonomy.cognitive_level
+        ):
+            cognitive_level = question.taxonomy.cognitive_level.lower()
+            if cognitive_level in ["recall", "procedural"]:
+                return "easy"
+            if cognitive_level in ["application", "conceptual"]:
+                return "medium"
+            return "hard"
+
+        return "medium"  # Default
 
     def _calculate_word_count(self, rendered_blocks: dict[str, str]) -> int:
         """Calculate total word count from rendered content."""

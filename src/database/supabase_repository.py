@@ -113,25 +113,25 @@ class QuestionRepository:
         tier: Optional[Tier] = None,
         min_quality_score: Optional[float] = None,
         limit: int = 20,
+        topic_keywords: list[str] = None,
     ) -> list[Question]:
         """
-        Search questions by subject content references.
+        Search questions by subject content references and topic keywords.
 
         Args:
-            subject_content_refs: List of syllabus references to match
+            subject_content_refs: List of syllabus references to match (e.g., ['C2.1', 'C2.2'])
             tier: Filter by tier
             min_quality_score: Minimum quality score
             limit: Maximum number of results
+            topic_keywords: Additional topic keywords to match against skill_tags/topic_path
 
         Returns:
-            List of Question objects
+            List of Question objects matching the criteria
         """
         try:
-            # For now, we'll use the text content to match
-            # In a full implementation, we'd have proper indexing by subject_content_refs
             questions = []
 
-            # Try to find questions that might match the content areas
+            # Build query with basic filters
             query = self.supabase.table(self.table_name).select("*")
 
             if tier:
@@ -139,23 +139,96 @@ class QuestionRepository:
             if min_quality_score:
                 query = query.gte("quality_score", min_quality_score)
 
-            query = query.order("created_at", desc=True).limit(limit * 2)  # Get more to filter
+            # Get more records to filter by content
+            query = query.order("created_at", desc=True).limit(limit * 3)
 
             response = query.execute()
 
             if response.data:
-                for row in response.data[:limit]:
+                for row in response.data:
                     try:
-                        question = Question.model_validate(row["content_json"])
-                        questions.append(question)
-                    except Exception as e:
-                        logger.warning(f"Failed to parse question from DB: {e}")
+                        # First check if this question matches our content criteria
+                        question_data = row["content_json"]
+                        if self._matches_content_criteria(
+                            question_data, subject_content_refs, topic_keywords
+                        ):
+                            # Only try to parse if it matches our criteria
+                            try:
+                                question = Question.model_validate(question_data)
+                                questions.append(question)
 
+                                # Stop when we have enough matches
+                                if len(questions) >= limit:
+                                    break
+                            except Exception as parse_error:
+                                logger.warning(
+                                    f"Failed to parse matching question from DB: {parse_error}"
+                                )
+                                # For now, skip questions that don't parse properly
+                                continue
+
+                    except Exception as e:
+                        logger.warning(f"Error processing question from DB: {e}")
+
+            logger.info(
+                f"Found {len(questions)} questions matching content criteria from {len(response.data or [])} total questions"
+            )
             return questions
 
         except Exception as e:
             logger.error(f"Failed to search questions by content: {e}")
             return []  # Return empty list on error
+
+    def _matches_content_criteria(
+        self,
+        question_data: dict,
+        subject_content_refs: list[str],
+        topic_keywords: list[str] = None,
+    ) -> bool:
+        """
+        Check if a question matches the content criteria using its rich JSON structure.
+
+        Args:
+            question_data: The content_json from database
+            subject_content_refs: Required syllabus references
+            topic_keywords: Additional topic keywords to match
+
+        Returns:
+            True if question matches criteria
+        """
+        try:
+            # Extract taxonomy data
+            taxonomy = question_data.get("taxonomy", {})
+
+            # 1. Check subject_content_references match
+            question_refs = taxonomy.get("subject_content_references", [])
+            if subject_content_refs:
+                # Check if any of the required refs are in the question's refs
+                if any(ref in question_refs for ref in subject_content_refs):
+                    logger.debug(
+                        f"Question matches syllabus refs: {question_refs} ∩ {subject_content_refs}"
+                    )
+                else:
+                    return False
+
+            # 2. Check topic keywords against skill_tags and topic_path
+            if topic_keywords:
+                skill_tags = taxonomy.get("skill_tags", [])
+                topic_path = taxonomy.get("topic_path", [])
+
+                # Convert to lowercase for matching
+                all_tags = [tag.lower() for tag in skill_tags + topic_path]
+                keywords_lower = [kw.lower() for kw in topic_keywords]
+
+                # Check if any keyword matches
+                if not any(kw in all_tags for kw in keywords_lower):
+                    return False
+
+            return True
+
+        except Exception as e:
+            logger.warning(f"Error checking content criteria: {e}")
+            return False
 
     def list_questions(
         self,
