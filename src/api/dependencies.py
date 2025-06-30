@@ -647,7 +647,7 @@ def get_integrated_document_service(
         # Create markdown service
         markdown_service = MarkdownDocumentService(
             llm_service=llm_factory.get_service("openai"),  # Use OpenAI as default
-            prompt_manager=prompt_manager
+            prompt_manager=prompt_manager,
         )
 
         # Create pandoc service
@@ -655,15 +655,12 @@ def get_integrated_document_service(
 
         # Create integrated service
         return IntegratedDocumentService(
-            markdown_service=markdown_service,
-            pandoc_service=pandoc_service,
-            r2_service=r2_service
+            markdown_service=markdown_service, pandoc_service=pandoc_service, r2_service=r2_service
         )
 
     except Exception as e:
         raise HTTPException(
-            status_code=503,
-            detail=f"Failed to initialize integrated document service: {e}"
+            status_code=503, detail=f"Failed to initialize integrated document service: {e}"
         )
 
 

@@ -27,7 +27,7 @@ async def test_markdown_pipeline():  # noqa: PLR0915
             tier=Tier.CORE,
             detail_level=DetailLevel.MEDIUM,
             target_duration_minutes=30,
-            grade_level="7-9"
+            grade_level="7-9",
         )
 
         print("📝 Test Request:")
@@ -37,8 +37,18 @@ async def test_markdown_pipeline():  # noqa: PLR0915
         print(f"   Duration: {request.target_duration_minutes} minutes")
         print()
 
-        # Get service instance
-        service = get_integrated_document_service()
+        # Get service instance with proper dependency injection
+        from src.api.dependencies import get_llm_factory, get_prompt_manager, get_r2_storage_service
+        
+        llm_factory = get_llm_factory()
+        prompt_manager = get_prompt_manager()
+        r2_service = get_r2_storage_service()
+        
+        service = get_integrated_document_service(
+            llm_factory=llm_factory,
+            prompt_manager=prompt_manager,
+            r2_service=r2_service
+        )
 
         print("🔧 Service initialized successfully")
         print()
@@ -47,7 +57,7 @@ async def test_markdown_pipeline():  # noqa: PLR0915
         print("1️⃣ Testing markdown generation...")
         result = await service.generate_and_store_all_formats(
             request=request,
-            custom_instructions="Focus on linear equations and simple algebraic manipulation"
+            custom_instructions="Focus on linear equations and simple algebraic manipulation",
         )
 
         if result["success"]:
@@ -61,10 +71,12 @@ async def test_markdown_pipeline():  # noqa: PLR0915
             for format_name, format_data in result["formats"].items():
                 if format_data["success"]:
                     print(f"   ✅ {format_name.upper()}: {format_data.get('size', 0)} bytes")
-                    if format_data.get('r2_url'):
+                    if format_data.get("r2_url"):
                         print(f"      📎 Download: {format_data['r2_url'][:60]}...")
                 else:
-                    print(f"   ❌ {format_name.upper()}: {format_data.get('error', 'Unknown error')}")
+                    print(
+                        f"   ❌ {format_name.upper()}: {format_data.get('error', 'Unknown error')}"
+                    )
             print()
 
             # Show metadata
@@ -86,7 +98,11 @@ async def test_markdown_pipeline():  # noqa: PLR0915
             # Show sample markdown content
             print("5️⃣ Sample markdown content:")
             print("-" * 40)
-            print(result["markdown_content"][:500] + "..." if len(result["markdown_content"]) > 500 else result["markdown_content"])
+            print(
+                result["markdown_content"][:500] + "..."
+                if len(result["markdown_content"]) > 500
+                else result["markdown_content"]
+            )
             print("-" * 40)
             print()
 
@@ -105,6 +121,7 @@ async def test_markdown_pipeline():  # noqa: PLR0915
     except Exception as e:
         print(f"❌ Pipeline test error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -124,7 +141,7 @@ async def test_api_endpoint():
             "tier": "Core",
             "detail_level": 5,
             "target_duration_minutes": 30,
-            "grade_level": "7-9"
+            "grade_level": "7-9",
         }
 
         print("📡 Sending request to /api/generation/documents/generate-markdown")
@@ -133,7 +150,7 @@ async def test_api_endpoint():
             response = await client.post(
                 "http://localhost:8000/api/generation/documents/generate-markdown",
                 json=test_payload,
-                timeout=120.0
+                timeout=120.0,
             )
 
             if response.status_code == 200:
@@ -142,8 +159,8 @@ async def test_api_endpoint():
                 print(f"   Document ID: {result.get('document_id')}")
                 print(f"   Formats available: {len(result.get('downloads', {}))}")
 
-                for format_name, download_info in result.get('downloads', {}).items():
-                    if download_info['available']:
+                for format_name, download_info in result.get("downloads", {}).items():
+                    if download_info["available"]:
                         print(f"   ✅ {format_name}: Ready for download")
                     else:
                         print(f"   ❌ {format_name}: Not available")

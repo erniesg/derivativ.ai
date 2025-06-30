@@ -29,7 +29,7 @@ class IntegratedDocumentService:
         self,
         markdown_service: MarkdownDocumentService,
         pandoc_service: PandocService,
-        r2_service: R2StorageService
+        r2_service: R2StorageService,
     ):
         self.markdown_service = markdown_service
         self.pandoc_service = pandoc_service
@@ -37,9 +37,7 @@ class IntegratedDocumentService:
         self.settings = get_settings()
 
     async def generate_and_store_all_formats(
-        self,
-        request: MarkdownGenerationRequest,
-        custom_instructions: Optional[str] = None
+        self, request: MarkdownGenerationRequest, custom_instructions: Optional[str] = None
     ) -> dict[str, Any]:
         """Generate document and immediately create + store all formats in R2.
 
@@ -57,7 +55,9 @@ class IntegratedDocumentService:
                 "generation_info": dict
             }
         """
-        logger.info(f"🚀 Starting integrated document generation: {request.document_type} - {request.topic}")
+        logger.info(
+            f"🚀 Starting integrated document generation: {request.document_type} - {request.topic}"
+        )
 
         try:
             # Step 1: Generate clean markdown
@@ -69,7 +69,7 @@ class IntegratedDocumentService:
                 return {
                     "success": False,
                     "error": f"Markdown generation failed: {markdown_result.get('error')}",
-                    "formats": {}
+                    "formats": {},
                 }
 
             markdown_content = markdown_result["markdown_content"]
@@ -83,16 +83,12 @@ class IntegratedDocumentService:
 
             # Step 2: Convert to all formats using pandoc
             conversion_results = await self._convert_to_all_formats(
-                markdown_content,
-                metadata["title"],
-                metadata
+                markdown_content, metadata["title"], metadata
             )
 
             # Step 3: Store all formats in R2
             storage_results = await self._store_all_formats_in_r2(
-                conversion_results,
-                document_id,
-                metadata
+                conversion_results, document_id, metadata
             )
 
             # Step 4: Generate presigned URLs for downloads
@@ -104,22 +100,15 @@ class IntegratedDocumentService:
                 "formats": final_results,
                 "metadata": metadata,
                 "generation_info": generation_info,
-                "markdown_content": markdown_content  # For frontend display
+                "markdown_content": markdown_content,  # For frontend display
             }
 
         except Exception as e:
             logger.error(f"❌ Integrated document generation failed: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "formats": {}
-            }
+            return {"success": False, "error": str(e), "formats": {}}
 
     async def _convert_to_all_formats(
-        self,
-        markdown_content: str,
-        title: str,
-        metadata: dict[str, Any]
+        self, markdown_content: str, title: str, metadata: dict[str, Any]
     ) -> dict[str, Any]:
         """Convert markdown to all supported formats."""
 
@@ -127,7 +116,7 @@ class IntegratedDocumentService:
             "markdown": {"success": True, "content": markdown_content},
             "html": {"success": False},
             "pdf": {"success": False},
-            "docx": {"success": False}
+            "docx": {"success": False},
         }
 
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -136,8 +125,7 @@ class IntegratedDocumentService:
             try:
                 # Convert to HTML
                 html_path = await self.pandoc_service.convert_markdown_to_html(
-                    markdown_content,
-                    temp_path / "document.html"
+                    markdown_content, temp_path / "document.html"
                 )
 
                 with open(html_path, encoding="utf-8") as f:
@@ -146,7 +134,7 @@ class IntegratedDocumentService:
                 results["html"] = {
                     "success": True,
                     "content": html_content,
-                    "file_path": str(html_path)
+                    "file_path": str(html_path),
                 }
 
                 logger.info("✅ Converted to HTML")
@@ -163,8 +151,8 @@ class IntegratedDocumentService:
                     template_options={
                         "fontsize": "11pt",
                         "geometry": "margin=2cm",
-                        "linestretch": "1.25"
-                    }
+                        "linestretch": "1.25",
+                    },
                 )
 
                 with open(pdf_path, "rb") as f:
@@ -173,7 +161,7 @@ class IntegratedDocumentService:
                 results["pdf"] = {
                     "success": True,
                     "content": pdf_content,
-                    "file_path": str(pdf_path)
+                    "file_path": str(pdf_path),
                 }
 
                 logger.info("✅ Converted to PDF")
@@ -185,8 +173,7 @@ class IntegratedDocumentService:
             try:
                 # Convert to DOCX
                 docx_path = await self.pandoc_service.convert_markdown_to_docx(
-                    markdown_content,
-                    temp_path / "document.docx"
+                    markdown_content, temp_path / "document.docx"
                 )
 
                 with open(docx_path, "rb") as f:
@@ -195,7 +182,7 @@ class IntegratedDocumentService:
                 results["docx"] = {
                     "success": True,
                     "content": docx_content,
-                    "file_path": str(docx_path)
+                    "file_path": str(docx_path),
                 }
 
                 logger.info("✅ Converted to DOCX")
@@ -207,10 +194,7 @@ class IntegratedDocumentService:
         return results
 
     async def _store_all_formats_in_r2(
-        self,
-        conversion_results: dict[str, Any],
-        document_id: str,
-        metadata: dict[str, Any]
+        self, conversion_results: dict[str, Any], document_id: str, metadata: dict[str, Any]
     ) -> dict[str, Any]:
         """Store all successful conversions in R2."""
 
@@ -228,7 +212,7 @@ class IntegratedDocumentService:
                     document_id=document_id,
                     document_type="document",
                     file_format=file_extension,
-                    version="student"  # Default to student version
+                    version="student",  # Default to student version
                 )
 
                 # Prepare content for upload
@@ -245,8 +229,8 @@ class IntegratedDocumentService:
                         "title": metadata.get("title", ""),
                         "topic": metadata.get("topic", ""),
                         "generated_at": datetime.now().isoformat(),
-                        "content_type": self._get_content_type(format_name)
-                    }
+                        "content_type": self._get_content_type(format_name),
+                    },
                 )
 
                 if upload_result["success"]:
@@ -254,22 +238,19 @@ class IntegratedDocumentService:
                         "success": True,
                         "file_key": file_key,
                         "upload_id": upload_result["upload_id"],
-                        "size": len(file_content)
+                        "size": len(file_content),
                     }
 
                     logger.info(f"✅ Stored {format_name} in R2: {file_key}")
                 else:
                     storage_results[format_name] = {
                         "success": False,
-                        "error": f"R2 upload failed: {upload_result}"
+                        "error": f"R2 upload failed: {upload_result}",
                     }
 
             except Exception as e:
                 logger.error(f"❌ Failed to store {format_name} in R2: {e}")
-                storage_results[format_name] = {
-                    "success": False,
-                    "error": str(e)
-                }
+                storage_results[format_name] = {"success": False, "error": str(e)}
 
         return storage_results
 
@@ -287,40 +268,34 @@ class IntegratedDocumentService:
                 # Generate presigned URL (24 hour expiration)
                 presigned_url = await self.r2_service.generate_presigned_url(
                     storage_result["file_key"],
-                    expiration=86400  # 24 hours
+                    expiration=86400,  # 24 hours
                 )
 
                 final_results[format_name] = {
                     "success": True,
                     "r2_url": presigned_url,
                     "file_key": storage_result["file_key"],
-                    "size": storage_result["size"]
+                    "size": storage_result["size"],
                 }
 
                 logger.info(f"✅ Generated download URL for {format_name}")
 
             except Exception as e:
                 logger.error(f"❌ Failed to generate URL for {format_name}: {e}")
-                final_results[format_name] = {
-                    "success": False,
-                    "error": str(e)
-                }
+                final_results[format_name] = {"success": False, "error": str(e)}
 
         return final_results
 
     def _generate_document_id(self, request: MarkdownGenerationRequest) -> str:
         """Generate consistent document ID."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        return f"{request.document_type.value}_{request.topic.value}_{timestamp}".replace(" ", "_").lower()
+        return f"{request.document_type.value}_{request.topic.value}_{timestamp}".replace(
+            " ", "_"
+        ).lower()
 
     def _get_file_extension(self, format_name: str) -> str:
         """Get file extension for format."""
-        extensions = {
-            "markdown": "md",
-            "html": "html",
-            "pdf": "pdf",
-            "docx": "docx"
-        }
+        extensions = {"markdown": "md", "html": "html", "pdf": "pdf", "docx": "docx"}
         return extensions.get(format_name, format_name)
 
     def _get_content_type(self, format_name: str) -> str:
@@ -329,7 +304,7 @@ class IntegratedDocumentService:
             "markdown": "text/markdown",
             "html": "text/html",
             "pdf": "application/pdf",
-            "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         }
         return content_types.get(format_name, "application/octet-stream")
 
@@ -346,7 +321,7 @@ class IntegratedDocumentService:
                 document_id=document_id,
                 document_type="document",
                 file_format=file_extension,
-                version="student"
+                version="student",
             )
 
             try:
@@ -358,7 +333,7 @@ class IntegratedDocumentService:
                     status[format_name] = {
                         "available": True,
                         "download_url": presigned_url,
-                        "file_key": file_key
+                        "file_key": file_key,
                     }
                 else:
                     status[format_name] = {"available": False}

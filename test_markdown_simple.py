@@ -31,7 +31,7 @@ async def test_markdown_generation():
             tier=Tier.CORE,
             detail_level=DetailLevel.MEDIUM,
             target_duration_minutes=30,
-            grade_level="7-9"
+            grade_level="7-9",
         )
 
         print(f"📝 Request: {request.document_type.value} on {request.topic.value}")
@@ -44,16 +44,14 @@ async def test_markdown_generation():
 
         # Create markdown service
         markdown_service = MarkdownDocumentService(
-            llm_service=llm_factory.get_service("openai"),
-            prompt_manager=prompt_manager
+            llm_service=llm_factory.get_service("openai"), prompt_manager=prompt_manager
         )
 
         print("📄 Generating markdown...")
 
         # Generate markdown
         result = await markdown_service.generate_markdown_document(
-            request=request,
-            custom_instructions="Focus on linear equations and graphing"
+            request=request, custom_instructions="Focus on linear equations and graphing"
         )
 
         if result["success"]:
@@ -77,6 +75,7 @@ async def test_markdown_generation():
     except Exception as e:
         print(f"❌ Test error: {e}")
         import traceback
+
         traceback.print_exc()
         return None
 
@@ -126,8 +125,7 @@ Find the slope of the line passing through (2,3) and (6,11).
             temp_path = Path(temp_dir)
 
             html_path = await pandoc_service.convert_markdown_to_html(
-                sample_markdown,
-                temp_path / "test.html"
+                sample_markdown, temp_path / "test.html"
             )
 
             if html_path.exists():
@@ -140,8 +138,7 @@ Find the slope of the line passing through (2,3) and (6,11).
             print("📄 Converting to PDF...")
             try:
                 pdf_path = await pandoc_service.convert_markdown_to_pdf(
-                    sample_markdown,
-                    temp_path / "test.pdf"
+                    sample_markdown, temp_path / "test.pdf"
                 )
 
                 if pdf_path.exists():

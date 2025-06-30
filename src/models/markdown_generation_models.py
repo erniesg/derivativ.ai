@@ -23,12 +23,18 @@ class MarkdownGenerationRequest(BaseModel):
     detail_level: DetailLevel = Field(..., description="Level of detail (1-10)")
 
     # Document parameters
-    title: Optional[str] = Field(None, description="Document title (auto-generated if not provided)")
-    target_duration_minutes: int = Field(default=30, ge=5, le=120, description="Target completion time")
+    title: Optional[str] = Field(
+        None, description="Document title (auto-generated if not provided)"
+    )
+    target_duration_minutes: int = Field(
+        default=30, ge=5, le=120, description="Target completion time"
+    )
     grade_level: str = Field(default="7-9", description="Target grade level")
 
     # Optional enhancements
-    custom_instructions: Optional[str] = Field(None, description="Additional generation instructions")
+    custom_instructions: Optional[str] = Field(
+        None, description="Additional generation instructions"
+    )
 
     def get_title(self) -> str:
         """Get document title, generating one if not provided."""
@@ -48,7 +54,7 @@ class MarkdownGenerationRequest(BaseModel):
             "target_duration_minutes": self.target_duration_minutes,
             "grade_level": self.grade_level,
             "title": self.get_title(),
-            "custom_instructions": self.custom_instructions
+            "custom_instructions": self.custom_instructions,
         }
 
 

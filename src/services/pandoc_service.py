@@ -109,12 +109,13 @@ class PandocService:
             temp_md_path = Path(temp_md.name)
 
         try:
-            # Build pandoc command with Unicode support
+            # Build pandoc command with Unicode and math support
             args = [
                 str(temp_md_path),
                 "-o",
                 str(output_path),
                 "--pdf-engine=xelatex",  # Better Unicode support than pdflatex
+                "--from=markdown+tex_math_dollars",  # Ensure math parsing
                 "-V",
                 "geometry:margin=1in",
             ]

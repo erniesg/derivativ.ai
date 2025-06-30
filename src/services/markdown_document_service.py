@@ -27,9 +27,7 @@ class MarkdownDocumentService:
         self.settings = get_settings()
 
     async def generate_markdown_document(
-        self,
-        request: MarkdownGenerationRequest,
-        custom_instructions: Optional[str] = None
+        self, request: MarkdownGenerationRequest, custom_instructions: Optional[str] = None
     ) -> dict[str, Any]:
         """Generate a clean markdown document.
 
@@ -42,7 +40,9 @@ class MarkdownDocumentService:
             }
         """
         try:
-            logger.info(f"🎯 Generating markdown document: {request.document_type} - {request.topic}")
+            logger.info(
+                f"🎯 Generating markdown document: {request.document_type} - {request.topic}"
+            )
 
             # Generate clean markdown content
             markdown_content = await self._generate_markdown_content(request, custom_instructions)
@@ -58,7 +58,7 @@ class MarkdownDocumentService:
                 "tier": request.tier.value,
                 "detail_level": request.detail_level,
                 "target_duration": request.target_duration_minutes,
-                "grade_level": request.grade_level
+                "grade_level": request.grade_level,
             }
 
             logger.info(f"✅ Generated {len(markdown_content)} characters of markdown content")
@@ -67,7 +67,7 @@ class MarkdownDocumentService:
                 "success": True,
                 "markdown_content": markdown_content,
                 "metadata": metadata,
-                "generation_info": generation_info
+                "generation_info": generation_info,
             }
 
         except Exception as e:
@@ -77,13 +77,11 @@ class MarkdownDocumentService:
                 "error": str(e),
                 "markdown_content": "",
                 "metadata": {},
-                "generation_info": {}
+                "generation_info": {},
             }
 
     async def _generate_markdown_content(
-        self,
-        request: MarkdownGenerationRequest,
-        custom_instructions: Optional[str]
+        self, request: MarkdownGenerationRequest, custom_instructions: Optional[str]
     ) -> str:
         """Generate clean markdown content using LLM."""
 
@@ -101,7 +99,7 @@ class MarkdownDocumentService:
             prompt=prompt,
             temperature=0.7,
             max_tokens=4000,
-            stream=False  # Don't stream for this use case
+            stream=False,  # Don't stream for this use case
         )
 
         response = await self.llm_service.generate(llm_request)
@@ -147,6 +145,14 @@ class MarkdownDocumentService:
             line = line.replace("**Worked Examples:**", "## Worked Examples")
             line = line.replace("**Key Formulas:**", "## Key Formulas")
             line = line.replace("**Solutions:**", "## Solutions")
+            
+            # Fix LaTeX math expressions - ensure they are properly delimited
+            # Convert inline LaTeX expressions to proper dollar notation
+            import re
+            # Fix cases like \( expression \) -> $ expression $
+            line = re.sub(r'\\\\?\((.*?)\\\\?\)', r'$\1$', line)
+            # Fix cases like ( \frac{...} ) -> $\frac{...}$
+            line = re.sub(r'\(\s*(\\\\[a-zA-Z]+\{[^}]*\}[^)]*)\s*\)', r'$\1$', line)
 
             cleaned_lines.append(line)
 
@@ -199,7 +205,9 @@ Generate a clean, professional markdown document with the following structure:
         guidelines = f"""## Content Guidelines
 
 ### Mathematical Content Standards:
-- Use clear mathematical notation
+- Use clear mathematical notation with proper LaTeX formatting
+- For inline math expressions, use $expression$ (e.g., $x + 2 = 5$)
+- For display math expressions, use $$expression$$ on separate lines
 - Show all working steps in solutions
 - Ensure mathematical accuracy and grade-appropriate difficulty
 
@@ -208,6 +216,7 @@ Generate a clean, professional markdown document with the following structure:
 - Use bullet points (-) for lists
 - Use numbered lists (1. 2. 3.) for sequential steps
 - Use bold text for key terms and important points
+- Always wrap mathematical expressions in dollar signs for proper rendering
 
 ## Topic-Specific Requirements for {topic.title()}:
 
@@ -230,9 +239,7 @@ Generate content that covers essential {topic} concepts appropriate for {tier} t
         return prompt
 
     def _extract_document_metadata(
-        self,
-        request: MarkdownGenerationRequest,
-        markdown_content: str
+        self, request: MarkdownGenerationRequest, markdown_content: str
     ) -> dict[str, Any]:
         """Extract metadata from request and content."""
 
@@ -254,7 +261,7 @@ Generate content that covers essential {topic} concepts appropriate for {tier} t
             "estimated_reading_minutes": estimated_reading_minutes,
             "word_count": word_count,
             "section_count": len(sections),
-            "sections": [section.replace("##", "").strip() for section in sections]
+            "sections": [section.replace("##", "").strip() for section in sections],
         }
 
     def preview_markdown_as_html(self, markdown_content: str) -> str:
@@ -262,10 +269,7 @@ Generate content that covers essential {topic} concepts appropriate for {tier} t
         try:
             import markdown
 
-            html = markdown.markdown(
-                markdown_content,
-                extensions=['extra', 'codehilite']
-            )
+            html = markdown.markdown(markdown_content, extensions=["extra", "codehilite"])
 
             # Add basic styling
             styled_html = f"""

@@ -64,8 +64,7 @@ async def generate_markdown_document(
 
         # Generate and store all formats
         result = await service.generate_and_store_all_formats(
-            request=request,
-            custom_instructions=custom_instructions
+            request=request, custom_instructions=custom_instructions
         )
 
         if result["success"]:
@@ -80,18 +79,17 @@ async def generate_markdown_document(
                     format_name: {
                         "available": format_data["success"],
                         "download_url": format_data.get("r2_url"),
-                        "file_size": format_data.get("size", 0)
+                        "file_size": format_data.get("size", 0),
                     }
                     for format_name, format_data in result["formats"].items()
                 },
                 "metadata": result["metadata"],
-                "generation_time": result["generation_info"].get("generated_at")
+                "generation_time": result["generation_info"].get("generated_at"),
             }
         else:
             logger.error(f"❌ Document generation failed: {result.get('error')}")
             raise HTTPException(
-                status_code=500,
-                detail=f"Document generation failed: {result.get('error')}"
+                status_code=500, detail=f"Document generation failed: {result.get('error')}"
             )
 
     except Exception as e:
@@ -107,10 +105,7 @@ async def get_document_status(
     """Get download status and URLs for a generated document."""
     try:
         status = await service.get_document_status(document_id)
-        return {
-            "document_id": document_id,
-            "formats": status
-        }
+        return {"document_id": document_id, "formats": status}
     except Exception as e:
         logger.error(f"❌ Failed to get document status: {e}")
         raise HTTPException(status_code=500, detail="Failed to get document status")
