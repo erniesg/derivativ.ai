@@ -15,10 +15,12 @@ const PORT = process.env.PORT || 3000;
 
 app.use(helmet());
 
-app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
-  credentials: true
-}));
+// app.use(cors({
+//   origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+//   credentials: true
+// }));
+
+app.use(cors('*'));
 
 app.use(rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

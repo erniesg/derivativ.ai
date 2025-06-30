@@ -1,14 +1,5 @@
 const supabase = require("../config/supabase");
-
-// Configuration constants
-const DEFAULT_DIFFICULTY_DISTRIBUTION = {
-  easy: 0.5,
-  medium: 0.3,
-  hard: 0.2,
-};
-
-const WMA_WEIGHT = 0.3; // Weight for new performance in WMA calculation
-const PADDING_FACTOR = 0.8; // Factor to pad initial grades to avoid false achievement
+const { DEFAULT_DIFFICULTY_DISTRIBUTION, WMA_WEIGHT, PADDING_FACTOR } = require("../config/core");
 
 /**
  * Initialize a new quiz session for a user
@@ -170,7 +161,7 @@ const selectQuestionsForSession = async (
 /**
  * Submit a quiz response
  */
-const submitQuizResponse = async (sessionId, questionId, userAnswer) => {
+const submitQuizResponse = async (userId,sessionId, questionId, userAnswer) => {
   try {
     // Check if this question has already been answered in this session
     const { data: existingResponse, error: checkError } = await supabase
@@ -187,6 +178,21 @@ const submitQuizResponse = async (sessionId, questionId, userAnswer) => {
 
     if (existingResponse) {
       throw new Error("Question has already been answered in this session");
+    }
+
+    const {data: session, error: sessionError} = await supabase
+      .from("quiz_sessions")
+      .select('*')
+      .eq('id', sessionId)
+      .eq('user_id', userId)
+      .single();
+
+    if (sessionError) throw sessionError;
+
+    const selectedQuestion = session.questions_selected.includes(questionId);
+  
+    if (!selectedQuestion) {
+      throw new Error("Invalid question");
     }
 
     const { data: question, error: questionError } = await supabase
@@ -229,16 +235,32 @@ const submitQuizResponse = async (sessionId, questionId, userAnswer) => {
 /**
  * Complete a quiz session and update WMA scores
  */
-const completeQuizSession = async (sessionId) => {
+const completeQuizSession = async (sessionId, userId) => {
   try {
     // Get session details
     const { data: session, error: sessionError } = await supabase
       .from("quiz_sessions")
       .select("*")
       .eq("id", sessionId)
+      .eq("user_id", userId)
+      .eq("status", "active")
       .single();
 
     if (sessionError) throw sessionError;
+
+
+    const { data: questions, error: questionsError} = await supabase
+      .from("questions")
+      .select("topic_id")
+      .in("id", session.questions_selected);
+
+    if (questionsError) throw questionsError;
+
+    const topicIds = questions.map(q => q.topic_id);
+    const topicCounts = topicIds.reduce((acc, topicId) => {
+      acc[topicId] = (acc[topicId] || 0) + 1;
+      return acc; 
+    }, {});
 
     // Get all responses for this session
     const { data: responses, error: responsesError } = await supabase
@@ -246,7 +268,7 @@ const completeQuizSession = async (sessionId) => {
       .select(
         `
         *,
-        questions(topic_id)
+        questions:question_id(*)
       `
       )
       .eq("quiz_session_id", sessionId);
@@ -255,16 +277,17 @@ const completeQuizSession = async (sessionId) => {
 
     // Calculate performance by topic
     const topicPerformance = {};
+
+    for (const [topicId, count] of Object.entries(topicCounts)) {
+      topicPerformance[topicId] = { correct: 0, total: count };
+    }
+
     responses.forEach((response) => {
       const topicId = response.questions.topic_id;
-      if (!topicPerformance[topicId]) {
-        topicPerformance[topicId] = { correct: 0, total: 0 };
-      }
-      topicPerformance[topicId].total++;
       if (response.is_correct) {
         topicPerformance[topicId].correct++;
       }
-    });
+    })
 
     // Update WMA for each topic
     const topicScores = {};
@@ -484,6 +507,18 @@ const durstenfeldShuffle = (array) => {
   }
 
   return array;
+}
+
+const getTopicIdFromQuestionId = async (questionId) => {
+  const { data: question, error } = await supabase
+    .from("questions")
+    .select("topic_id")
+    .eq("id", questionId)
+    .single();
+
+  if (error) throw error;
+
+  return question.topic_id;
 }
 
 module.exports = {

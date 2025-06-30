@@ -61,10 +61,13 @@ const submitResponse = async (req, res) => {
         error: error.details,
       });
     }
+    
+    const user = req.user;
 
     const { sessionId, questionId, answer } = value;
 
     const result = await quizService.submitQuizResponse(
+      user.id,
       sessionId,
       questionId,
       answer
@@ -102,8 +105,9 @@ const completeQuiz = async (req, res) => {
     }
 
     const { sessionId } = value;
+    const user = req.user;
 
-    const result = await quizService.completeQuizSession(sessionId);
+    const result = await quizService.completeQuizSession(sessionId, user.id);
 
     res.status(200).json({
       data: result,
@@ -280,7 +284,7 @@ const getAnalytics = async (req, res) => {
           ? history.reduce((sum, quiz) => sum + quiz.overall_score, 0) /
             history.length
           : 0,
-      topicPerformance: performance.map((p) => ({
+        topicsPerformance: performance.map((p) => ({
         topicName: p.topics.topic_name,
         currentGrade: p.total_attempts > 0 ? p.current_grade : 0,
         wmaGrade: p.total_attempts > 0 ? p.wma_grade : 0,
@@ -293,16 +297,8 @@ const getAnalytics = async (req, res) => {
             : "stable",
       })),
       recentQuizzes: history.slice(0, 3),
-      strongestTopic:  history.length > 0 ? performance.reduce(
-        (strongest, current) =>
-          current.wma_grade > strongest.wma_grade ? current : strongest,
-        performance[0] || {}
-      ) : [],
-      weakestTopic: history.length > 0 ? performance.reduce(
-        (weakest, current) =>
-          current.wma_grade < weakest.wma_grade ? current : weakest,
-        performance[0] || {}
-      ) : [],
+      weakestTopics: [],
+      strongestTopics: [],
     };
 
     res.status(200).json({
