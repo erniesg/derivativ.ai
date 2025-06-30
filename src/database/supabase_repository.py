@@ -262,11 +262,15 @@ class QuestionRepository:
 
             # Apply filters
             if tier:
-                query = query.eq("tier", tier.value)
+                tier_value = tier.value if hasattr(tier, "value") else tier
+                query = query.eq("tier", tier_value)
             if min_quality_score:
                 query = query.gte("quality_score", min_quality_score)
             if command_word:
-                query = query.eq("command_word", command_word.value)
+                command_word_value = (
+                    command_word.value if hasattr(command_word, "value") else command_word
+                )
+                query = query.eq("command_word", command_word_value)
 
             # Apply ordering and pagination
             query = query.order("created_at", desc=True).limit(limit)

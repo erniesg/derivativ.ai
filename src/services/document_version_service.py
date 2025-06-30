@@ -27,9 +27,12 @@ class DocumentVersionService:
             DetailLevel.MEDIUM: "medium",
             DetailLevel.DETAILED: "detailed",
             DetailLevel.COMPREHENSIVE: "comprehensive",
-            DetailLevel.GUIDED: "guided"
+            DetailLevel.GUIDED: "guided",
         }
-        return level_names.get(detail_level, f"level {detail_level.value}")
+        return level_names.get(
+            detail_level,
+            f"level {detail_level.value if hasattr(detail_level, 'value') else detail_level}",
+        )
 
     def __init__(self):
         """Initialize document version service."""

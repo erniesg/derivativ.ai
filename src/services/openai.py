@@ -272,8 +272,8 @@ class OpenAILLMService(LLMService):
             "text_format": response_format,
         }
 
-        # Add optional parameters if present
-        for param in ["temperature", "max_tokens", "top_p"]:
+        # Add optional parameters if present (excluding max_tokens for new API)
+        for param in ["temperature", "top_p"]:
             if param in openai_params:
                 new_params[param] = openai_params[param]
 

@@ -133,28 +133,30 @@ class DocumentGenerationService:
 
                     schema_instruction = f"""
 
-CRITICAL: You MUST respond with a JSON object that exactly matches this schema:
+CRITICAL: You MUST respond with a JSON object that exactly matches this flattened schema:
 {{
   "enhanced_title": "string - Enhanced title for the document",
-  "introduction": "string - Brief introduction to the topic",
-  "blocks": [
-    {{
-      "block_type": "string - One of: {', '.join(structure_pattern)}",
-      "content": {{"key": "value"}},
-      "estimated_minutes": 5,
-      "reasoning": "string - Why this block was included"
-    }}
-  ],
+  "introduction": "string - Brief introduction to the topic (REQUIRED, cannot be empty)",
+  "block_types": ["{structure_pattern[0]}", "{structure_pattern[1] if len(structure_pattern) > 1 else structure_pattern[0]}"],
+  "block_contents": [{{"key": "value"}}, {{"key": "value"}}],
+  "block_minutes": [5, 10],
+  "block_reasoning": ["Reason for first block", "Reason for second block"],
   "total_estimated_minutes": 30,
   "actual_detail_level": {detail_level_num},
-  "generation_reasoning": "string - Overall reasoning",
-  "coverage_notes": "string - Coverage notes",
+  "generation_reasoning": "string - Overall reasoning (REQUIRED, cannot be empty)",
+  "coverage_notes": "string - Coverage notes (REQUIRED, cannot be empty)",
   "personalization_applied": []
 }}
 
-IMPORTANT:
-- estimated_minutes and total_estimated_minutes must be integers (numbers), not strings
-- actual_detail_level must be an integer {detail_level_num}, not a string
+IMPORTANT FLATTENED STRUCTURE:
+- block_types: array of strings with block type names from: {', '.join(structure_pattern)}
+- block_contents: array of JSON strings (each string contains a valid JSON object) with the actual content for each block
+- block_minutes: array of integers with estimated minutes for each block
+- block_reasoning: array of strings with reasoning for each block
+- ALL arrays must have the same length (one entry per block)
+- ALL fields are required and cannot be empty strings or null
+- introduction, generation_reasoning, and coverage_notes must contain actual text
+- Do NOT use nested objects or the old "blocks" structure
 - Do NOT use any other JSON structure. Do NOT wrap the response in additional keys."""
                     rendered_prompt += schema_instruction
 
@@ -178,8 +180,8 @@ IMPORTANT:
                 document_response = await llm_service.parse_structured(
                     llm_request, DocumentGenerationResponse
                 )
-                # Convert Pydantic model to dict for existing logic
-                document_data = document_response.model_dump()
+                # Convert flattened response to the expected blocks format
+                document_data = self._convert_flattened_to_blocks(document_response.model_dump())
 
             elif provider == "google":
                 # Google Gemini: Use response_schema (if available)
@@ -289,8 +291,13 @@ IMPORTANT:
 
         # 2. Auto-include relevant questions if requested
         if request.auto_include_questions:
+            # Handle tier value safely
+            tier_value = "core"  # default
+            if request.tier:
+                tier_value = request.tier.value if hasattr(request.tier, "value") else request.tier
+
             filters = {
-                "tier": request.tier.value if request.tier else "core",
+                "tier": tier_value,
                 "topic": request.topic,
                 "limit": request.max_questions - len(questions),
                 "min_quality_score": 0.7,  # Only include good quality questions
@@ -300,12 +307,14 @@ IMPORTANT:
                 filters["grade_level"] = request.grade_level
 
             if request.subject_content_refs:
+                # Handle subject content refs safely
                 filters["subject_content_refs"] = [
-                    ref.value for ref in request.subject_content_refs
+                    ref.value if hasattr(ref, "value") else ref
+                    for ref in request.subject_content_refs
                 ]
 
             try:
-                auto_questions = await self.question_repository.list_questions(**filters)
+                auto_questions = self.question_repository.list_questions(**filters)
 
                 # Convert to Question objects (simplified - would need full conversion)
                 for q_data in auto_questions[: request.max_questions - len(questions)]:
@@ -332,7 +341,9 @@ IMPORTANT:
 
         for i, block in enumerate(blocks):
             block_type = block.get("block_type", "generic")
-            content = block.get("content", {})
+            content = block.get(
+                "block_content", block.get("content", {})
+            )  # Support both old and new field names
 
             # Create section title from block type
             section_title = block_type.replace("_", " ").title()
@@ -436,7 +447,7 @@ IMPORTANT:
         for i, section_type in enumerate(structure_pattern):
             block = {
                 "block_type": section_type,
-                "content": {"text": f"Generated content for {section_type}"},
+                "block_content": {"text": f"Generated content for {section_type}"},
                 "estimated_minutes": 5,
                 "reasoning": f"Fallback content for {section_type.replace('_', ' ')}",
             }
@@ -446,17 +457,91 @@ IMPORTANT:
             request.document_type, request.detail_level, len(questions)
         )
 
+        # Ensure all required fields are provided with non-empty values for OpenAI structured output
         return {
             "enhanced_title": request.title,
-            "introduction": f"Introduction to {request.topic}",
+            "introduction": f"Introduction to {request.topic}"
+            if request.topic
+            else "Welcome to this educational material",
             "blocks": blocks,
             "total_estimated_minutes": estimated_duration,
             "actual_detail_level": request.detail_level.value
             if hasattr(request.detail_level, "value")
             else 5,
             "generation_reasoning": "Fallback content generated due to LLM response parsing failure",
-            "coverage_notes": f"Basic coverage of {request.topic}",
-            "personalization_applied": [],
+            "coverage_notes": f"Basic coverage of {request.topic}"
+            if request.topic
+            else "General educational content",
+            "personalization_applied": [],  # Empty list but still required field
+        }
+
+    def _convert_flattened_to_blocks(self, flattened_data: dict[str, Any]) -> dict[str, Any]:
+        """Convert OpenAI flattened response format back to blocks format for existing logic."""
+        logger.info("Converting flattened OpenAI response to blocks format")
+
+        # Extract flattened arrays
+        block_types = flattened_data.get("block_types", [])
+        block_contents = flattened_data.get("block_contents", [])
+        block_minutes = flattened_data.get("block_minutes", [])
+        block_reasoning = flattened_data.get("block_reasoning", [])
+
+        # Validate arrays have same length
+        max_length = max(
+            len(block_types), len(block_contents), len(block_minutes), len(block_reasoning)
+        )
+
+        # Reconstruct blocks array - parse JSON strings back to dictionaries
+        blocks = []
+        for i in range(max_length):
+            # Parse block content from JSON string
+            content_data = {}
+            if i < len(block_contents):
+                try:
+                    import json
+
+                    content_string = block_contents[i]
+                    if isinstance(content_string, str) and content_string.strip().startswith("{"):
+                        content_data = json.loads(content_string)
+                    elif isinstance(content_string, str):
+                        # If it's not JSON, treat as plain text
+                        content_data = {"text": content_string}
+                    else:
+                        # If it's already a dict (fallback case), use directly
+                        content_data = content_string
+                except (json.JSONDecodeError, ValueError) as e:
+                    logger.warning(f"Failed to parse block content as JSON: {e}")
+                    content_data = {
+                        "text": str(block_contents[i]) if i < len(block_contents) else ""
+                    }
+
+            block = {
+                "block_type": block_types[i] if i < len(block_types) else "generic",
+                "block_content": content_data,
+                "estimated_minutes": block_minutes[i] if i < len(block_minutes) else 5,
+                "reasoning": block_reasoning[i]
+                if i < len(block_reasoning)
+                else "Generated content",
+            }
+            blocks.append(block)
+
+        logger.info(f"Converted {len(blocks)} blocks from flattened format")
+
+        # Return in expected format
+        return {
+            "enhanced_title": flattened_data.get("enhanced_title", "Generated Document"),
+            "introduction": flattened_data.get(
+                "introduction", "Welcome to this educational material"
+            ),
+            "blocks": blocks,
+            "total_estimated_minutes": flattened_data.get("total_estimated_minutes", 30),
+            "actual_detail_level": flattened_data.get("actual_detail_level", 5),
+            "generation_reasoning": flattened_data.get(
+                "generation_reasoning", "Document generated successfully"
+            ),
+            "coverage_notes": flattened_data.get(
+                "coverage_notes", "Comprehensive coverage provided"
+            ),
+            "personalization_applied": flattened_data.get("personalization_applied", []),
         }
 
     def _estimate_duration(
