@@ -17,6 +17,7 @@ uvicorn src.api.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 ### Frontend (parallel)
+**Frontend Repository**: https://github.com/erniesg/derivativ
 ```bash
 cd ../derivativ
 npm run dev
@@ -191,8 +192,8 @@ derivativ.ai/                 # Backend (Python FastAPI)
 ├── scripts/                 # Development utilities
 └── config/                  # Configuration files
 
-../derivativ/                # Frontend (React TypeScript)
-├── src/
+derivativ/                   # Frontend (React TypeScript)
+├── src/                     # Repository: https://github.com/erniesg/derivativ
 │   ├── components/          # Reusable UI components
 │   ├── pages/              # Application pages
 │   └── contexts/           # React state management
