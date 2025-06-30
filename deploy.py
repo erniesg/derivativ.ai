@@ -3,9 +3,10 @@ Modal deployment for Derivativ AI FastAPI backend.
 Deploys the complete FastAPI application to Modal's serverless platform.
 """
 
-import modal
-import os
 import logging
+import os
+
+import modal
 
 # Configure logging
 logging.basicConfig(
@@ -39,7 +40,8 @@ image = (
     .apt_install([
         "git",
         "curl",
-        "build-essential"
+        "build-essential",
+        "pandoc"
     ])
     # Install Python dependencies
     .pip_install_from_requirements("requirements.txt")
@@ -66,23 +68,23 @@ image = (
 @modal.asgi_app()
 def fastapi_app():
     """Deploy FastAPI application to Modal."""
-    import sys
     import os
-    
+    import sys
+
     # Debug information
     logger.info("Starting Derivativ AI FastAPI application in Modal")
     logger.info(f"Working directory: {os.getcwd()}")
     logger.info(f"Python path: {sys.path}")
-    
+
     # Verify environment setup
     required_env_vars = [
         "OPENAI_API_KEY",
-        "ANTHROPIC_API_KEY", 
+        "ANTHROPIC_API_KEY",
         "GOOGLE_API_KEY",
         "SUPABASE_URL",
         "SUPABASE_ANON_KEY"
     ]
-    
+
     missing_vars = []
     for var in required_env_vars:
         if var not in os.environ:
@@ -90,12 +92,12 @@ def fastapi_app():
             logger.warning(f"Environment variable {var} not set")
         else:
             logger.info(f"Found {var} in environment")
-    
+
     # Enable demo mode if any required variables are missing
     if missing_vars:
         os.environ["DEMO_MODE"] = "true"
         logger.info(f"Demo mode enabled due to missing variables: {missing_vars}")
-    
+
     # Import and return FastAPI app
     try:
         from src.api.main import app as derivativ_app
@@ -121,27 +123,27 @@ def generate_questions(
     difficulty: str = "medium"
 ):
     """Generate questions using Modal compute - can be called independently."""
-    import os
     import asyncio
-    
+    import os
+
     # Enable demo mode for standalone function
     os.environ["DEMO_MODE"] = "true"
-    
+
     try:
-        from src.services.question_generation_service import QuestionGenerationService
-        from src.models.question_models import QuestionGenerationRequest
         from src.core.config import get_settings
-        
+        from src.models.question_models import QuestionGenerationRequest
+        from src.services.question_generation_service import QuestionGenerationService
+
         settings = get_settings()
         service = QuestionGenerationService(settings)
-        
+
         request = QuestionGenerationRequest(
             topic=topic,
             grade_level=grade_level,
             num_questions=num_questions,
             difficulty=difficulty
         )
-        
+
         async def _generate():
             result = await service.generate_questions_demo(request)
             return {
@@ -154,9 +156,9 @@ def generate_questions(
                     "difficulty": difficulty
                 }
             }
-        
+
         return asyncio.run(_generate())
-        
+
     except Exception as e:
         logger.error(f"Question generation failed: {e}")
         return {
@@ -184,26 +186,26 @@ def generate_document(
     grade_level: int = 9
 ):
     """Generate educational documents using Modal compute."""
-    import os
     import asyncio
-    
+    import os
+
     os.environ["DEMO_MODE"] = "true"
-    
+
     try:
-        from src.services.document_generation_service import DocumentGenerationService
-        from src.models.document_models import DocumentGenerationRequest
         from src.core.config import get_settings
-        
+        from src.models.document_models import DocumentGenerationRequest
+        from src.services.document_generation_service import DocumentGenerationService
+
         settings = get_settings()
         service = DocumentGenerationService(settings)
-        
+
         request = DocumentGenerationRequest(
             material_type=material_type,
             topics=topics,
             detail_level=detail_level,
             grade_level=grade_level
         )
-        
+
         async def _generate():
             result = await service.generate_document(request)
             return {
@@ -216,9 +218,9 @@ def generate_document(
                     "grade_level": grade_level
                 }
             }
-        
+
         return asyncio.run(_generate())
-        
+
     except Exception as e:
         logger.error(f"Document generation failed: {e}")
         return {
@@ -249,12 +251,12 @@ def health_check():
 def main():
     """Local entrypoint for testing Modal functions."""
     print("🚀 Testing Derivativ AI Modal deployment...")
-    
+
     # Test health check
     print("\n1. Testing health check...")
     health = health_check.remote()
     print(f"Health status: {health}")
-    
+
     # Test question generation
     print("\n2. Testing question generation...")
     questions = generate_questions.remote(
@@ -266,7 +268,7 @@ def main():
     print(f"Generated questions: {questions['success']}")
     if questions['success']:
         print(f"Number of questions: {len(questions['questions'])}")
-    
+
     # Test document generation
     print("\n3. Testing document generation...")
     document = generate_document.remote(
@@ -276,7 +278,7 @@ def main():
         grade_level=9
     )
     print(f"Generated document: {document['success']}")
-    
+
     print("\n✅ All tests completed!")
 
 
