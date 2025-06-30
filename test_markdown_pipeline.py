@@ -39,11 +39,11 @@ async def test_markdown_pipeline():  # noqa: PLR0915
 
         # Get service instance with proper dependency injection
         from src.api.dependencies import get_llm_factory, get_prompt_manager, get_r2_storage_service
-        
+
         llm_factory = get_llm_factory()
         prompt_manager = get_prompt_manager()
         r2_service = get_r2_storage_service()
-        
+
         service = get_integrated_document_service(
             llm_factory=llm_factory,
             prompt_manager=prompt_manager,

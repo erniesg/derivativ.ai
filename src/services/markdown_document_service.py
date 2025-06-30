@@ -145,7 +145,7 @@ class MarkdownDocumentService:
             line = line.replace("**Worked Examples:**", "## Worked Examples")
             line = line.replace("**Key Formulas:**", "## Key Formulas")
             line = line.replace("**Solutions:**", "## Solutions")
-            
+
             # Fix LaTeX math expressions - ensure they are properly delimited
             # Convert inline LaTeX expressions to proper dollar notation
             import re
@@ -153,6 +153,13 @@ class MarkdownDocumentService:
             line = re.sub(r'\\\\?\((.*?)\\\\?\)', r'$\1$', line)
             # Fix cases like ( \frac{...} ) -> $\frac{...}$
             line = re.sub(r'\(\s*(\\\\[a-zA-Z]+\{[^}]*\}[^)]*)\s*\)', r'$\1$', line)
+            # Fix problematic bracket combinations like {[} and {]}
+            line = re.sub(r'\{\[\}', '', line)  # Remove {[}
+            line = re.sub(r'\{\]\}', '', line)  # Remove {]}
+            # Fix cases where math is mixed with text brackets like }: {[}
+            line = re.sub(r'\}:\s*\{\[\}\s*', '}: ', line)
+            # Clean up any remaining malformed bracket sequences
+            line = re.sub(r'\{\[\}\s*\\\\?([a-zA-Z]+)', r'$\\\1', line)
 
             cleaned_lines.append(line)
 
@@ -206,8 +213,10 @@ Generate a clean, professional markdown document with the following structure:
 
 ### Mathematical Content Standards:
 - Use clear mathematical notation with proper LaTeX formatting
-- For inline math expressions, use $expression$ (e.g., $x + 2 = 5$)
+- For inline math expressions, use $expression$ (e.g., $x + 2 = 5$, $\\frac{{2x}}{{2}} = x$)
 - For display math expressions, use $$expression$$ on separate lines
+- IMPORTANT: Never mix square brackets [ ] with LaTeX math - use only curly braces {{ }}
+- IMPORTANT: Avoid problematic sequences like {{[}} or {{]}} in mathematical expressions
 - Show all working steps in solutions
 - Ensure mathematical accuracy and grade-appropriate difficulty
 
@@ -217,6 +226,7 @@ Generate a clean, professional markdown document with the following structure:
 - Use numbered lists (1. 2. 3.) for sequential steps
 - Use bold text for key terms and important points
 - Always wrap mathematical expressions in dollar signs for proper rendering
+- When showing working: "Step 1: $2x + 4 = 10$" NOT "Step 1: {{[}} $2x + 4 = 10$"
 
 ## Topic-Specific Requirements for {topic.title()}:
 
