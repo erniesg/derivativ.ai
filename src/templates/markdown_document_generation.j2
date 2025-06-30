@@ -1,0 +1,84 @@
+You are an expert educational content creator specializing in Cambridge IGCSE Mathematics. Generate a clean, well-structured markdown document for a {{ document_type }} about {{ topic }}.
+
+## Document Requirements
+- **Document Type**: {{ document_type | title }}
+- **Topic**: {{ topic | title }}
+- **Tier**: {{ tier }}
+- **Detail Level**: {{ detail_level }}/10
+- **Target Duration**: {{ target_duration_minutes }} minutes
+- **Grade Level**: {{ grade_level }}
+
+{% if custom_instructions -%}
+## Custom Instructions
+{{ custom_instructions }}
+
+{% endif -%}
+
+## Output Requirements
+
+Generate a clean, professional markdown document with the following structure:
+
+1. **Main Title** (H1) - Clear, engaging title
+2. **Learning Objectives** (H2) - 3-5 clear learning goals
+3. **Key Concepts** (H2) - Essential definitions and explanations
+4. **Worked Examples** (H2) - Step-by-step solutions with reasoning
+5. **Practice Questions** (H2) - Graduated difficulty questions
+6. **Solutions** (H2) - Detailed solutions for practice questions
+
+## Content Guidelines
+
+### For {{ document_type | title }}:
+{% if document_type == "worksheet" -%}
+- Focus on practice questions with clear worked examples
+- Include 5-8 practice questions with increasing difficulty
+- Provide detailed solutions showing all working steps
+- Add learning objectives that align with practice content
+{% elif document_type == "notes" -%}
+- Emphasize concept explanations with practical examples
+- Include key formulas and definitions in clear sections
+- Provide 2-3 comprehensive worked examples
+- Add summary of key points for revision
+{% elif document_type == "mini_textbook" -%}
+- Comprehensive coverage with detailed explanations
+- Multiple worked examples showing different approaches
+- Extended practice section with varied question types
+- Include real-world applications and extensions
+{% endif %}
+
+### Mathematical Content Standards:
+- Use clear mathematical notation
+- Show all working steps in solutions
+- Include appropriate diagrams descriptions where helpful
+- Ensure mathematical accuracy and grade-appropriate difficulty
+
+### Formatting Guidelines:
+- Use proper markdown headers (# ## ###)
+- Use bullet points (-) for lists
+- Use numbered lists (1. 2. 3.) for sequential steps
+- Use **bold** for key terms and important points
+- Use `inline code` for mathematical expressions when needed
+- Use > blockquotes for important notes or tips
+
+## Topic-Specific Requirements for {{ topic | title }}:
+
+Generate content that covers the essential {{ topic }} concepts appropriate for {{ tier }} tier students, including:
+- Core mathematical principles and definitions
+- Practical problem-solving techniques
+- Common misconceptions and how to avoid them
+- Real-world applications where relevant
+
+## Time Allocation ({{ target_duration_minutes }} minutes total):
+- Learning objectives review: 3 minutes
+- Concept explanation: {{ (target_duration_minutes * 0.3) | round | int }} minutes
+- Worked examples: {{ (target_duration_minutes * 0.4) | round | int }} minutes  
+- Practice questions: {{ (target_duration_minutes * 0.3) | round | int }} minutes
+
+## Quality Standards:
+- All mathematical content must be accurate and curriculum-aligned
+- Solutions must show clear step-by-step working
+- Language should be appropriate for the target grade level
+- Content should build logically from basics to applications
+
+---
+
+**Generate the complete markdown document now, following the structure and guidelines above. Return ONLY the markdown content, no additional formatting or explanations.**

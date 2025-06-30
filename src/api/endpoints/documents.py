@@ -14,6 +14,7 @@ from fastapi.responses import FileResponse
 from src.api.dependencies import (
     get_document_generation_service,
     get_document_generation_service_v2,
+    get_integrated_document_service,
     get_r2_storage_service,
 )
 from src.models.document_generation_v2 import (
@@ -29,14 +30,90 @@ from src.models.document_models import (
     ExportRequest,
     GeneratedDocument,
 )
+from src.models.markdown_generation_models import MarkdownGenerationRequest
 from src.services.document_export_service import DocumentExportService
 from src.services.document_generation_service import DocumentGenerationService
 from src.services.document_generation_service_v2 import DocumentGenerationServiceV2
+from src.services.integrated_document_service import IntegratedDocumentService
 from src.services.r2_storage_service import R2StorageService
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/generation/documents", tags=["Document Generation"])
+
+
+@router.post("/generate-markdown", response_model=dict)
+async def generate_markdown_document(
+    request: MarkdownGenerationRequest,
+    custom_instructions: Optional[str] = None,
+    service: IntegratedDocumentService = Depends(get_integrated_document_service),
+) -> dict:
+    """
+    Generate a document using markdown-first pipeline with automatic format conversion.
+
+    This endpoint:
+    1. Generates clean markdown content
+    2. Converts to PDF/DOCX/HTML using pandoc
+    3. Stores all formats in R2
+    4. Returns download URLs for all formats
+
+    Returns presigned URLs for immediate download - no client-side conversion needed.
+    """
+    try:
+        logger.info(f"🚀 Generating markdown document: {request.document_type} - {request.topic}")
+
+        # Generate and store all formats
+        result = await service.generate_and_store_all_formats(
+            request=request,
+            custom_instructions=custom_instructions
+        )
+
+        if result["success"]:
+            logger.info(f"✅ Successfully generated all formats for {result['document_id']}")
+
+            # Return structured response with download URLs
+            return {
+                "success": True,
+                "document_id": result["document_id"],
+                "markdown_content": result["markdown_content"],  # For frontend display
+                "downloads": {
+                    format_name: {
+                        "available": format_data["success"],
+                        "download_url": format_data.get("r2_url"),
+                        "file_size": format_data.get("size", 0)
+                    }
+                    for format_name, format_data in result["formats"].items()
+                },
+                "metadata": result["metadata"],
+                "generation_time": result["generation_info"].get("generated_at")
+            }
+        else:
+            logger.error(f"❌ Document generation failed: {result.get('error')}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Document generation failed: {result.get('error')}"
+            )
+
+    except Exception as e:
+        logger.error(f"❌ Markdown generation endpoint failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Generation failed: {e!s}")
+
+
+@router.get("/status/{document_id}")
+async def get_document_status(
+    document_id: str,
+    service: IntegratedDocumentService = Depends(get_integrated_document_service),
+) -> dict:
+    """Get download status and URLs for a generated document."""
+    try:
+        status = await service.get_document_status(document_id)
+        return {
+            "document_id": document_id,
+            "formats": status
+        }
+    except Exception as e:
+        logger.error(f"❌ Failed to get document status: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get document status")
 
 
 @router.post("/generate", response_model=DocumentGenerationResult)

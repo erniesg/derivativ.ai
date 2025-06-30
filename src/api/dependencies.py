@@ -20,7 +20,10 @@ from src.services.document_export_service import DocumentExportService
 from src.services.document_generation_service import DocumentGenerationService
 from src.services.document_generation_service_v2 import DocumentGenerationServiceV2
 from src.services.document_storage_service import DocumentStorageService
+from src.services.integrated_document_service import IntegratedDocumentService
 from src.services.llm_factory import LLMFactory
+from src.services.markdown_document_service import MarkdownDocumentService
+from src.services.pandoc_service import PandocService
 from src.services.prompt_manager import PromptManager
 from src.services.question_generation_service import QuestionGenerationService
 from src.services.r2_storage_service import R2StorageService
@@ -627,6 +630,41 @@ def check_realtime_health() -> dict:
             "websocket": "unavailable",
             "error": str(e),
         }
+
+
+def get_integrated_document_service(
+    llm_factory: LLMFactory = Depends(get_llm_factory),
+    prompt_manager: PromptManager = Depends(get_prompt_manager),
+    r2_service: R2StorageService = Depends(get_r2_storage_service),
+) -> IntegratedDocumentService:
+    """
+    Get IntegratedDocumentService instance with markdown + pandoc + R2 pipeline.
+
+    This service provides the clean markdown-first document generation approach
+    that eliminates complex JSON structure issues.
+    """
+    try:
+        # Create markdown service
+        markdown_service = MarkdownDocumentService(
+            llm_service=llm_factory.get_service("openai"),  # Use OpenAI as default
+            prompt_manager=prompt_manager
+        )
+
+        # Create pandoc service
+        pandoc_service = PandocService()
+
+        # Create integrated service
+        return IntegratedDocumentService(
+            markdown_service=markdown_service,
+            pandoc_service=pandoc_service,
+            r2_service=r2_service
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Failed to initialize integrated document service: {e}"
+        )
 
 
 def get_system_health() -> dict:
