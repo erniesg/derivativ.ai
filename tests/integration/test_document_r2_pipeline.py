@@ -7,14 +7,18 @@ import asyncio
 import json
 import logging
 from datetime import datetime
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.api.dependencies import get_r2_storage_service
 from src.core.config import get_settings
+from src.database.supabase_repository import QuestionRepository
 from src.models.document_models import DetailLevel, DocumentGenerationRequest, DocumentType, Tier
 from src.services.document_export_service import DocumentExportService
 from src.services.document_generation_service import DocumentGenerationService
+from src.services.llm_factory import LLMFactory
+from src.services.prompt_manager import PromptManager
 
 # Configure test logging
 logging.basicConfig(level=logging.INFO)
@@ -50,8 +54,32 @@ async def test_document_generation_to_r2_storage():  # noqa: PLR0915
     logger.info(f"📋 Detail level: {generation_request.detail_level}")
 
     try:
-        # Initialize document generation service
-        doc_gen_service = DocumentGenerationService()
+        # Initialize document generation service with proper dependencies
+        mock_question_repository = MagicMock(spec=QuestionRepository)
+        mock_question_repository.search_questions = AsyncMock(return_value=[])
+
+        mock_llm_factory = MagicMock(spec=LLMFactory)
+        mock_llm_service = AsyncMock()
+        mock_llm_service.generate.return_value = json.dumps({
+            "title": "Test Worksheet",
+            "document_type": "worksheet",
+            "detail_level": 1,
+            "sections": [
+                {"title": "Practice Questions", "content": "Sample content"},
+                {"title": "Solutions", "content": "Sample solutions"}
+            ],
+            "estimated_duration": "30 minutes",
+            "total_questions": 2
+        })
+        mock_llm_factory.get_service.return_value = mock_llm_service
+
+        prompt_manager = PromptManager()
+
+        doc_gen_service = DocumentGenerationService(
+            question_repository=mock_question_repository,
+            llm_factory=mock_llm_factory,
+            prompt_manager=prompt_manager
+        )
 
         # Generate document
         logger.info("📝 Generating document...")

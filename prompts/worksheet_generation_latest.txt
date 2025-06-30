@@ -43,6 +43,26 @@ You must generate content for a {{ document_type }} with these sections:
 - **Teacher Version Content**: Include everything from student version PLUS detailed solutions, marking schemes, teaching notes, and assessment criteria
 - **Ensure Dual Compatibility**: All content blocks should support both student and teacher versions through conditional inclusion of answers and solutions
 
+## Required Content Block Types
+
+You MUST generate exactly these block types in this order:
+{% for section_type in structure_pattern %}
+- **{{ section_type }}**
+{% endfor %}
+
+## Content Schema for Each Block Type
+
+Each block must follow these specific content formats:
+
+**learning_objectives**: Content as numbered dictionary: {"1": "objective", "2": "objective", ...}
+**key_formulas**: Content as numbered dictionary: {"1": "formula", "2": "formula", ...}  
+**worked_examples**: Content as numbered dictionary: {"1": {"equation": "problem", "solution": "step by step"}, "2": {...}, ...}
+**practice_questions**: Content as numbered dictionary: {"1": "question", "2": "question", ...}
+**solutions**: Content as numbered dictionary: {"1": "answer", "2": "answer", ...}
+**concept_explanations**: Content as numbered dictionary: {"1": "explanation", "2": "explanation", ...}
+**key_concepts**: Content as numbered dictionary: {"1": "concept", "2": "concept", ...}
+**summary**: Content as numbered dictionary: {"1": "point", "2": "point", ...}
+
 ## Output Requirements
 
 Generate structured educational content as a JSON object with this exact structure:
@@ -52,15 +72,17 @@ Generate structured educational content as a JSON object with this exact structu
   "enhanced_title": "Engaging title for the {{ document_type }}",
   "introduction": "Brief introduction to {{ topic }}",
   "blocks": [
+{% for section_type in structure_pattern %}
     {
-      "block_type": "learning_objectives",
+      "block_type": "{{ section_type }}",
       "content": {
-        "objectives": ["Objective 1", "Objective 2"],
-        "text": "Learning objectives content"
+        "1": "First item for {{ section_type }}",
+        "2": "Second item for {{ section_type }}"
       },
       "estimated_minutes": 5,
-      "reasoning": "Why this block was included"
-    }
+      "reasoning": "Why {{ section_type }} was included"
+    }{% if not loop.last %},{% endif %}
+{% endfor %}
   ],
   "total_estimated_minutes": 30,
   "actual_detail_level": {{ detail_level }},
@@ -70,8 +92,8 @@ Generate structured educational content as a JSON object with this exact structu
 }
 ```
 
-Create content blocks for the structure pattern requested: {{ structure_pattern | join(", ") }}
+**CRITICAL**: You must generate exactly {{ structure_pattern | length }} blocks with block_types: {{ structure_pattern | join(", ") }}
 
-Each block should contain rich, specific content appropriate for the topic and grade level, ensuring mathematical accuracy and Cambridge IGCSE alignment.
+Each block should contain rich, specific content appropriate for {{ topic }} and grade level {{ target_grade or "7-9" }}, ensuring mathematical accuracy and Cambridge IGCSE alignment.
 
-Generate the JSON response now with this exact structure for {{ document_type }} about {{ topic }}.
+Generate the JSON response now with the exact block types specified above.

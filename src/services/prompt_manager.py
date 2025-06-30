@@ -685,59 +685,26 @@ Generate educationally valuable content that matches the specified detail level 
 
     def _get_worksheet_generation_template(self) -> PromptTemplate:
         """Get built-in worksheet generation template."""
-        content = """You are an expert Cambridge IGCSE Mathematics educator. Generate a practice worksheet with the following specifications:
+        # Note: Template content moved to prompts/worksheet_generation_latest.txt
+        # This is a fallback for when file-based template is not available
+        content = """You are an expert educational content creator specializing in Cambridge IGCSE Mathematics.
 
-**Worksheet Requirements:**
+Generate a structured {{ document_type }} about {{ topic }} with the following requirements:
 - Title: {{ title }}
-- Topic: {{ topic }}
-- Detail Level: {{ detail_level }}
-- Target Grade: {{ target_grade }}
-- Estimated Duration: {{ estimated_duration | default(30) }} minutes
-{% if custom_instructions is defined and custom_instructions -%}
-- Special Instructions: {{ custom_instructions }}
-{% endif -%}
+- Detail Level: {{ detail_level }}/10
+- Grade: {{ target_grade }}
+- Structure: {{ structure_pattern | join(", ") }}
 
-**Content Structure:**
-{% if detail_level == "minimal" -%}
-- Practice questions with answer key
-{% elif detail_level == "medium" -%}
-- Learning objectives
-- Key formulas
-- Practice questions
-- Step-by-step solutions
-{% elif detail_level == "comprehensive" -%}
-- Learning objectives
-- Key concepts review
-- Worked examples
-- Practice questions (varied difficulty)
-- Detailed solutions with explanations
-{% elif detail_level == "guided" -%}
-- Learning objectives
-- Concept introduction with examples
-- Guided practice with hints
-- Independent practice questions
-- Self-assessment rubric
-{% endif %}
-
-**Question Requirements:**
-- Include 5-8 questions of appropriate difficulty
-- Mix of question types (calculation, application, problem-solving)
-- Clear marking scheme with total marks
-- Use official Cambridge command words
-
-**Output Format:**
-Return a JSON object with sections containing appropriate question and solution data.
-
-Generate a comprehensive worksheet that provides effective practice for Cambridge IGCSE students."""
+Return JSON with enhanced_title, introduction, and blocks array."""
 
         return PromptTemplate(
             name="worksheet_generation",
             version="latest",
             content=content,
-            description="Generate practice worksheets for Cambridge IGCSE Mathematics",
-            required_variables=["title", "topic", "detail_level", "target_grade"],
-            optional_variables=["estimated_duration", "custom_instructions"],
-            tags=["worksheet", "practice", "cambridge", "igcse"],
+            description="Generate practice worksheets for Cambridge IGCSE Mathematics (fallback template)",
+            required_variables=["title", "topic", "detail_level", "target_grade", "document_type", "structure_pattern"],
+            optional_variables=["custom_instructions", "tier", "generate_versions", "export_formats", "personalization_context"],
+            tags=["worksheet", "practice", "cambridge", "igcse", "fallback"],
         )
 
     def _get_notes_generation_template(self) -> PromptTemplate:
