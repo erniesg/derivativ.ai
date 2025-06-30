@@ -116,6 +116,27 @@ class DocumentGenerationRequest(BaseModel):
     detail_level: DetailLevel = Field(..., description="Level of detail to include")
     title: str = Field(..., description="Document title")
 
+    @field_validator("detail_level", mode="before")
+    @classmethod
+    def validate_detail_level(cls, v):
+        """Convert string or int to DetailLevel enum."""
+        if isinstance(v, DetailLevel):
+            return v
+        if isinstance(v, str):
+            # Try to convert string to int first
+            try:
+                v = int(v)
+            except ValueError:
+                # Try legacy string conversion
+                return DetailLevel.from_legacy_string(v.lower())
+        if isinstance(v, int):
+            # Find matching enum value
+            for level in DetailLevel:
+                if level.value == v:
+                    return level
+            raise ValueError(f"Invalid detail level value: {v}")
+        raise ValueError(f"Invalid detail level type: {type(v)}")
+
     # Content targeting
     topic: str = Field(..., description="Main topic/subject")
     tier: Tier = Field(default=Tier.CORE, description="Core or Extended tier")
@@ -155,15 +176,15 @@ class DocumentGenerationRequest(BaseModel):
     include_answers: bool = Field(default=True, description="Include answer sections")
     include_working: bool = Field(default=True, description="Include step-by-step working")
     include_mark_schemes: bool = Field(default=False, description="Include marking schemes")
-    
+
     # Version generation
     generate_versions: list["DocumentVersion"] = Field(
         default_factory=lambda: [DocumentVersion.STUDENT, DocumentVersion.TEACHER],
-        description="Which document versions to generate"
+        description="Which document versions to generate",
     )
     export_formats: list["ExportFormat"] = Field(
         default_factory=lambda: [ExportFormat.PDF, ExportFormat.DOCX],
-        description="Which export formats to generate"
+        description="Which export formats to generate",
     )
 
     @field_validator("title")

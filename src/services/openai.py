@@ -224,7 +224,11 @@ class OpenAILLMService(LLMService):
 
             # Apply runtime overrides (but don't let them override response_format)
             if overrides:
-                filtered_overrides = {k: v for k, v in overrides.items() if k != "response_format"}
+                filtered_overrides = {
+                    k: v
+                    for k, v in overrides.items()
+                    if k not in {"response_format", "text_format"}
+                }
                 openai_params.update(filtered_overrides)
 
             logger.info("OpenAI parse_structured called with:")
@@ -232,59 +236,15 @@ class OpenAILLMService(LLMService):
             logger.info(f"  - response_format type: {type(response_format)}")
             logger.info(f"  - model: {openai_params['model']}")
 
-            # Check if parse method is available (newer OpenAI versions)
-            parse_available = hasattr(self.client.chat.completions, "parse")
-            logger.info(f"  - parse method available: {parse_available}")
+            # Check for new 2025 responses.parse method
+            if hasattr(self.client, "responses") and hasattr(self.client.responses, "parse"):
+                return await self._parse_with_new_api(openai_params, response_format)
 
-            if parse_available:
-                # Use OpenAI's parse method - pass Pydantic model as response_format
-                logger.info(
-                    f"Using OpenAI parse method with response_format={response_format.__name__}"
-                )
-                completion = await self.client.chat.completions.parse(
-                    **openai_params, response_format=response_format
-                )
-                logger.info(
-                    f"Parse successful, got parsed object: {type(completion.choices[0].message.parsed)}"
-                )
-                return completion.choices[0].message.parsed
+            # Check if old parse method is available
+            elif hasattr(self.client.chat.completions, "parse"):
+                return await self._parse_with_old_api(openai_params, response_format)
             else:
-                # Fallback to json_object mode for older versions
-                logger.warning(
-                    "OpenAI parse method not available, falling back to json_object mode"
-                )
-                openai_params["response_format"] = {"type": "json_object"}
-
-                completion = await self.client.chat.completions.create(**openai_params)
-                raw_content = completion.choices[0].message.content
-                logger.info(f"Raw OpenAI response (first 200 chars): {raw_content[:200]}...")
-
-                # Parse JSON manually and validate against schema
-                import json
-
-                try:
-                    parsed_data = json.loads(raw_content)
-                    logger.info(f"Parsed JSON keys: {list(parsed_data.keys())}")
-
-                    # Handle wrapped responses (e.g., {'worksheet': {...}})
-                    if len(parsed_data) == 1 and isinstance(next(iter(parsed_data.values())), dict):
-                        # Unwrap the nested data
-                        wrapped_key = next(iter(parsed_data.keys()))
-                        logger.info(f"Unwrapping OpenAI response from '{wrapped_key}' key")
-                        parsed_data = parsed_data[wrapped_key]
-                        logger.info(f"Unwrapped data keys: {list(parsed_data.keys())}")
-
-                    # Validate against schema
-                    logger.info(
-                        f"Attempting to create {response_format.__name__} with data keys: {list(parsed_data.keys())}"
-                    )
-                    return response_format(**parsed_data)
-                except (json.JSONDecodeError, ValueError) as e:
-                    logger.error(f"OpenAI JSON validation failed: {e}")
-                    logger.error(
-                        f"Raw parsed data: {parsed_data if 'parsed_data' in locals() else 'Failed to parse JSON'}"
-                    )
-                    raise Exception(f"Failed to parse OpenAI JSON response: {e}")
+                return await self._parse_with_json_object(openai_params, response_format)
 
         except openai.APIError as e:
             logger.error(f"OpenAI structured parsing API error: {e}")
@@ -293,6 +253,86 @@ class OpenAILLMService(LLMService):
         except Exception as e:
             logger.error(f"Unexpected error in OpenAI structured parsing: {e}")
             raise Exception(f"OpenAI structured parsing error: {e}")
+
+    async def _parse_with_new_api(
+        self, openai_params: dict[str, Any], response_format: type[BaseModel]
+    ) -> BaseModel:
+        """Parse using new 2025 OpenAI responses.parse() API."""
+        logger.info(
+            f"Using new OpenAI 2025 responses.parse method with text_format={response_format.__name__}"
+        )
+
+        # Convert messages format for new API
+        input_messages = openai_params.pop("messages")
+
+        # Build parameters for new API
+        new_params = {
+            "model": openai_params["model"],
+            "input": input_messages,
+            "text_format": response_format,
+        }
+
+        # Add optional parameters if present
+        for param in ["temperature", "max_tokens", "top_p"]:
+            if param in openai_params:
+                new_params[param] = openai_params[param]
+
+        response = await self.client.responses.parse(**new_params)
+        logger.info(f"Parse successful, got parsed object: {type(response.output_parsed)}")
+        return response.output_parsed
+
+    async def _parse_with_old_api(
+        self, openai_params: dict[str, Any], response_format: type[BaseModel]
+    ) -> BaseModel:
+        """Parse using older OpenAI chat.completions.parse() API."""
+        logger.info(
+            f"Using older OpenAI parse method with response_format={response_format.__name__}"
+        )
+        completion = await self.client.chat.completions.parse(
+            **openai_params, response_format=response_format
+        )
+        logger.info(
+            f"Parse successful, got parsed object: {type(completion.choices[0].message.parsed)}"
+        )
+        return completion.choices[0].message.parsed
+
+    async def _parse_with_json_object(
+        self, openai_params: dict[str, Any], response_format: type[BaseModel]
+    ) -> BaseModel:
+        """Parse using json_object mode fallback."""
+        logger.warning("OpenAI parse method not available, falling back to json_object mode")
+        openai_params["response_format"] = {"type": "json_object"}
+
+        completion = await self.client.chat.completions.create(**openai_params)
+        raw_content = completion.choices[0].message.content
+        logger.info(f"Raw OpenAI response (first 200 chars): {raw_content[:200]}...")
+
+        # Parse JSON manually and validate against schema
+        import json
+
+        try:
+            parsed_data = json.loads(raw_content)
+            logger.info(f"Parsed JSON keys: {list(parsed_data.keys())}")
+
+            # Handle wrapped responses (e.g., {'worksheet': {...}})
+            if len(parsed_data) == 1 and isinstance(next(iter(parsed_data.values())), dict):
+                # Unwrap the nested data
+                wrapped_key = next(iter(parsed_data.keys()))
+                logger.info(f"Unwrapping OpenAI response from '{wrapped_key}' key")
+                parsed_data = parsed_data[wrapped_key]
+                logger.info(f"Unwrapped data keys: {list(parsed_data.keys())}")
+
+            # Validate against schema
+            logger.info(
+                f"Attempting to create {response_format.__name__} with data keys: {list(parsed_data.keys())}"
+            )
+            return response_format(**parsed_data)
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.error(f"OpenAI JSON validation failed: {e}")
+            logger.error(
+                f"Raw parsed data: {parsed_data if 'parsed_data' in locals() else 'Failed to parse JSON'}"
+            )
+            raise Exception(f"Failed to parse OpenAI JSON response: {e}")
 
     async def generate_non_stream(self, request: LLMRequest, **overrides) -> LLMResponse:
         """

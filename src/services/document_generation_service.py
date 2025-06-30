@@ -93,7 +93,9 @@ class DocumentGenerationService:
                 "title": request.title,
                 "topic": request.topic,
                 "document_type": request.document_type.value,
-                "detail_level": request.detail_level.value,
+                "detail_level": request.detail_level.value
+                if hasattr(request.detail_level, "value")
+                else request.detail_level,
                 "target_grade": request.grade_level or 7,
                 "structure_pattern": structure_pattern,
             }

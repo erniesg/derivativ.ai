@@ -112,8 +112,11 @@ class DocumentStructureConfig:
         try:
             return self._structure_patterns[document_type][detail_level]
         except KeyError:
+            detail_level_value = (
+                detail_level.value if hasattr(detail_level, "value") else detail_level
+            )
             logger.warning(
-                f"No structure pattern found for {document_type.value} at {detail_level.value}, using fallback"
+                f"No structure pattern found for {document_type.value} at {detail_level_value}, using fallback"
             )
             # Fallback to medium level for the document type
             fallback_patterns = self._structure_patterns.get(document_type, {})

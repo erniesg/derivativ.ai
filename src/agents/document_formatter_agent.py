@@ -40,9 +40,10 @@ class DocumentFormatterAgent(BaseAgent):
             DetailLevel.MEDIUM: "Medium",
             DetailLevel.DETAILED: "Detailed",
             DetailLevel.COMPREHENSIVE: "Comprehensive",
-            DetailLevel.GUIDED: "Guided"
+            DetailLevel.GUIDED: "Guided",
         }
-        return level_names.get(detail_level, f"Level {detail_level.value}")
+        detail_level_value = detail_level.value if hasattr(detail_level, "value") else detail_level
+        return level_names.get(detail_level, f"Level {detail_level_value}")
 
     def _load_formatting_templates(self) -> dict[str, dict[str, str]]:
         """Load formatting templates for different output formats."""
