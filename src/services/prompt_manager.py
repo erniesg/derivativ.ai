@@ -702,8 +702,21 @@ Return JSON with enhanced_title, introduction, and blocks array."""
             version="latest",
             content=content,
             description="Generate practice worksheets for Cambridge IGCSE Mathematics (fallback template)",
-            required_variables=["title", "topic", "detail_level", "target_grade", "document_type", "structure_pattern"],
-            optional_variables=["custom_instructions", "tier", "generate_versions", "export_formats", "personalization_context"],
+            required_variables=[
+                "title",
+                "topic",
+                "detail_level",
+                "target_grade",
+                "document_type",
+                "structure_pattern",
+            ],
+            optional_variables=[
+                "custom_instructions",
+                "tier",
+                "generate_versions",
+                "export_formats",
+                "personalization_context",
+            ],
             tags=["worksheet", "practice", "cambridge", "igcse", "fallback"],
         )
 

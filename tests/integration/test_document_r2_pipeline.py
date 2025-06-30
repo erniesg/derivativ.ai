@@ -60,17 +60,19 @@ async def test_document_generation_to_r2_storage():  # noqa: PLR0915
 
         mock_llm_factory = MagicMock(spec=LLMFactory)
         mock_llm_service = AsyncMock()
-        mock_llm_service.generate.return_value = json.dumps({
-            "title": "Test Worksheet",
-            "document_type": "worksheet",
-            "detail_level": 1,
-            "sections": [
-                {"title": "Practice Questions", "content": "Sample content"},
-                {"title": "Solutions", "content": "Sample solutions"}
-            ],
-            "estimated_duration": "30 minutes",
-            "total_questions": 2
-        })
+        mock_llm_service.generate.return_value = json.dumps(
+            {
+                "title": "Test Worksheet",
+                "document_type": "worksheet",
+                "detail_level": 1,
+                "sections": [
+                    {"title": "Practice Questions", "content": "Sample content"},
+                    {"title": "Solutions", "content": "Sample solutions"},
+                ],
+                "estimated_duration": "30 minutes",
+                "total_questions": 2,
+            }
+        )
         mock_llm_factory.get_service.return_value = mock_llm_service
 
         prompt_manager = PromptManager()
@@ -78,7 +80,7 @@ async def test_document_generation_to_r2_storage():  # noqa: PLR0915
         doc_gen_service = DocumentGenerationService(
             question_repository=mock_question_repository,
             llm_factory=mock_llm_factory,
-            prompt_manager=prompt_manager
+            prompt_manager=prompt_manager,
         )
 
         # Generate document
@@ -103,9 +105,20 @@ async def test_document_generation_to_r2_storage():  # noqa: PLR0915
         for format_type in export_formats:
             logger.info(f"📤 Exporting to {format_type.upper()}...")
 
+            # Convert GeneratedDocument to dict for export service
+            document_dict = {
+                "document_id": generated_doc.document_id,
+                "title": generated_doc.title,
+                "document_type": generated_doc.document_type,
+                "sections": [
+                    {"title": section.title, "content": section.content_data}
+                    for section in generated_doc.sections
+                ],
+            }
+
             # Export document
             export_result = await export_service.export_document(
-                document=generated_doc,
+                document=document_dict,
                 format_type=format_type,
                 version="student",  # Test student version
             )
