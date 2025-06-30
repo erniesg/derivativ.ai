@@ -299,7 +299,7 @@ const completeQuizSession = async (sessionId, userId) => {
 
     // Calculate overall performance
     const totalCorrect = responses.filter((r) => r.is_correct).length;
-    const overallScore = (totalCorrect / responses.length) * 100;
+    const overallScore = (totalCorrect / questions.length) * 100;
 
     // Create quiz result
     const { data: result, error: resultError } = await supabase
@@ -309,7 +309,7 @@ const completeQuizSession = async (sessionId, userId) => {
         user_id: session.user_id,
         topic_scores: topicScores,
         overall_score: overallScore,
-        total_questions: responses.length,
+        total_questions: questions.length,
         correct_answers: totalCorrect,
         completion_time_seconds: Math.floor(
           (new Date() - new Date(session.started_at)) / 1000
@@ -507,18 +507,6 @@ const durstenfeldShuffle = (array) => {
   }
 
   return array;
-}
-
-const getTopicIdFromQuestionId = async (questionId) => {
-  const { data: question, error } = await supabase
-    .from("questions")
-    .select("topic_id")
-    .eq("id", questionId)
-    .single();
-
-  if (error) throw error;
-
-  return question.topic_id;
 }
 
 module.exports = {
